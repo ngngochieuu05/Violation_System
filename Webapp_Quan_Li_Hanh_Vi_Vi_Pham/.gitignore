@@ -1,0 +1,9 @@
+ML/weights/*
+!ML/weights/.gitkeep
+ML/datasets/*
+!ML/datasets/.gitkeep
+ML/samples/*
+!ML/samples/.gitkeep
+ML/scripts/__pycache__/
+ML/runs/*
+!ML/runs/.gitkeep

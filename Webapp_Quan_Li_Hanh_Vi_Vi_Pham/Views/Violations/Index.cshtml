@@ -1,0 +1,86 @@
+@model Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.ViewModels.ViolationDashboardViewModel
+
+@{
+    ViewData["Title"] = "Violation Dashboard";
+}
+
+<div class="container py-4">
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted">Tong vi pham hom nay</div>
+                    <div class="display-6">@Model.TotalViolationsToday</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted">Cho duyet</div>
+                    <div class="display-6">@Model.PendingReviews</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="text-muted">Muc do cao</div>
+                    <div class="display-6">@Model.HighSeverityCases</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header">Recent Violations</div>
+                <div class="card-body table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Ma NV</th>
+                                <th>Nhan vien</th>
+                                <th>Vi pham</th>
+                                <th>Muc do</th>
+                                <th>Vi tri camera</th>
+                                <th>Trang thai</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in Model.RecentViolations)
+                        {
+                            <tr>
+                                <td>@item.EmployeeCode</td>
+                                <td>@item.EmployeeName</td>
+                                <td>@item.ViolationType</td>
+                                <td>@item.Severity</td>
+                                <td>@item.CameraLocation</td>
+                                <td>@item.Status</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header">Latest YOLO Detections</div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                    @foreach (var item in Model.LatestDetections)
+                    {
+                        <li class="list-group-item px-0">
+                            <strong>@item.Label</strong>
+                            <div>Confidence: @item.Confidence</div>
+                            <div>Bounding box: @item.BoundingBox</div>
+                        </li>
+                    }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

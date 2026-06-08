@@ -1,0 +1,15 @@
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/weights/*
+!Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/weights/.gitkeep
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/datasets/*
+!Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/datasets/.gitkeep
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/samples/*
+!Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/samples/.gitkeep
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/runs/*
+!Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/runs/.gitkeep
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham/ML/scripts/__pycache__/
