@@ -72,10 +72,16 @@
         }
     };
 
-    // Resize + compress ảnh về tối đa 256x256 / quality 0.75 trước khi lưu
+    // Resize + compress ảnh về tối đa 256x256 / quality 0.75 trước khi lưu (bỏ qua GIF để giữ animation)
     const compressImage = (file, callback) => {
         const reader = new FileReader();
         reader.onload = (e) => {
+            if (file.type === "image/gif") {
+                // Không nén ảnh GIF để giữ nguyên ảnh động
+                callback(e.target.result);
+                return;
+            }
+            
             const img = new Image();
             img.onload = () => {
                 const MAX = 256;
@@ -154,17 +160,25 @@
 
     const setActiveTab = (tab) => {
         const normalized = tabPanels.some((panel) => panel.dataset.tabPanel === tab) ? tab : "home";
+        const homeHero = document.querySelector("[data-home-hero]");
+
         tabButtons.forEach((button) => {
             const isActive = button.dataset.tabTrigger === normalized;
             button.classList.toggle("bg-red-600", isActive);
             button.classList.toggle("text-white", isActive);
             button.classList.toggle("shadow-sm", isActive);
+            button.classList.toggle("hover:bg-red-600", isActive);
+            button.classList.toggle("hover:text-white", isActive);
             button.classList.toggle("text-slate-600", !isActive);
         });
 
         tabPanels.forEach((panel) => {
             panel.classList.toggle("hidden", panel.dataset.tabPanel !== normalized);
         });
+
+        if (homeHero) {
+            homeHero.classList.toggle("hidden", normalized !== "home");
+        }
 
         const url = new URL(window.location.href);
         url.searchParams.set("tab", normalized);
@@ -188,7 +202,9 @@
             ["[data-profile-name]", profile.name],
             ["[data-profile-department]", profile.department],
             ["[data-profile-department-view]", profile.department],
-            ["[data-profile-id]", profile.employeeId]
+            ["[data-profile-id]", profile.employeeId],
+            ["[data-profile-email-view]", profile.email],
+            ["[data-profile-phone-view]", profile.phone]
         ];
 
         mappings.forEach(([selector, value]) => {
@@ -387,24 +403,27 @@
         document.querySelector("[data-profile-message]").textContent = "Đã cập nhật thông tin hiển thị trong khu vực nhân viên.";
     });
 
-    document.querySelector("[data-avatar-input]")?.addEventListener("change", (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+    document.querySelectorAll("[data-avatar-input]").forEach((input) => {
+        input.addEventListener("change", (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
 
-        if (!file.type.startsWith("image/")) {
-            document.querySelector("[data-avatar-message]").textContent = "Vui lòng chọn đúng tệp hình ảnh.";
-            // Reset input để có thể chọn lại
-            event.target.value = "";
-            return;
-        }
+            if (!file.type.startsWith("image/")) {
+                const msg = document.querySelector("[data-avatar-message]");
+                if (msg) msg.textContent = "Vui lòng chọn đúng tệp hình ảnh.";
+                // Reset input để có thể chọn lại
+                event.target.value = "";
+                return;
+            }
 
-        // Compress và lưu avatar vào key riêng, KHÔNG lưu trong profile object
-        compressImage(file, (dataUrl) => {
-            avatarDataUrl = dataUrl;
-            writeAvatar(avatarDataUrl);
-            // Reset input để người dùng có thể chọn lại cùng file
-            event.target.value = "";
-            renderProfile();
+            // Compress và lưu avatar vào key riêng, KHÔNG lưu trong profile object
+            compressImage(file, (dataUrl) => {
+                avatarDataUrl = dataUrl;
+                writeAvatar(avatarDataUrl);
+                // Reset input để người dùng có thể chọn lại cùng file
+                event.target.value = "";
+                renderProfile();
+            });
         });
     });
 

@@ -70,50 +70,39 @@
                                     <span>Cấu hình AI & Key</span>
                                 </a>
                             }
-                            else if (User.IsInRole("Manager"))
-                            {
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Manager" asp-action="Index">
-                                    <i class="fa-solid fa-house text-slate-400"></i>
-                                    <span>Trang chủ</span>
-                                </a>
-                            }
-                            else if (User.IsInRole("Employee"))
-                            {
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="home">
-                                    <i class="fa-solid fa-house text-slate-400"></i>
-                                    <span>Trang chủ</span>
-                                </a>
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="attendance">
-                                    <i class="fa-solid fa-fingerprint text-slate-400"></i>
-                                    <span>Chấm công</span>
-                                </a>
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="messages">
-                                    <i class="fa-solid fa-comments text-slate-400"></i>
-                                    <span>Tin nhắn</span>
-                                </a>
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="requests">
-                                    <i class="fa-solid fa-file-signature text-slate-400"></i>
-                                    <span>Đơn từ</span>
-                                </a>
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="profile">
-                                    <i class="fa-solid fa-id-badge text-slate-400"></i>
-                                    <span>Profile</span>
-                                </a>
-                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="settings">
-                                    <i class="fa-solid fa-gear text-slate-400"></i>
-                                    <span>Setting</span>
-                                </a>
-                            }
-                            
-                            <!-- User info & Logout -->
-                            <div class="flex items-center space-x-3 border-l border-slate-200 pl-4">
-                                <div class="text-right hidden sm:block">
-                                    <p class="text-xs font-semibold text-slate-900">@User.FindFirst("FullName")?.Value</p>
-                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider font-bold">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                            <!-- Notification Bell -->
+                            <button type="button" class="relative text-slate-500 hover:text-red-600 transition focus:outline-none">
+                                <i class="fa-regular fa-bell text-xl"></i>
+                                <span class="absolute top-0 right-0 flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                            </button>
+
+                            <!-- User Avatar Dropdown -->
+                            <div class="relative ml-4 border-l border-slate-200 pl-4" data-user-dropdown>
+                                <button type="button" class="flex items-center focus:outline-none transition hover:opacity-80" data-dropdown-trigger>
+                                    <div class="employee-avatar-placeholder relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-red-50 text-red-600 ring-2 ring-white shadow-sm">
+                                        <img data-avatar-image class="hidden absolute inset-0 h-full w-full object-cover z-10" alt="Avatar" />
+                                        <i data-avatar-fallback class="fa-solid fa-user text-xl z-0"></i>
+                                    </div>
+                                </button>
+                                
+                                <div data-dropdown-menu class="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50">
+                                    <div class="px-4 py-3 border-b border-slate-100">
+                                        <p class="text-sm font-semibold text-slate-900 truncate" data-profile-name>@User.FindFirst("FullName")?.Value</p>
+                                        <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                                    </div>
+                                    <div class="py-2">
+                                        @if (User.IsInRole("Employee"))
+                                        {
+                                            <a href="/Employee?tab=profile" data-tab-trigger="profile" class="block px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"><i class="fa-solid fa-id-badge mr-3 w-4 text-center"></i>Profile</a>
+                                        }
+                                    </div>
+                                    <div class="border-t border-slate-100 py-2">
+                                        <a asp-area="" asp-controller="Account" asp-action="Logout" class="block px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"><i class="fa-solid fa-right-from-bracket mr-3 w-4 text-center"></i>Đăng xuất</a>
+                                    </div>
                                 </div>
-                                <a class="inline-flex items-center justify-center p-2 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition" asp-area="" asp-controller="Account" asp-action="Logout" title="Đăng xuất">
-                                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
-                                </a>
                             </div>
                         </div>
                     </div>
@@ -138,6 +127,7 @@
                 <div class="flex space-x-4">
                     <a asp-area="" asp-controller="Home" asp-action="Privacy" class="hover:text-slate-700 transition">Chính sách bảo mật</a>
                     <span>&bull;</span>
+
                     <span>Hỗ trợ kỹ thuật</span>
                 </div>
             </div>
@@ -148,6 +138,29 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- User Dropdown Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropdownContainer = document.querySelector('[data-user-dropdown]');
+            if (dropdownContainer) {
+                const trigger = dropdownContainer.querySelector('[data-dropdown-trigger]');
+                const menu = dropdownContainer.querySelector('[data-dropdown-menu]');
+                
+                trigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    menu.classList.toggle('hidden');
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!dropdownContainer.contains(e.target)) {
+                        menu.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
