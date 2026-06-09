@@ -1,0 +1,79 @@
+<section data-tab-panel="profile" class="employee-tab-panel hidden">
+    <div class="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+        <div class="employee-surface rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm sm:p-8">
+            <div class="flex flex-col items-center gap-5 text-center sm:items-start sm:text-left">
+                <!-- Avatar + nút edit overlay -->
+                <div class="relative flex-shrink-0">
+                    <div class="employee-avatar-placeholder relative flex h-40 w-40 items-center justify-center overflow-hidden rounded-full bg-red-50 text-red-600 ring-4 ring-red-100 shadow-sm">
+                        <img data-avatar-image class="hidden absolute inset-0 h-full w-full object-cover z-10" alt="Avatar employee" />
+                        <i data-avatar-fallback class="fa-solid fa-user text-5xl z-0"></i>
+                    </div>
+                    <!-- Nút camera góc phải dưới -->
+                    <label class="absolute bottom-1 right-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-slate-800 text-white shadow-lg ring-2 ring-white transition hover:bg-red-600 z-20" title="Cập nhật ảnh đại diện">
+                        <input type="file" accept="image/*" data-avatar-input class="hidden" />
+                        <i class="fa-solid fa-camera text-xs"></i>
+                    </label>
+                </div>
+                <div>
+                    <p class="employee-text font-outfit text-3xl font-bold text-slate-900 sm:text-4xl" data-profile-name>@User.FindFirst("FullName")?.Value</p>
+                    <p class="employee-subtext mt-1 text-sm text-slate-500 sm:text-base">@User.Identity?.Name</p>
+                    <!-- Nút xóa ảnh nhỏ bên dưới tên -->
+                    <button type="button" data-avatar-remove class="mt-2 text-xs text-slate-400 underline underline-offset-2 transition hover:text-red-500">Xóa ảnh đại diện</button>
+                </div>
+            </div>
+
+
+            <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-avatar-message>
+                Ảnh đại diện hiện đang dùng biểu tượng mặc định.
+            </div>
+
+            <div class="mt-6 space-y-4">
+                <div class="employee-muted rounded-2xl bg-slate-50 p-4">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Mã nhân viên</p>
+                    <p class="employee-text mt-2 font-semibold text-slate-900">EMP-2026-014</p>
+                </div>
+                <div class="employee-muted rounded-2xl bg-slate-50 p-4">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Bộ phận</p>
+                    <p class="employee-text mt-2 font-semibold text-slate-900" data-profile-department-view>Khối vận hành</p>
+                </div>
+                <div class="employee-muted rounded-2xl bg-slate-50 p-4">
+                    <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Vai trò</p>
+                    <p class="employee-text mt-2 font-semibold text-slate-900">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div class="employee-surface rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Profile</p>
+                <h2 class="employee-text mt-2 font-outfit text-2xl font-bold text-slate-900">Cập nhật thông tin hiển thị</h2>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Họ tên</label>
+                        <input type="text" data-profile-input="name" value="@User.FindFirst("FullName")?.Value" class="employee-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                    </div>
+                    <div>
+                        <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Bộ phận</label>
+                        <input type="text" data-profile-input="department" value="Khối vận hành" class="employee-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                    </div>
+                    <div>
+                        <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Email công việc</label>
+                        <input type="email" data-profile-input="email" value="employee@compliancehub.vn" class="employee-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                    </div>
+                    <div>
+                        <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Số điện thoại</label>
+                        <input type="text" data-profile-input="phone" value="0123 456 789" class="employee-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="button" data-profile-save class="rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white">
+                            Lưu thông tin
+                        </button>
+                    </div>
+                </div>
+                <div class="employee-muted mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-profile-message>
+                    Thông tin hiện đang ở trạng thái mặc định.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

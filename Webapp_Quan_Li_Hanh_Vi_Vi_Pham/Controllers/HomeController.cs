@@ -28,6 +28,10 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers
                 {
                     return RedirectToAction("Index", "Manager");
                 }
+                if (User.IsInRole("Employee"))
+                {
+                    return RedirectToAction("Index", "Employee");
+                }
             }
             return View();
         }

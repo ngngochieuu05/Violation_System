@@ -1,0 +1,48 @@
+<section data-tab-panel="requests" class="employee-tab-panel hidden">
+    <div class="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+        <div class="rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm sm:p-8">
+            <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500">Đơn từ</p>
+            <h2 class="mt-2 font-outfit text-2xl font-bold text-slate-900">Tạo yêu cầu mới</h2>
+            <div class="mt-6 grid gap-4 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Loại đơn</label>
+                    <select data-request-type class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300">
+                        <option value="Nghỉ phép">Nghỉ phép</option>
+                        <option value="Đi muộn">Đi muộn</option>
+                        <option value="Tăng ca">Tăng ca</option>
+                        <option value="Điều chỉnh ca">Điều chỉnh ca</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Ngày áp dụng</label>
+                    <input type="date" data-request-date class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                </div>
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Nội dung</label>
+                    <textarea data-request-content rows="5" class="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" placeholder="Nhập nội dung đơn xin..."></textarea>
+                </div>
+                <div class="md:col-span-2 flex gap-3">
+                    <button type="button" data-request-submit class="rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white">
+                        Gửi đơn
+                    </button>
+                    <button type="button" data-request-draft class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700">
+                        Lưu nháp
+                    </button>
+                </div>
+            </div>
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-request-message>
+                Chưa có thao tác mới.
+            </div>
+        </div>
+
+        <div class="rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Theo dõi</p>
+            <h3 class="mt-2 font-outfit text-2xl font-bold text-slate-900">Danh sách yêu cầu</h3>
+            <div class="mt-6 space-y-3" data-request-list>
+                <div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+                    Chưa có đơn nào được tạo trong trình duyệt này.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -77,6 +77,33 @@
                                     <span>Trang chủ</span>
                                 </a>
                             }
+                            else if (User.IsInRole("Employee"))
+                            {
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="home">
+                                    <i class="fa-solid fa-house text-slate-400"></i>
+                                    <span>Trang chủ</span>
+                                </a>
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="attendance">
+                                    <i class="fa-solid fa-fingerprint text-slate-400"></i>
+                                    <span>Chấm công</span>
+                                </a>
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="messages">
+                                    <i class="fa-solid fa-comments text-slate-400"></i>
+                                    <span>Tin nhắn</span>
+                                </a>
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="requests">
+                                    <i class="fa-solid fa-file-signature text-slate-400"></i>
+                                    <span>Đơn từ</span>
+                                </a>
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="profile">
+                                    <i class="fa-solid fa-id-badge text-slate-400"></i>
+                                    <span>Profile</span>
+                                </a>
+                                <a class="text-sm font-medium text-slate-600 hover:text-red-600 transition flex items-center space-x-1" asp-area="" asp-controller="Employee" asp-action="Index" asp-route-tab="settings">
+                                    <i class="fa-solid fa-gear text-slate-400"></i>
+                                    <span>Setting</span>
+                                </a>
+                            }
                             
                             <!-- User info & Logout -->
                             <div class="flex items-center space-x-3 border-l border-slate-200 pl-4">

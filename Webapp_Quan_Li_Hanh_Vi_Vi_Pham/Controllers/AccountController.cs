@@ -151,7 +151,7 @@ public class AccountController : Controller
         }
         else
         {
-            redirectUrl = Url.Action("Index", "Home") ?? "/";
+            redirectUrl = Url.Action("Index", "Employee") ?? "/Employee";
         }
         return Json(new { success = true, redirectUrl = redirectUrl });
     }
@@ -195,6 +195,7 @@ public class AccountController : Controller
             {
                 if (User.IsInRole("Admin")) activeRole = "Admin";
                 else if (User.IsInRole("Manager")) activeRole = "Manager";
+                else if (User.IsInRole("Employee")) activeRole = "Employee";
             }
         }
 
@@ -207,6 +208,10 @@ public class AccountController : Controller
             if (activeRole.Equals("Manager", StringComparison.OrdinalIgnoreCase))
             {
                 return RedirectToAction("Index", "Manager");
+            }
+            if (activeRole.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+            {
+                return RedirectToAction("Index", "Employee");
             }
         }
         return RedirectToAction("Index", "Home");
