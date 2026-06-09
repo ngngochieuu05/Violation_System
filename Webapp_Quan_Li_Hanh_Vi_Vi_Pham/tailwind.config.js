@@ -1,11 +1,17 @@
 ﻿/** @type {import('tailwindcss').Config} */
 module.exports = {
+    darkMode: 'class', // Kích hoạt tính năng Dark Mode bằng class
     content: [
         "./Views/**/*.cshtml",
-        "./wwwroot/js/**/*.js"
+        "./Pages/**/*.cshtml",
+        "./wwwroot/**/*.js"
     ],
     theme: {
-        extend: {},
+        extend: {
+            colors: {
+                border: "shadow-sm",
+            }
+        },
     },
     plugins: [],
 }
