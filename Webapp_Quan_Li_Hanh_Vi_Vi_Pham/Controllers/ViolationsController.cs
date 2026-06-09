@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
+[Authorize(Roles = "Admin")]
 public class ViolationsController : Controller
 {
     private readonly IViolationService _violationService;

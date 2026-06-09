@@ -1,0 +1,19 @@
+@{
+    ViewData["Title"] = "Từ chối truy cập";
+    Layout = "_Layout";
+}
+
+<div class="min-h-screen flex items-center justify-center bg-slate-50 px-4 py-12">
+    <div class="max-w-md w-full text-center space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-2">
+            <i class="fa-solid fa-ban text-3xl"></i>
+        </div>
+        <h2 class="font-outfit text-2xl font-bold text-slate-950">Không có quyền truy cập</h2>
+        <p class="text-sm text-slate-500">Tài khoản của bạn không được cấp quyền truy cập vào chức năng này. Vui lòng liên hệ quản trị viên.</p>
+        <div>
+            <a asp-controller="Home" asp-action="Index" class="inline-block py-2.5 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow transition">
+                Về trang chủ
+            </a>
+        </div>
+    </div>
+</div>
