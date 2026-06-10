@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
@@ -32,6 +33,49 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IModelSettingService, ModelSettingService>();
 
 var app = builder.Build();
+
+// Auto-setup Python environment if needed
+try
+{
+    var projectRoot = app.Environment.ContentRootPath;
+    var venvPath = Path.Combine(projectRoot, ".venv");
+    if (!Directory.Exists(venvPath))
+    {
+        Console.WriteLine("==================================================");
+        Console.WriteLine("Virtual environment not found. Setting up Python environment...");
+        Console.WriteLine("This may take a few minutes if Python needs to be installed.");
+        Console.WriteLine("==================================================");
+        var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-ExecutionPolicy Bypass -File \"{Path.Combine(projectRoot, "setup_env.ps1")}\"",
+                WorkingDirectory = projectRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+        process.Start();
+        
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
+        
+        Console.WriteLine(await outputTask);
+        if (process.ExitCode != 0)
+        {
+            var error = await errorTask;
+            Console.WriteLine($"WARNING: Setup script failed with exit code {process.ExitCode}: {error}");
+        }
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"WARNING: Failed to auto-setup Python environment: {ex.Message}");
+}
 
 // Auto-migrate/create database and seed data
 using (var scope = app.Services.CreateScope())
