@@ -92,13 +92,23 @@ public static class DbSeeder
                     Name = "DeepFace Face Recognition",
                     Type = "Deepface",
                     ModelPath = "VGG-Face",
-                    ConfThreshold = 0.40m,
+                    ConfThreshold = 0.55m,
                     IouThreshold = 0.00m,
                     IsActive = true,
                     CreatedAtUtc = DateTime.UtcNow
                 }
             };
             context.AiModels.AddRange(seedModels);
+        }
+        else
+        {
+            var activeDeepfaceModel = context.AiModels.FirstOrDefault(m => m.Type == "Deepface" && m.IsActive);
+            if (activeDeepfaceModel != null &&
+                activeDeepfaceModel.ModelPath == "VGG-Face" &&
+                activeDeepfaceModel.ConfThreshold < 0.55m)
+            {
+                activeDeepfaceModel.ConfThreshold = 0.55m;
+            }
         }
 
         // Seed ViolationRecords

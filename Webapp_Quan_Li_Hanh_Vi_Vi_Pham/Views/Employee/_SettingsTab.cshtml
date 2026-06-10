@@ -1,38 +1,38 @@
 <section data-tab-panel="settings" class="employee-tab-panel hidden">
     <div class="grid gap-8 lg:grid-cols-[1fr_0.9fr]">
-        <div class="employee-surface rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm">
+        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl">
             <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Setting</p>
             <h2 class="employee-text mt-2 font-outfit text-2xl font-bold text-slate-900">Tùy chọn giao diện người dùng</h2>
             <div class="mt-6 space-y-4">
-                <label class="employee-muted flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <label class="employee-muted flex items-center justify-between rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-4">
                     <div>
                         <p class="employee-text font-semibold text-slate-900">Nhận thông báo nội bộ</p>
                         <p class="employee-subtext text-sm text-slate-500">Lưu cục bộ trong trình duyệt</p>
                     </div>
                     <input type="checkbox" data-setting-toggle="notifications" class="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500" checked />
                 </label>
-                <label class="employee-muted flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <label class="employee-muted flex items-center justify-between rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-4">
                     <div>
                         <p class="employee-text font-semibold text-slate-900">Chế độ hiển thị gọn</p>
                         <p class="employee-subtext text-sm text-slate-500">Ẩn bớt khoảng cách trong các card</p>
                     </div>
                     <input type="checkbox" data-setting-toggle="compact" class="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500" />
                 </label>
-                <div class="employee-muted rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-4">
                     <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Ngôn ngữ hiển thị</label>
                     <select data-setting-select="language" class="employee-input w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300">
                         <option value="vi-VN">Tiếng Việt</option>
                         <option value="en-US">English</option>
                     </select>
                 </div>
-                <div class="employee-muted rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-4">
                     <label class="employee-text mb-2 block text-sm font-semibold text-slate-700">Chủ đề giao diện</label>
                     <select data-setting-select="theme" class="employee-input w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300">
                         <option value="light">Sáng</option>
                         <option value="dark">Tối</option>
                     </select>
                 </div>
-                <label class="employee-muted flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <label class="employee-muted flex items-center justify-between rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-4">
                     <div>
                         <p class="employee-text font-semibold text-slate-900">Giảm hiệu ứng chuyển động</p>
                         <p class="employee-subtext text-sm text-slate-500">Phù hợp khi muốn giao diện ổn định hơn</p>
@@ -41,20 +41,20 @@
                 </label>
             </div>
             <div class="mt-5 flex flex-wrap gap-3">
-                <button type="button" data-setting-reset class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <button type="button" data-setting-reset class="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md hover:bg-slate-50">
                     Khôi phục mặc định
                 </button>
             </div>
-            <div class="employee-muted mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-setting-message>
+            <div class="employee-muted mt-5 rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-3 text-sm text-slate-600" data-setting-message>
                 Các thiết lập sẽ được giữ trong trình duyệt hiện tại.
             </div>
         </div>
 
-        <div class="employee-surface rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm">
+        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl">
             <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Tài khoản</p>
             <h3 class="employee-text mt-2 font-outfit text-2xl font-bold text-slate-900">Thao tác phiên làm việc</h3>
             <div class="mt-6 space-y-3">
-                <button type="button" data-tab-trigger="profile" class="employee-input flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                <button type="button" data-tab-trigger="profile" class="employee-input flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md hover:bg-slate-50">
                     <span>Mở profile</span>
                     <i class="fa-solid fa-angle-right text-slate-400"></i>
                 </button>

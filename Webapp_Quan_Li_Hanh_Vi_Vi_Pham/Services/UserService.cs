@@ -260,7 +260,7 @@ public class UserService : IUserService
             var activeDeepfaceModel = await _context.AiModels.FirstOrDefaultAsync(
                 m => m.Type == "Deepface" && m.IsActive,
                 cancellationToken);
-            var threshold = activeDeepfaceModel != null ? (double)activeDeepfaceModel.ConfThreshold : 0.75;
+            var threshold = GetEffectiveThreshold(activeDeepfaceModel);
 
             int matchedCount = 0;
             var distances = new List<double>();
@@ -515,6 +515,21 @@ public class UserService : IUserService
         var enforceDetection = (_configuration["DeepFace:EnforceDetection"] ?? "true").ToLowerInvariant();
 
         return $"{baseArguments} --model-name \"{modelName}\" --detector-backend \"{detectorBackend}\" --align {align} --enforce-detection {enforceDetection}";
+    }
+
+    private static double GetEffectiveThreshold(AiModel? activeDeepfaceModel)
+    {
+        if (activeDeepfaceModel == null)
+        {
+            return 0.55;
+        }
+
+        if (activeDeepfaceModel.ModelPath.Equals("VGG-Face", StringComparison.OrdinalIgnoreCase))
+        {
+            return Math.Max((double)activeDeepfaceModel.ConfThreshold, 0.55d);
+        }
+
+        return (double)activeDeepfaceModel.ConfThreshold;
     }
 
     private static void DeleteTempFiles(IEnumerable<string> tempFiles)
