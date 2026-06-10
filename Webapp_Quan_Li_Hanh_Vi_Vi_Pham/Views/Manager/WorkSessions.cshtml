@@ -1,0 +1,52 @@
+﻿@{
+    ViewData["Title"] = "Quản lý phiên làm việc";
+    Layout = "_ManagerLayout";
+}
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Quản lý phiên làm việc</h1>
+            <p class="text-sm text-slate-500 mt-1">Kiểm soát chấm công và vi phạm của nhân sự.</p>
+        </div>
+        <button class="bg-slate-900 text-white px-4 py-2 rounded-[8px] text-sm font-medium hover:bg-slate-800 transition">
+            <i class="fa-solid fa-download mr-1"></i> Xuất dữ liệu
+        </button>
+    </div>
+
+    <div class="system-card overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex gap-4">
+            <input type="text" placeholder="Tìm kiếm nhân sự..." class="text-sm p-2 border border-slate-200 rounded-[8px] outline-none w-64 focus:border-red-500" />
+            <select class="text-sm p-2 border border-slate-200 rounded-[8px] outline-none bg-white">
+                <option>Tất cả trạng thái</option>
+                <option>Vi phạm đi muộn</option>
+            </select>
+        </div>
+        <div class="p-0">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3">ID Nhân sự</th>
+                        <th class="px-6 py-3">Họ tên</th>
+                        <th class="px-6 py-3">Thời gian Check-in</th>
+                        <th class="px-6 py-3">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="px-6 py-4 font-medium text-slate-900">NV001</td>
+                        <td class="px-6 py-4">Nguyễn Văn A</td>
+                        <td class="px-6 py-4">08:00 AM</td>
+                        <td class="px-6 py-4"><span class="px-2 py-1 bg-green-100 text-green-700 rounded-[4px] text-xs font-semibold">Đúng giờ</span></td>
+                    </tr>
+                    <tr class="hover:bg-slate-50/50">
+                        <td class="px-6 py-4 font-medium text-slate-900">NV002</td>
+                        <td class="px-6 py-4">Trần Thị B</td>
+                        <td class="px-6 py-4">08:45 AM</td>
+                        <td class="px-6 py-4"><span class="px-2 py-1 bg-red-100 text-red-700 rounded-[4px] text-xs font-semibold">Đi muộn</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
