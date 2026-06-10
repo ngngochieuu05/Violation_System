@@ -121,7 +121,12 @@
 </head>
 <body class="text-slate-800">
 
-<div class="dashboard-layout" data-employee-app data-initial-tab="@initialTab">
+<div class="dashboard-layout"
+     data-employee-app
+     data-initial-tab="@initialTab"
+     data-user-id="@User.FindFirst("UserId")?.Value"
+     data-username="@User.Identity?.Name"
+     data-full-name="@User.FindFirst("FullName")?.Value">
     
     <!-- Sidebar -->
     <aside class="dashboard-sidebar shadow-sm">
@@ -344,7 +349,7 @@
             
             <div class="mt-8 flex justify-end">
                 <button type="button" id="btnGoToProfileSettings" class="text-sm bg-white text-red-600 border border-red-600 font-semibold py-2 px-6 rounded-lg hover:bg-red-50 transition shadow-sm flex items-center">
-                    <i class="fa-solid fa-user-gear mr-2"></i>Chuyển đến Cài đặt hồ sơ
+                    <i class="fa-solid fa-user-gear mr-3"></i>Chuyển đến Cài đặt hồ sơ
                 </button>
             </div>
         </div>

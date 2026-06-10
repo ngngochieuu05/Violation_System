@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
@@ -156,6 +157,25 @@ public class AccountController : Controller
         return Json(new { success = true, redirectUrl = redirectUrl });
     }
 
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> VerifyCurrentUserFace(string faceImage, CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(faceImage))
+        {
+            return Json(new { success = false, message = "Thiếu dữ liệu xác thực khuôn mặt." });
+        }
+
+        var verified = await _userService.VerifyBiometricsAsync(username, faceImage, cancellationToken);
+        if (!verified)
+        {
+            return Json(new { success = false, message = "Khuôn mặt không khớp với tài khoản đang đăng nhập." });
+        }
+
+        return Json(new { success = true, message = "Xác thực khuôn mặt thành công." });
+    }
+
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -178,7 +198,7 @@ public class AccountController : Controller
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var authProperties = new AuthenticationProperties { IsPersistent = true };
+        var authProperties = new AuthenticationProperties { IsPersistent = false };
 
         await HttpContext.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,

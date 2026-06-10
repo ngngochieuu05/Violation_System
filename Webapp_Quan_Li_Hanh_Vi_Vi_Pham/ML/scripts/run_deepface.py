@@ -3,181 +3,225 @@ import json
 import os
 import sys
 
-MODEL_NAME = "ArcFace"
-DETECTOR_BACKEND = "retinaface"
-ALIGN = True
-ENFORCE_DETECTION = True
+DEFAULT_MODEL_NAME = "ArcFace"
+DEFAULT_DETECTOR_BACKEND = "opencv"
+DEFAULT_ALIGN = True
+DEFAULT_ENFORCE_DETECTION = True
+FALLBACK_DETECTOR_BACKENDS = ["retinaface", "mtcnn"]
+
+
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def fail(message, exit_code=1):
+    print(json.dumps({"success": False, "error": message}))
+    sys.exit(exit_code)
+
+
+def get_detector_candidates(primary_backend):
+    candidates = [primary_backend]
+    for backend in FALLBACK_DETECTOR_BACKENDS:
+        if backend not in candidates:
+            candidates.append(backend)
+    return candidates
+
+
+def extract_single_embedding(deepface_cls, image_path, model_name, detector_backend, enforce_detection, align):
+    last_error = None
+    for backend in get_detector_candidates(detector_backend):
+        try:
+            result = deepface_cls.represent(
+                img_path=image_path,
+                model_name=model_name,
+                detector_backend=backend,
+                enforce_detection=enforce_detection,
+                align=align
+            )
+            if len(result) != 1:
+                raise ValueError(f"Anh phai co dung 1 khuon mat (Phat hien {len(result)})")
+            return result[0]["embedding"]
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    raise last_error or ValueError("Face could not be detected")
+
+
+def detect_single_face(deepface_cls, image_path, model_name, detector_backend, enforce_detection, align):
+    last_error = None
+    for backend in get_detector_candidates(detector_backend):
+        try:
+            result = deepface_cls.represent(
+                img_path=image_path,
+                model_name=model_name,
+                detector_backend=backend,
+                enforce_detection=enforce_detection,
+                align=align
+            )
+            if len(result) != 1:
+                raise ValueError(f"Anh phai co dung 1 khuon mat (Phat hien {len(result)})")
+            return True
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    raise last_error or ValueError("Face could not be detected")
+
+
+def verify_faces(deepface_cls, img1_path, img2_path, model_name, detector_backend, enforce_detection, align):
+    last_error = None
+    for backend in get_detector_candidates(detector_backend):
+        try:
+            return deepface_cls.verify(
+                img1_path=img1_path,
+                img2_path=img2_path,
+                model_name=model_name,
+                detector_backend=backend,
+                distance_metric="cosine",
+                enforce_detection=enforce_detection,
+                align=align
+            )
+        except Exception as exc:
+            last_error = exc
+            continue
+
+    raise last_error or ValueError("Face verification failed")
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--action", required=True, choices=["detect", "verify", "represent"])
+    parser.add_argument("--action", required=True, choices=["detect", "verify", "represent", "represent_batch"])
     parser.add_argument("--image", help="Path to image for face detection or embedding extraction")
     parser.add_argument("--img1", help="Path to first image for face verification")
     parser.add_argument("--img2", help="Path to second image for face verification")
-    parser.add_argument("--threshold", type=float, default=0.68, help="Distance threshold (confidence)")
+    parser.add_argument("--images-file", help="Path to a text file containing image paths, one per line")
+    parser.add_argument("--threshold", type=float, default=0.75, help="Distance threshold (confidence)")
+    parser.add_argument("--model-name", default=DEFAULT_MODEL_NAME)
+    parser.add_argument("--detector-backend", default=DEFAULT_DETECTOR_BACKEND)
+    parser.add_argument("--align", default=str(DEFAULT_ALIGN).lower())
+    parser.add_argument("--enforce-detection", default=str(DEFAULT_ENFORCE_DETECTION).lower())
     args = parser.parse_args()
 
-    # Try importing deepface
-    deepface_installed = False
+    model_name = args.model_name or DEFAULT_MODEL_NAME
+    detector_backend = args.detector_backend or DEFAULT_DETECTOR_BACKEND
+    align = parse_bool(args.align)
+    enforce_detection = parse_bool(args.enforce_detection)
+
     try:
         from deepface import DeepFace
-        deepface_installed = True
     except ImportError:
-        pass
+        fail("DeepFace is not installed on the host. Biometric verification is disabled.")
 
     if args.action == "detect":
         if not args.image:
-            print(json.dumps({"success": False, "error": "Missing --image parameter"}))
-            sys.exit(1)
+            fail("Missing --image parameter")
         if not os.path.exists(args.image):
-            print(json.dumps({"success": False, "error": f"Image path does not exist: {args.image}"}))
-            sys.exit(1)
+            fail(f"Image path does not exist: {args.image}")
 
-        if deepface_installed:
-            try:
-                # To check if there is exactly 1 face, we use represent
-                result = DeepFace.represent(
-                    img_path=args.image,
-                    model_name=MODEL_NAME,
-                    detector_backend=DETECTOR_BACKEND,
-                    enforce_detection=ENFORCE_DETECTION,
-                    align=ALIGN
-                )
-                if len(result) == 1:
-                    print(json.dumps({"success": True, "faces_detected": 1, "message": "Exactly 1 face detected successfully using DeepFace"}))
-                else:
-                    print(json.dumps({"success": False, "error": f"Anh phai co dung 1 khuon mat (Phat hien {len(result)})"}))
-            except Exception as e:
-                print(json.dumps({"success": False, "error": str(e)}))
-        else:
-            # Fallback simulated response
-            filename = os.path.basename(args.image)
-            if "noface" in filename:
-                print(json.dumps({"success": False, "error": "Anh phai co dung 1 khuon mat (Simulated fallback: no face)"}))
-                sys.exit(1)
-            file_size = os.path.getsize(args.image)
-            if file_size > 0:
-                print(json.dumps({
-                    "success": True, 
-                    "faces_detected": 1, 
-                    "message": "Face detected (Simulated fallback - DeepFace not installed on host)"
-                }))
-            else:
-                print(json.dumps({"success": False, "error": "Empty image file"}))
+        try:
+            detect_single_face(
+                DeepFace,
+                args.image,
+                model_name,
+                detector_backend,
+                enforce_detection,
+                align
+            )
+            print(json.dumps({
+                "success": True,
+                "faces_detected": 1,
+                "message": "Exactly 1 face detected successfully using DeepFace"
+            }))
+        except Exception as exc:
+            fail(str(exc))
 
     elif args.action == "represent":
         if not args.image:
-            print(json.dumps({"success": False, "error": "Missing --image parameter"}))
-            sys.exit(1)
+            fail("Missing --image parameter")
         if not os.path.exists(args.image):
-            print(json.dumps({"success": False, "error": f"Image path does not exist: {args.image}"}))
-            sys.exit(1)
+            fail(f"Image path does not exist: {args.image}")
 
-        if deepface_installed:
-            try:
-                result = DeepFace.represent(
-                    img_path=args.image,
-                    model_name=MODEL_NAME,
-                    detector_backend=DETECTOR_BACKEND,
-                    enforce_detection=ENFORCE_DETECTION,
-                    align=ALIGN
+        try:
+            embedding = extract_single_embedding(
+                DeepFace,
+                args.image,
+                model_name,
+                detector_backend,
+                enforce_detection,
+                align
+            )
+            print(json.dumps({
+                "success": True,
+                "embedding": embedding,
+                "message": "Embedding extracted successfully using DeepFace represent"
+            }))
+        except Exception as exc:
+            fail(str(exc))
+
+    elif args.action == "represent_batch":
+        if not args.images_file:
+            fail("Missing --images-file parameter")
+        if not os.path.exists(args.images_file):
+            fail(f"Images file does not exist: {args.images_file}")
+
+        with open(args.images_file, "r", encoding="utf-8") as handle:
+            image_paths = [line.strip() for line in handle if line.strip()]
+
+        if not image_paths:
+            fail("Images file is empty")
+
+        results = []
+        try:
+            for image_path in image_paths:
+                if not os.path.exists(image_path):
+                    raise FileNotFoundError(f"Image path does not exist: {image_path}")
+                embedding = extract_single_embedding(
+                    DeepFace,
+                    image_path,
+                    model_name,
+                    detector_backend,
+                    enforce_detection,
+                    align
                 )
-                if len(result) != 1:
-                    print(json.dumps({"success": False, "error": "Anh phai co dung 1 khuon mat"}))
-                    sys.exit(1)
-                
-                embedding = result[0]["embedding"]
-                print(json.dumps({
-                    "success": True,
-                    "embedding": embedding,
-                    "message": "Embedding extracted successfully using DeepFace represent"
-                }))
-            except Exception as e:
-                print(json.dumps({"success": False, "error": str(e)}))
-        else:
-            # Fallback simulated response
-            filename = os.path.basename(args.image)
-            if "noface" in filename:
-                print(json.dumps({"success": False, "error": "Anh phai co dung 1 khuon mat (Simulated fallback: no face)"}))
-                sys.exit(1)
-
-            parts = filename.split('_')
-            username = parts[0]
-
-            # Simple hash for username
-            seed_val = sum(ord(c) for c in username) % 10
-
-            # Define unit vector V_S
-            v_s = [0.0] * 512
-            block_start = seed_val * 50
-            for i in range(block_start, block_start + 50):
-                v_s[i] = 1.0 / (50.0 ** 0.5)
-
-            # Define unit vector V_orth (orthogonal to all S blocks, using indices 500-511)
-            v_orth = [0.0] * 512
-            for i in range(500, 512):
-                v_orth[i] = 1.0 / (12.0 ** 0.5)
-
-            # Check quality modifier
-            if "blurry" in filename or "dark" in filename:
-                # Cosine distance will be 0.75
-                alpha = 0.25
-                beta = (1.0 - alpha**2) ** 0.5
-                mock_embedding = [alpha * v_s[i] + beta * v_orth[i] for i in range(512)]
-            elif "shadow" in filename:
-                # Cosine distance will be 0.60
-                alpha = 0.40
-                beta = (1.0 - alpha**2) ** 0.5
-                mock_embedding = [alpha * v_s[i] + beta * v_orth[i] for i in range(512)]
-            else:
-                mock_embedding = v_s
+                results.append({"success": True, "embedding": embedding})
 
             print(json.dumps({
                 "success": True,
-                "embedding": mock_embedding,
-                "message": "Embedding extracted (Simulated fallback - DeepFace not installed on host)"
+                "results": results,
+                "message": "Batch embeddings extracted successfully using DeepFace"
             }))
+        except Exception as exc:
+            fail(str(exc))
 
     elif args.action == "verify":
         if not args.img1 or not args.img2:
-            print(json.dumps({"success": False, "error": "Missing --img1 or --img2 parameters"}))
-            sys.exit(1)
+            fail("Missing --img1 or --img2 parameters")
         if not os.path.exists(args.img1) or not os.path.exists(args.img2):
-            print(json.dumps({"success": False, "error": "One or both images do not exist"}))
-            sys.exit(1)
+            fail("One or both images do not exist")
 
-        if deepface_installed:
-            try:
-                result = DeepFace.verify(
-                    img1_path=args.img1, 
-                    img2_path=args.img2, 
-                    model_name=MODEL_NAME,
-                    detector_backend=DETECTOR_BACKEND,
-                    distance_metric='cosine',
-                    enforce_detection=ENFORCE_DETECTION,
-                    align=ALIGN
-                )
-                verified = result.get("verified", False)
-                distance = result.get("distance", 1.0)
-                
-                print(json.dumps({
-                    "success": True,
-                    "verified": verified,
-                    "distance": distance,
-                    "threshold": result.get("threshold", args.threshold),
-                    "message": "Verification completed with DeepFace"
-                }))
-            except Exception as e:
-                print(json.dumps({"success": False, "error": str(e)}))
-        else:
-            # Fallback simulated response
+        try:
+            result = verify_faces(
+                DeepFace,
+                args.img1,
+                args.img2,
+                model_name,
+                detector_backend,
+                enforce_detection,
+                align
+            )
             print(json.dumps({
                 "success": True,
-                "verified": True,
-                "distance": 0.15,
-                "threshold": args.threshold,
-                "message": "Verification completed (Simulated fallback - DeepFace not installed on host)"
+                "verified": result.get("verified", False),
+                "distance": result.get("distance", 1.0),
+                "threshold": result.get("threshold", args.threshold),
+                "message": "Verification completed with DeepFace"
             }))
+        except Exception as exc:
+            fail(str(exc))
+
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,8 +22,8 @@ public class UserService : IUserService
     private readonly IConfiguration _configuration;
 
     public UserService(
-        ViolationDbContext context, 
-        IWebHostEnvironment webHostEnvironment, 
+        ViolationDbContext context,
+        IWebHostEnvironment webHostEnvironment,
         IConfiguration configuration)
     {
         _context = context;
@@ -34,12 +36,7 @@ public class UserService : IUserService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
         if (user == null) return null;
 
-        if (PasswordHasher.VerifyPassword(password, user.PasswordHash))
-        {
-            return user;
-        }
-
-        return null;
+        return PasswordHasher.VerifyPassword(password, user.PasswordHash) ? user : null;
     }
 
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -49,7 +46,6 @@ public class UserService : IUserService
 
     public async Task<User?> RegisterAsync(User user, string plainPassword, string faceImageBase64, CancellationToken cancellationToken = default)
     {
-        // Check if username already exists
         var existingUser = await _context.Users.AnyAsync(u => u.Username == user.Username, cancellationToken);
         if (existingUser)
         {
@@ -60,7 +56,6 @@ public class UserService : IUserService
         user.PasswordHash = PasswordHasher.HashPassword(plainPassword);
         user.CreatedAtUtc = DateTime.UtcNow;
 
-        // Default manager key behavior
         if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase))
         {
             user.ManagerKey = string.IsNullOrEmpty(user.ManagerKey) ? "hieudeptraivcl" : user.ManagerKey;
@@ -71,80 +66,75 @@ public class UserService : IUserService
             user.IsKeyActivated = true;
         }
 
-        // Handle Biometrics
-        if (!string.IsNullOrEmpty(faceImageBase64))
+        if (string.IsNullOrWhiteSpace(faceImageBase64))
         {
-            var base64List = faceImageBase64.Split(new[] { ";base64split;" }, StringSplitOptions.RemoveEmptyEntries);
-            if (base64List.Length != 4)
+            throw new InvalidOperationException("Biometric data (face image) is required for registration.");
+        }
+
+        var base64List = faceImageBase64.Split(new[] { ";base64split;" }, StringSplitOptions.RemoveEmptyEntries);
+        if (base64List.Length != 4)
+        {
+            throw new InvalidOperationException("Cần đúng 4 ảnh đăng ký");
+        }
+
+        var tempFiles = new List<string>();
+        try
+        {
+            for (int i = 0; i < base64List.Length; i++)
             {
-                throw new InvalidOperationException("Cần đúng 4 ảnh đăng ký");
+                var tempFile = await SaveBase64ImageToTempAsync(
+                    base64List[i],
+                    $"{user.Username}_register_{i}_{Guid.NewGuid().ToString()[..8]}.jpg",
+                    cancellationToken);
+                tempFiles.Add(tempFile);
+            }
+
+            var batchResult = await RunDeepFaceRepresentBatchAsync(tempFiles);
+            if (!batchResult.Success || batchResult.Results.Count != tempFiles.Count)
+            {
+                throw new InvalidOperationException(batchResult.Error);
             }
 
             var embeddings = new List<List<double>>();
-
-            for (int i = 0; i < base64List.Length; i++)
+            for (int i = 0; i < batchResult.Results.Count; i++)
             {
-                var base64Data = base64List[i];
-                if (base64Data.Contains(","))
+                var result = batchResult.Results[i];
+                if (!result.Success || result.Embedding == null || result.Embedding.Count == 0)
                 {
-                    base64Data = base64Data.Split(',')[1];
+                    throw new InvalidOperationException($"Ảnh thứ {i + 1} không hợp lệ hoặc không có đúng 1 khuôn mặt: {result.Error}");
                 }
-                base64Data = base64Data.Replace(" ", "+");
-
-                var tempFile = Path.Combine(Path.GetTempPath(), $"{user.Username}_register_{i}_{Guid.NewGuid().ToString().Substring(0, 8)}.jpg");
-                try
-                {
-                    var imageBytes = Convert.FromBase64String(base64Data);
-                    await File.WriteAllBytesAsync(tempFile, imageBytes, cancellationToken);
-
-                    // Extract embedding using represent action
-                    var representResult = await RunDeepFaceRepresentAsync(tempFile);
-                    if (!representResult.Success || representResult.Embedding == null || representResult.Embedding.Count == 0)
-                    {
-                        throw new InvalidOperationException($"Ảnh thứ {i + 1} không hợp lệ hoặc không có đúng 1 khuôn mặt: {representResult.Error}");
-                    }
-
-                    embeddings.Add(representResult.Embedding);
-                }
-                finally
-                {
-                    if (File.Exists(tempFile))
-                    {
-                        File.Delete(tempFile);
-                    }
-                }
+                embeddings.Add(result.Embedding);
             }
 
-            // Save user
             _context.Users.Add(user);
             await _context.SaveChangesAsync(cancellationToken);
 
-            // Save embeddings
             foreach (var emb in embeddings)
             {
-                var userEmbedding = new UserFaceEmbedding
+                _context.UserFaceEmbeddings.Add(new UserFaceEmbedding
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
                     EmbeddingJson = JsonSerializer.Serialize(emb),
                     CreatedAtUtc = DateTime.UtcNow
-                };
-                _context.UserFaceEmbeddings.Add(userEmbedding);
+                });
             }
+
             user.FaceImagePath = "embeddings_saved";
             await _context.SaveChangesAsync(cancellationToken);
+            return user;
         }
-        else
+        finally
         {
-            throw new InvalidOperationException("Biometric data (face image) is required for registration.");
+            DeleteTempFiles(tempFiles);
         }
-
-        return user;
     }
 
     public async Task<bool> ActivateManagerKeyAsync(string username, string key, CancellationToken cancellationToken = default)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username && u.Role == "Manager", cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(
+            u => u.Username == username && u.Role == "Manager",
+            cancellationToken);
         if (user == null) return false;
 
         if (user.ManagerKey == key)
@@ -168,58 +158,56 @@ public class UserService : IUserService
             return false;
         }
 
-        var newEmbeddings = new List<List<double>>();
-        for (int i = 0; i < base64List.Length; i++)
+        var tempFiles = new List<string>();
+        try
         {
-            var base64Data = base64List[i];
-            if (base64Data.Contains(","))
+            for (int i = 0; i < base64List.Length; i++)
             {
-                base64Data = base64Data.Split(',')[1];
+                var tempFile = await SaveBase64ImageToTempAsync(
+                    base64List[i],
+                    $"{user.Username}_update_{i}_{Guid.NewGuid().ToString()[..8]}.jpg",
+                    cancellationToken);
+                tempFiles.Add(tempFile);
             }
-            base64Data = base64Data.Replace(" ", "+");
 
-            var tempFile = Path.Combine(Path.GetTempPath(), $"{user.Username}_update_{i}_{Guid.NewGuid().ToString().Substring(0, 8)}.jpg");
-            try
+            var batchResult = await RunDeepFaceRepresentBatchAsync(tempFiles);
+            if (!batchResult.Success || batchResult.Results.Count != tempFiles.Count)
             {
-                var imageBytes = Convert.FromBase64String(base64Data);
-                await File.WriteAllBytesAsync(tempFile, imageBytes, cancellationToken);
+                return false;
+            }
 
-                var representResult = await RunDeepFaceRepresentAsync(tempFile);
-                if (!representResult.Success || representResult.Embedding == null || representResult.Embedding.Count == 0)
+            var newEmbeddings = new List<List<double>>();
+            foreach (var result in batchResult.Results)
+            {
+                if (!result.Success || result.Embedding == null || result.Embedding.Count == 0)
                 {
                     return false;
                 }
-                newEmbeddings.Add(representResult.Embedding);
+                newEmbeddings.Add(result.Embedding);
             }
-            finally
+
+            var oldEmbeddings = await _context.UserFaceEmbeddings.Where(e => e.UserId == user.Id).ToListAsync(cancellationToken);
+            _context.UserFaceEmbeddings.RemoveRange(oldEmbeddings);
+
+            foreach (var emb in newEmbeddings)
             {
-                if (File.Exists(tempFile))
+                _context.UserFaceEmbeddings.Add(new UserFaceEmbedding
                 {
-                    File.Delete(tempFile);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    EmbeddingJson = JsonSerializer.Serialize(emb),
+                    CreatedAtUtc = DateTime.UtcNow
+                });
             }
+
+            user.FaceImagePath = "embeddings_saved";
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
         }
-
-        // Delete old embeddings
-        var oldEmbeddings = await _context.UserFaceEmbeddings.Where(e => e.UserId == user.Id).ToListAsync(cancellationToken);
-        _context.UserFaceEmbeddings.RemoveRange(oldEmbeddings);
-
-        // Add new embeddings
-        foreach (var emb in newEmbeddings)
+        finally
         {
-            var userEmbedding = new UserFaceEmbedding
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                EmbeddingJson = JsonSerializer.Serialize(emb),
-                CreatedAtUtc = DateTime.UtcNow
-            };
-            _context.UserFaceEmbeddings.Add(userEmbedding);
+            DeleteTempFiles(tempFiles);
         }
-
-        user.FaceImagePath = "embeddings_saved";
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
     }
 
     public async Task<bool> VerifyBiometricsAsync(string username, string faceImageBase64, CancellationToken cancellationToken = default)
@@ -227,7 +215,6 @@ public class UserService : IUserService
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
         if (user == null) return false;
 
-        // Fetch stored embeddings
         var storedEmbeddings = await _context.UserFaceEmbeddings
             .Where(e => e.UserId == user.Id)
             .Select(e => e.EmbeddingJson)
@@ -238,7 +225,6 @@ public class UserService : IUserService
             return false;
         }
 
-        // Write probe image to a temp file
         string prefix = username;
         if (faceImageBase64.Contains("differentuser") || faceImageBase64.Contains("wrongperson"))
         {
@@ -253,40 +239,13 @@ public class UserService : IUserService
             prefix = $"{username}_shadow";
         }
 
-        var tempFile = Path.Combine(Path.GetTempPath(), $"{prefix}_login_{Guid.NewGuid().ToString().Substring(0, 8)}.jpg");
-        var base64Data = faceImageBase64;
-        if (base64Data.Contains(";wrongperson;"))
-        {
-            base64Data = base64Data.Replace(";wrongperson;", "");
-        }
-        if (base64Data.Contains(";differentuser;"))
-        {
-            base64Data = base64Data.Replace(";differentuser;", "");
-        }
-        if (base64Data.Contains(";blurry;"))
-        {
-            base64Data = base64Data.Replace(";blurry;", "");
-        }
-        if (base64Data.Contains(";dark;"))
-        {
-            base64Data = base64Data.Replace(";dark;", "");
-        }
-        if (base64Data.Contains(";shadow;"))
-        {
-            base64Data = base64Data.Replace(";shadow;", "");
-        }
-        if (base64Data.Contains(","))
-        {
-            base64Data = base64Data.Split(',')[1];
-        }
-        base64Data = base64Data.Replace(" ", "+");
+        var tempFile = await SaveBase64ImageToTempAsync(
+            SanitizeProbeBase64(faceImageBase64),
+            $"{prefix}_login_{Guid.NewGuid().ToString()[..8]}.jpg",
+            cancellationToken);
 
         try
         {
-            var imageBytes = Convert.FromBase64String(base64Data);
-            await File.WriteAllBytesAsync(tempFile, imageBytes, cancellationToken);
-
-            // Get embedding of login image
             var representResult = await RunDeepFaceRepresentAsync(tempFile);
             if (!representResult.Success || representResult.Embedding == null || representResult.Embedding.Count == 0)
             {
@@ -295,10 +254,10 @@ public class UserService : IUserService
             }
 
             var loginEmbedding = representResult.Embedding.ToArray();
-
-            // Load active threshold
-            var activeDeepfaceModel = await _context.AiModels.FirstOrDefaultAsync(m => m.Type == "Deepface" && m.IsActive, cancellationToken);
-            double threshold = activeDeepfaceModel != null ? (double)activeDeepfaceModel.ConfThreshold : 0.68;
+            var activeDeepfaceModel = await _context.AiModels.FirstOrDefaultAsync(
+                m => m.Type == "Deepface" && m.IsActive,
+                cancellationToken);
+            var threshold = activeDeepfaceModel != null ? (double)activeDeepfaceModel.ConfThreshold : 0.75;
 
             int matchedCount = 0;
             var distances = new List<double>();
@@ -308,19 +267,16 @@ public class UserService : IUserService
                 var storedEmb = JsonSerializer.Deserialize<List<double>>(embJson);
                 if (storedEmb == null) continue;
 
-                double distance = CosineDistance(loginEmbedding, storedEmb.ToArray());
+                var distance = CosineDistance(loginEmbedding, storedEmb.ToArray());
                 distances.Add(distance);
-
-                bool isMatch = distance <= threshold;
-                if (isMatch)
+                if (distance <= threshold)
                 {
                     matchedCount++;
                 }
             }
 
             Console.WriteLine($"[DEBUG BIOMETRICS] User: {username}, Matches: {matchedCount}/4, Distances: {string.Join(", ", distances.Select(d => d.ToString("F4")))}, Threshold: {threshold:F4}");
-
-            return matchedCount >= 2; // MIN_MATCH_COUNT = 2
+            return matchedCount >= 2;
         }
         finally
         {
@@ -334,7 +290,9 @@ public class UserService : IUserService
     private static double CosineDistance(double[] vector1, double[] vector2)
     {
         if (vector1.Length != vector2.Length)
+        {
             throw new ArgumentException("Vectors must be of the same length.");
+        }
 
         double dotProduct = 0.0;
         double normA = 0.0;
@@ -348,21 +306,50 @@ public class UserService : IUserService
         }
 
         if (normA == 0.0 || normB == 0.0)
+        {
             return 1.0;
+        }
 
-        double similarity = dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
+        var similarity = dotProduct / (Math.Sqrt(normA) * Math.Sqrt(normB));
         return 1.0 - similarity;
+    }
+
+    private async Task<string> SaveBase64ImageToTempAsync(string base64Data, string fileName, CancellationToken cancellationToken)
+    {
+        if (base64Data.Contains(","))
+        {
+            base64Data = base64Data.Split(',')[1];
+        }
+
+        base64Data = base64Data.Replace(" ", "+");
+        var tempFile = Path.Combine(Path.GetTempPath(), fileName);
+        var imageBytes = Convert.FromBase64String(base64Data);
+        await File.WriteAllBytesAsync(tempFile, imageBytes, cancellationToken);
+        return tempFile;
+    }
+
+    private static string SanitizeProbeBase64(string faceImageBase64)
+    {
+        var base64Data = faceImageBase64
+            .Replace(";wrongperson;", "", StringComparison.Ordinal)
+            .Replace(";differentuser;", "", StringComparison.Ordinal)
+            .Replace(";blurry;", "", StringComparison.Ordinal)
+            .Replace(";dark;", "", StringComparison.Ordinal)
+            .Replace(";shadow;", "", StringComparison.Ordinal);
+
+        return base64Data;
     }
 
     private async Task<DeepFaceRepresentResult> RunDeepFaceRepresentAsync(string imagePath)
     {
         var pythonExe = _configuration["YoloModel:PythonExecutable"] ?? "python";
         var scriptPath = Path.Combine(_webHostEnvironment.ContentRootPath, "ML/scripts/run_deepface.py");
+        var arguments = BuildDeepFaceArguments($"--action represent --image \"{imagePath}\"");
 
         var startInfo = new ProcessStartInfo
         {
             FileName = pythonExe,
-            Arguments = $"\"{scriptPath}\" --action represent --image \"{imagePath}\"",
+            Arguments = $"\"{scriptPath}\" {arguments}",
             WorkingDirectory = _webHostEnvironment.ContentRootPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -377,19 +364,126 @@ public class UserService : IUserService
         var error = await process.StandardError.ReadToEndAsync(cancellationToken: default);
         await process.WaitForExitAsync(cancellationToken: default);
 
+        DeepFaceRepresentResult? parsedOutput = null;
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            try
+            {
+                parsedOutput = JsonSerializer.Deserialize<DeepFaceRepresentResult>(
+                    output,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch
+            {
+                parsedOutput = null;
+            }
+        }
+
         if (process.ExitCode != 0)
         {
-            return new DeepFaceRepresentResult { Success = false, Error = error };
+            return new DeepFaceRepresentResult
+            {
+                Success = false,
+                Error = !string.IsNullOrWhiteSpace(parsedOutput?.Error)
+                    ? parsedOutput.Error
+                    : (!string.IsNullOrWhiteSpace(error) ? error : "DeepFace script execution failed.")
+            };
         }
+
+        return parsedOutput ?? new DeepFaceRepresentResult
+        {
+            Success = false,
+            Error = "Failed to deserialize output."
+        };
+    }
+
+    private async Task<DeepFaceBatchRepresentResult> RunDeepFaceRepresentBatchAsync(IReadOnlyCollection<string> imagePaths)
+    {
+        var pythonExe = _configuration["YoloModel:PythonExecutable"] ?? "python";
+        var scriptPath = Path.Combine(_webHostEnvironment.ContentRootPath, "ML/scripts/run_deepface.py");
+        var imagesFile = Path.Combine(Path.GetTempPath(), $"deepface_batch_{Guid.NewGuid():N}.txt");
+        await File.WriteAllLinesAsync(imagesFile, imagePaths, new UTF8Encoding(false), CancellationToken.None);
 
         try
         {
-            return JsonSerializer.Deserialize<DeepFaceRepresentResult>(output, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                   ?? new DeepFaceRepresentResult { Success = false, Error = "Failed to deserialize output." };
+            var arguments = BuildDeepFaceArguments($"--action represent_batch --images-file \"{imagesFile}\"");
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = pythonExe,
+                Arguments = $"\"{scriptPath}\" {arguments}",
+                WorkingDirectory = _webHostEnvironment.ContentRootPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+
+            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken: default);
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken: default);
+            await process.WaitForExitAsync(cancellationToken: default);
+
+            DeepFaceBatchRepresentResult? parsedOutput = null;
+            if (!string.IsNullOrWhiteSpace(output))
+            {
+                try
+                {
+                    parsedOutput = JsonSerializer.Deserialize<DeepFaceBatchRepresentResult>(
+                        output,
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+                catch
+                {
+                    parsedOutput = null;
+                }
+            }
+
+            if (process.ExitCode != 0)
+            {
+                return new DeepFaceBatchRepresentResult
+                {
+                    Success = false,
+                    Error = !string.IsNullOrWhiteSpace(parsedOutput?.Error)
+                        ? parsedOutput.Error
+                        : (!string.IsNullOrWhiteSpace(error) ? error : "DeepFace batch script execution failed.")
+                };
+            }
+
+            return parsedOutput ?? new DeepFaceBatchRepresentResult
+            {
+                Success = false,
+                Error = "Failed to deserialize batch output."
+            };
         }
-        catch (Exception ex)
+        finally
         {
-            return new DeepFaceRepresentResult { Success = false, Error = ex.Message };
+            if (File.Exists(imagesFile))
+            {
+                File.Delete(imagesFile);
+            }
+        }
+    }
+
+    private string BuildDeepFaceArguments(string baseArguments)
+    {
+        var modelName = _configuration["DeepFace:ModelName"] ?? "ArcFace";
+        var detectorBackend = _configuration["DeepFace:DetectorBackend"] ?? "opencv";
+        var align = (_configuration["DeepFace:Align"] ?? "true").ToLowerInvariant();
+        var enforceDetection = (_configuration["DeepFace:EnforceDetection"] ?? "true").ToLowerInvariant();
+
+        return $"{baseArguments} --model-name \"{modelName}\" --detector-backend \"{detectorBackend}\" --align {align} --enforce-detection {enforceDetection}";
+    }
+
+    private static void DeleteTempFiles(IEnumerable<string> tempFiles)
+    {
+        foreach (var tempFile in tempFiles)
+        {
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
         }
     }
 
@@ -397,6 +491,13 @@ public class UserService : IUserService
     {
         public bool Success { get; set; }
         public List<double> Embedding { get; set; } = new();
+        public string Error { get; set; } = string.Empty;
+    }
+
+    private class DeepFaceBatchRepresentResult
+    {
+        public bool Success { get; set; }
+        public List<DeepFaceRepresentResult> Results { get; set; } = new();
         public string Error { get; set; } = string.Empty;
     }
 }
