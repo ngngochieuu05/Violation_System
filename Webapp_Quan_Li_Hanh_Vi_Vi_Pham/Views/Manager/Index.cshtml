@@ -5,39 +5,46 @@
 
 <div class="space-y-6">
     <div class="system-card overflow-hidden">
-        <div class="bg-gradient-to-r from-red-600 via-red-700 to-rose-700 px-8 py-8 text-white relative overflow-hidden rounded-t-[8px]">
+        <div class="bg-gradient-to-r from-red-600 via-red-700 to-rose-700 px-8 py-10 text-white relative">
             <div class="absolute w-64 h-64 bg-white/10 rounded-full blur-2xl -top-20 -right-20"></div>
             <div class="relative z-10">
                 <span class="px-3 py-1 bg-white/20 text-white text-xs font-semibold uppercase tracking-wider rounded-full backdrop-blur-sm">Quản lý Doanh nghiệp</span>
-                <h1 class="text-2xl font-bold mt-3">Chào mừng bạn trở lại, @User.FindFirst("FullName")?.Value</h1>
+                <h1 class="text-3xl font-bold mt-3">Chào mừng bạn trở lại, @User.FindFirst("FullName")?.Value</h1>
                 <p class="text-red-100 text-sm mt-1">Hệ thống đã xác nhận phiên đăng nhập và kích hoạt khóa bảo mật thành công.</p>
             </div>
         </div>
 
-        <div class="p-6">
-            <div class="flex items-center bg-green-50 rounded-[8px] p-4 border border-green-100 gap-4 mb-6">
-                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white text-lg flex-shrink-0">
+        <div class="p-8">
+            <div class="flex items-center bg-green-50 rounded-[8px] p-6 border border-green-100 gap-4 mb-6">
+                <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white text-2xl flex-shrink-0 animate-bounce">
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-green-900 text-sm">Đăng nhập & Kích hoạt thành công</h3>
-                    <p class="text-xs text-green-700 mt-0.5">Tài khoản quản lý của bạn đã được liên kết với khóa bản quyền và sẵn sàng hoạt động. Mọi luồng xử lý và dữ liệu đã được cấu hình đồng bộ.</p>
+                    <h3 class="font-bold text-green-900 text-lg">Đăng nhập & Kích hoạt thành công</h3>
+                    <p class="text-sm text-green-700 mt-1">Tài khoản quản lý của bạn đã được liên kết với khóa bản quyền và sẵn sàng hoạt động. Mọi luồng xử lý và dữ liệu đã được cấu hình đồng bộ.</p>
                 </div>
             </div>
 
+            <h4 class="font-bold text-slate-900 mb-4 mt-8">Lối tắt chức năng</h4>
             <div class="grid grid-cols-3 gap-6">
-                <div class="system-card p-5 border-slate-200">
-                    <p class="text-xs text-slate-500 font-semibold mb-1">Phiên làm việc hôm nay</p>
-                    <p class="text-2xl font-bold text-slate-900">124 <span class="text-xs text-green-500 font-normal ml-1">Đang hoạt động</span></p>
-                </div>
-                <div class="system-card p-5 border-slate-200">
-                    <p class="text-xs text-slate-500 font-semibold mb-1">Đơn cần xét duyệt</p>
-                    <p class="text-2xl font-bold text-slate-900">8 <span class="text-xs text-red-500 font-normal ml-1">Cần xử lý ngay</span></p>
-                </div>
-                <div class="system-card p-5 border-slate-200">
-                    <p class="text-xs text-slate-500 font-semibold mb-1">Biểu mẫu hệ thống</p>
-                    <p class="text-2xl font-bold text-slate-900">12 <span class="text-xs text-slate-400 font-normal ml-1">Sẵn sàng</span></p>
-                </div>
+                <a href="@Url.Action("WorkSessions")" class="system-card p-6 flex items-center hover:border-red-300 transition">
+                    <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center text-xl mr-4">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div><h4 class="font-bold text-slate-900">Phiên làm việc</h4><p class="text-xs text-slate-500">Chấm công & Vi phạm</p></div>
+                </a>
+                <a href="@Url.Action("Approvals")" class="system-card p-6 flex items-center hover:border-red-300 transition">
+                    <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center text-xl mr-4">
+                        <i class="fa-solid fa-file-signature"></i>
+                    </div>
+                    <div><h4 class="font-bold text-slate-900">Xét duyệt</h4><p class="text-xs text-slate-500">Đơn xin nghỉ & Tin nhắn</p></div>
+                </a>
+                <a href="@Url.Action("Forms")" class="system-card p-6 flex items-center hover:border-red-300 transition">
+                    <div class="w-12 h-12 rounded-full bg-slate-50 text-slate-600 flex items-center justify-center text-xl mr-4">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div><h4 class="font-bold text-slate-900">Biểu mẫu</h4><p class="text-xs text-slate-500">Kho tài liệu hệ thống</p></div>
+                </a>
             </div>
         </div>
     </div>
