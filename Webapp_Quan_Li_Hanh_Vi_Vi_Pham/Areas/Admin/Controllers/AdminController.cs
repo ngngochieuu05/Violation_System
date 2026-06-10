@@ -13,6 +13,7 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Authorize(Roles = "Admin")]
+[Route("Admin")] // Ép gốc của Controller này là /Admin
 public class AdminController : Controller
 {
     private readonly IModelSettingService _modelSettingService;
@@ -24,10 +25,12 @@ public class AdminController : Controller
         _context = context;
     }
 
+    // 1. HÀM CHÍNH: Chỉ chấp nhận URL sạch là "/Admin"
+    [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var activeSetting = await _modelSettingService.GetActiveSettingAsync(cancellationToken);
-        
+
         var managers = await _context.Users
             .Where(u => u.Role == "Manager")
             .OrderByDescending(u => u.CreatedAtUtc)
@@ -39,14 +42,27 @@ public class AdminController : Controller
 
         ViewBag.Managers = managers;
         ViewBag.AiModels = aiModels;
-        return View(activeSetting);
+
+        // Trả về thẳng file Index.cshtml
+        return View("Index", activeSetting);
     }
 
-    [HttpPost]
+    // 2. KẺ HỦY DIỆT "INDEX": Bất kỳ luồng nào trỏ tới /Admin/Index sẽ bị đá văng về /Admin
+    [HttpGet("Index")]
+    public IActionResult KillIndex()
+    {
+        return Redirect("/Admin");
+    }
+
+    /* =======================================================
+       CÁC HÀM XỬ LÝ FORM BÊN DƯỚI GIỮ NGUYÊN HOÀN TOÀN 
+       ======================================================= */
+
+    [HttpPost("[action]")]
     public async Task<IActionResult> UpdateModelSettings(
-        string yoloModelPath, 
-        decimal yoloConfThreshold, 
-        decimal yoloIouThreshold, 
+        string yoloModelPath,
+        decimal yoloConfThreshold,
+        decimal yoloIouThreshold,
         decimal deepfaceConfThreshold,
         CancellationToken cancellationToken)
     {
@@ -60,10 +76,10 @@ public class AdminController : Controller
 
         await _modelSettingService.UpdateSettingAsync(setting, cancellationToken);
         TempData["SuccessMessage"] = "Cập nhật cấu hình mô hình AI thành công!";
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> UpdateManagerKey(Guid managerId, string newKey, CancellationToken cancellationToken)
     {
         var manager = await _context.Users.FindAsync(new object[] { managerId }, cancellationToken);
@@ -77,10 +93,10 @@ public class AdminController : Controller
         {
             TempData["ErrorMessage"] = "Không tìm thấy tài khoản quản lý.";
         }
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> ResetManagerActivation(Guid managerId, CancellationToken cancellationToken)
     {
         var manager = await _context.Users.FindAsync(new object[] { managerId }, cancellationToken);
@@ -90,16 +106,16 @@ public class AdminController : Controller
             await _context.SaveChangesAsync(cancellationToken);
             TempData["SuccessMessage"] = $"Đã reset trạng thái kích hoạt cho {manager.FullName}!";
         }
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, decimal confThreshold, decimal iouThreshold, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type) || string.IsNullOrEmpty(modelPath))
         {
             TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin mô hình.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
         var newModel = new AiModel
@@ -110,7 +126,7 @@ public class AdminController : Controller
             ModelPath = modelPath,
             ConfThreshold = confThreshold,
             IouThreshold = iouThreshold,
-            IsActive = false, // starts as inactive, user can toggle active
+            IsActive = false,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -118,29 +134,29 @@ public class AdminController : Controller
         await _context.SaveChangesAsync(cancellationToken);
 
         TempData["SuccessMessage"] = $"Đã thêm mô hình {name} thành công!";
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> EditAiModel(
-        Guid id, 
-        string name, 
-        string modelPath, 
-        decimal confThreshold, 
-        decimal iouThreshold, 
+        Guid id,
+        string name,
+        string modelPath,
+        decimal confThreshold,
+        decimal iouThreshold,
         CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(modelPath))
         {
             TempData["ErrorMessage"] = "Vui lòng điền đầy đủ tên và đường dẫn mô hình.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
         model.Name = name;
@@ -150,23 +166,21 @@ public class AdminController : Controller
 
         await _context.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = $"Đã cập nhật thông số mô hình {name} thành công!";
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> ToggleAiModel(Guid id, CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
-        // Toggle active status
         if (!model.IsActive)
         {
-            // Deactivate other models of the SAME type
             var otherActiveModels = await _context.AiModels
                 .Where(m => m.Type == model.Type && m.IsActive && m.Id != model.Id)
                 .ToListAsync(cancellationToken);
@@ -186,29 +200,29 @@ public class AdminController : Controller
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 
-    [HttpPost]
+    [HttpPost("[action]")]
     public async Task<IActionResult> DeleteAiModel(Guid id, CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
         if (model.IsActive)
         {
             TempData["ErrorMessage"] = "Không thể xóa mô hình đang ở trạng thái kích hoạt.";
-            return RedirectToAction("Index");
+            return Redirect("/Admin");
         }
 
         _context.AiModels.Remove(model);
         await _context.SaveChangesAsync(cancellationToken);
 
         TempData["SuccessMessage"] = $"Đã xóa mô hình {model.Name} thành công!";
-        return RedirectToAction("Index");
+        return Redirect("/Admin");
     }
 }
