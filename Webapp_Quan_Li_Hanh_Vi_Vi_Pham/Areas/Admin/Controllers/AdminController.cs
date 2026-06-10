@@ -94,7 +94,7 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, decimal confThreshold, decimal iouThreshold, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, string confThreshold, string iouThreshold, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type) || string.IsNullOrEmpty(modelPath))
         {
@@ -102,14 +102,17 @@ public class AdminController : Controller
             return RedirectToAction("Index");
         }
 
+        decimal.TryParse(confThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedConf);
+        decimal.TryParse(iouThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedIou);
+
         var newModel = new AiModel
         {
             Id = Guid.NewGuid(),
             Name = name,
             Type = type,
             ModelPath = modelPath,
-            ConfThreshold = confThreshold,
-            IouThreshold = iouThreshold,
+            ConfThreshold = parsedConf,
+            IouThreshold = parsedIou,
             IsActive = false, // starts as inactive, user can toggle active
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -126,8 +129,8 @@ public class AdminController : Controller
         Guid id, 
         string name, 
         string modelPath, 
-        decimal confThreshold, 
-        decimal iouThreshold, 
+        string confThreshold, 
+        string iouThreshold, 
         CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
@@ -143,10 +146,13 @@ public class AdminController : Controller
             return RedirectToAction("Index");
         }
 
+        decimal.TryParse(confThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedConf);
+        decimal.TryParse(iouThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedIou);
+
         model.Name = name;
         model.ModelPath = modelPath;
-        model.ConfThreshold = confThreshold;
-        model.IouThreshold = iouThreshold;
+        model.ConfThreshold = parsedConf;
+        model.IouThreshold = parsedIou;
 
         await _context.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = $"Đã cập nhật thông số mô hình {name} thành công!";

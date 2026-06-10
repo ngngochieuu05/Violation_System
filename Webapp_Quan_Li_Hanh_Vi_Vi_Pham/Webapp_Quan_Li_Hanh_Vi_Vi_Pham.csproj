@@ -13,6 +13,7 @@
   <ItemGroup>
     <Folder Include="Controllers\Employee\" />
     <Folder Include="Controllers\Manager\" />
+    <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 
 </Project>
