@@ -290,6 +290,43 @@ public class UserService : IUserService
         }
     }
 
+    public async Task<bool> HasBiometricRegistrationAsync(string username, CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return await _context.UserFaceEmbeddings
+            .AsNoTracking()
+            .AnyAsync(e => e.UserId == user.Id, cancellationToken);
+    }
+
+    public async Task<bool> ChangePasswordAsync(
+        Guid userId,
+        string oldPassword,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        if (!PasswordHasher.VerifyPassword(oldPassword, user.PasswordHash))
+        {
+            return false;
+        }
+
+        user.PasswordHash = PasswordHasher.HashPassword(newPassword);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     private static double CosineDistance(double[] vector1, double[] vector2)
     {
         if (vector1.Length != vector2.Length)

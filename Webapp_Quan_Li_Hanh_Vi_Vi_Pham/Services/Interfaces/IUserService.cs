@@ -13,4 +13,6 @@ public interface IUserService
     Task<bool> ActivateManagerKeyAsync(string username, string key, CancellationToken cancellationToken = default);
     Task<bool> UpdateBiometricImageAsync(Guid userId, string faceImageBase64, CancellationToken cancellationToken = default);
     Task<bool> VerifyBiometricsAsync(string username, string faceImageBase64, CancellationToken cancellationToken = default);
+    Task<bool> HasBiometricRegistrationAsync(string username, CancellationToken cancellationToken = default);
+    Task<bool> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword, CancellationToken cancellationToken = default);
 }

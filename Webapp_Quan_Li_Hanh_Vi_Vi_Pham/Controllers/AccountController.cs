@@ -176,6 +176,54 @@ public class AccountController : Controller
         return Json(new { success = true, message = "Xác thực khuôn mặt thành công." });
     }
 
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> ChangePassword(string oldPassword, string newPassword, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
+        }
+
+        if (string.IsNullOrWhiteSpace(oldPassword) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            return Json(new { success = false, message = "Vui lòng nhập đầy đủ mật khẩu cũ và mới." });
+        }
+
+        var success = await _userService.ChangePasswordAsync(userId, oldPassword, newPassword, cancellationToken);
+        if (!success)
+        {
+            return Json(new { success = false, message = "Mật khẩu cũ không đúng." });
+        }
+
+        return Json(new { success = true, message = "Đổi mật khẩu thành công." });
+    }
+
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> UpdateFace(string faceImagesBase64, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
+        }
+
+        if (string.IsNullOrWhiteSpace(faceImagesBase64))
+        {
+            return Json(new { success = false, message = "Thiếu dữ liệu khuôn mặt." });
+        }
+
+        var success = await _userService.UpdateBiometricImageAsync(userId, faceImagesBase64, cancellationToken);
+        if (!success)
+        {
+            return Json(new { success = false, message = "Cập nhật dữ liệu khuôn mặt thất bại. Đảm bảo ảnh rõ ràng và chỉ có 1 khuôn mặt." });
+        }
+
+        return Json(new { success = true, message = "Cập nhật dữ liệu khuôn mặt thành công." });
+    }
+
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -185,6 +233,27 @@ public class AccountController : Controller
     public IActionResult AccessDenied()
     {
         return View();
+    }
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> BiometricRegistrationStatus(CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return Json(new { success = false, hasBiometricRegistration = false, message = "Thiếu thông tin người dùng." });
+        }
+
+        var hasBiometricRegistration = await _userService.HasBiometricRegistrationAsync(username, cancellationToken);
+        return Json(new
+        {
+            success = true,
+            hasBiometricRegistration,
+            message = hasBiometricRegistration
+                ? "Đã có dữ liệu sinh trắc học."
+                : "Bạn chưa đăng ký sinh trắc học. Vui lòng cập nhật ở Cài đặt hồ sơ."
+        });
     }
 
     private async Task SignInUserAsync(User user)

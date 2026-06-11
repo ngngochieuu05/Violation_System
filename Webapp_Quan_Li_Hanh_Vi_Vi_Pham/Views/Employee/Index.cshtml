@@ -148,6 +148,9 @@
             <button type="button" data-tab-trigger="attendance" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
                 <i class="fa-solid fa-fingerprint w-5 text-center mr-3"></i>Chấm công
             </button>
+            <button type="button" data-tab-trigger="schedule" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
+                <i class="fa-solid fa-calendar-check w-5 text-center mr-3"></i>Lịch làm việc
+            </button>
             <button type="button" data-tab-trigger="messages" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
                 <i class="fa-solid fa-comments w-5 text-center mr-3"></i>Tin nhắn
             </button>
@@ -170,7 +173,7 @@
     <!-- Main Content Wrapper -->
     <div class="dashboard-main relative overflow-hidden">
         <div class="absolute inset-0 -z-10 pointer-events-none">
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm opacity-10" style="background-image: url('@Url.Content("~/images/anh_nen.png")');"></div>
+            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm opacity-10" style="background-image: url('@Url.Content("~/images/anh_nen123.png")');"></div>
             <div class="absolute inset-0 bg-gradient-to-br from-slate-50/80 via-white/60 to-slate-100/80"></div>
         </div>
         
@@ -248,7 +251,7 @@
         </header>
 
         <!-- Main Content Area -->
-        <main class="dashboard-content relative z-[1]" style="background: transparent;">
+        <main class="dashboard-content relative" style="background: transparent;">
             <div class="max-w-5xl mx-auto space-y-8 pb-12">
                 <!-- Hero Section for Home Tab -->
                 <section data-tab-panel="home" data-home-hero class="employee-tab-panel relative overflow-hidden rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white/60 px-6 py-8 text-black shadow-xl shadow-slate-200/50 sm:px-8 lg:px-10">
@@ -292,6 +295,7 @@
                 </section>
 
                 <partial name="_HomeTab" />
+                <partial name="_ScheduleTab" />
                 <partial name="_AttendanceTab" />
                 <partial name="_MessagesTab" />
                 <partial name="_RequestsTab" />
@@ -508,6 +512,62 @@
                     });
                 });
                 observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+            }
+            
+            // Attendance Detail Drag & Teleport Logic (Inline to bypass caching)
+            const detailModal = document.querySelector('[data-attendance-detail-modal]');
+            const detailContent = document.querySelector('[data-attendance-detail-content]');
+            const detailHeader = document.querySelector('[data-attendance-detail-header]');
+            
+            if (detailModal) document.body.appendChild(detailModal);
+            
+            if (detailContent && detailHeader) {
+                let isDraggingAtt = false;
+                let currentXAtt = 0, currentYAtt = 0, initialXAtt = 0, initialYAtt = 0;
+                let xOffsetAtt = 0, yOffsetAtt = 0;
+
+                detailHeader.style.cursor = 'grab';
+                detailHeader.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('[data-attendance-detail-close]')) return;
+                    initialXAtt = e.clientX - xOffsetAtt;
+                    initialYAtt = e.clientY - yOffsetAtt;
+                    
+                    if (e.target === detailHeader || detailHeader.contains(e.target)) {
+                        isDraggingAtt = true;
+                        detailContent.style.transition = 'none';
+                        detailHeader.style.cursor = 'grabbing';
+                    }
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDraggingAtt) {
+                        e.preventDefault();
+                        currentXAtt = e.clientX - initialXAtt;
+                        currentYAtt = e.clientY - initialYAtt;
+                        xOffsetAtt = currentXAtt;
+                        yOffsetAtt = currentYAtt;
+                        detailContent.style.transform = `translate3d(${currentXAtt}px, ${currentYAtt}px, 0)`;
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDraggingAtt) {
+                        isDraggingAtt = false;
+                        detailContent.style.transition = '';
+                        detailHeader.style.cursor = 'grab';
+                    }
+                });
+
+                const observerAtt = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.target.classList.contains('hidden')) {
+                            xOffsetAtt = 0;
+                            yOffsetAtt = 0;
+                            detailContent.style.transform = `translate3d(0, 0, 0)`;
+                        }
+                    });
+                });
+                observerAtt.observe(detailModal, { attributes: true, attributeFilter: ['class'] });
             }
         }
     });
