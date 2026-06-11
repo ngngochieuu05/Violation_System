@@ -1,49 +1,119 @@
-# File Tree: Webapp_System
+# File Tree: Webapp_Quan_Li_Hanh_Vi_Vi_Pham
 
-**Generated:** 6/8/2026, 8:21:35 AM
-**Root Path:** `d:\Web\TH\Webapp_System`
+**Generated:** 6/10/2026, 4:57:35 PM
+**Root Path:** `d:\WEB\project\Webapp_Quan_Li_Hanh_Vi_Vi_Pham`
 
 ```
-├── 📁 Webapp_Quan_Li_Hanh_Vi_Vi_Pham
-│   ├── 📁 Controllers
-│   │   └── 📄 HomeController.cs
-│   ├── 📁 Models
-│   │   └── 📄 ErrorViewModel.cs
-│   ├── 📁 Properties
-│   │   └── ⚙️ launchSettings.json
-│   ├── 📁 Views
-│   │   ├── 📁 Home
-│   │   │   ├── 📄 Index.cshtml
-│   │   │   └── 📄 Privacy.cshtml
-│   │   ├── 📁 Shared
-│   │   │   ├── 📄 Error.cshtml
-│   │   │   ├── 📄 _Layout.cshtml
-│   │   │   ├── 🎨 _Layout.cshtml.css
-│   │   │   └── 📄 _ValidationScriptsPartial.cshtml
-│   │   ├── 📄 _ViewImports.cshtml
-│   │   └── 📄 _ViewStart.cshtml
-│   ├── 📁 wwwroot
-│   │   ├── 📁 css
-│   │   │   └── 🎨 site.css
-│   │   ├── 📁 js
-│   │   │   └── 📄 site.js
-│   │   ├── 📁 lib
-│   │   │   ├── 📁 bootstrap
-│   │   │   │   └── 📄 LICENSE
-│   │   │   ├── 📁 jquery
-│   │   │   │   └── 📄 LICENSE.txt
-│   │   │   ├── 📁 jquery-validation
-│   │   │   │   └── 📝 LICENSE.md
-│   │   │   └── 📁 jquery-validation-unobtrusive
-│   │   │       ├── 📄 LICENSE.txt
-│   │   │       └── 📄 jquery.validate.unobtrusive.js
-│   │   └── 📄 favicon.ico
-│   ├── 📄 Program.cs
-│   ├── 📄 Webapp_Quan_Li_Hanh_Vi_Vi_Pham.csproj
-│   ├── 📄 Webapp_Quan_Li_Hanh_Vi_Vi_Pham.csproj.user
-│   ├── ⚙️ appsettings.Development.json
-│   └── ⚙️ appsettings.json
-└── 📄 Webapp_System.sln
+├── 📁 Areas
+│   └── 📁 Admin
+│       ├── 📁 Controllers
+│       │   └── 📄 AdminController.cs
+│       └── 📁 Views
+│           ├── 📁 Admin
+│           │   └── 📄 Index.cshtml
+│           ├── 📄 _ViewImports.cshtml
+│           └── 📄 _ViewStart.cshtml
+├── 📁 Controllers
+│   ├── 📄 AccountController.cs
+│   ├── 📄 HomeController.cs
+│   ├── 📄 ManagerController.cs
+│   └── 📄 ViolationsController.cs
+├── 📁 ML
+│   ├── 📁 Inference
+│   │   ├── 📄 IYoloInferenceService.cs
+│   │   ├── 📄 LocalYoloInferenceService.cs
+│   │   └── 📄 YoloModelOptions.cs
+│   ├── 📁 scripts
+│   │   ├── 🐍 run_deepface.py
+│   │   └── 🐍 run_yolo_inference.py
+│   └── 📝 README.md
+├── 📁 Models
+│   ├── 📁 Entities
+│   │   ├── 📄 AiModel.cs
+│   │   ├── 📄 DetectionResult.cs
+│   │   ├── 📄 ModelSetting.cs
+│   │   ├── 📄 User.cs
+│   │   ├── 📄 UserFaceEmbedding.cs
+│   │   ├── 📄 ViolationDbContext.cs
+│   │   └── 📄 ViolationRecord.cs
+│   ├── 📁 ViewModels
+│   │   ├── 📄 ActivateKeyViewModel.cs
+│   │   ├── 📄 AdminSettingsViewModel.cs
+│   │   ├── 📄 LoginViewModel.cs
+│   │   ├── 📄 RegisterViewModel.cs
+│   │   └── 📄 ViolationDashboardViewModel.cs
+│   └── 📄 ErrorViewModel.cs
+├── 📁 Properties
+│   └── ⚙️ launchSettings.json
+├── 📁 Services
+│   ├── 📁 Interfaces
+│   │   ├── 📄 IModelSettingService.cs
+│   │   ├── 📄 IUserService.cs
+│   │   └── 📄 IViolationService.cs
+│   ├── 📄 DbSeeder.cs
+│   ├── 📄 ModelSettingService.cs
+│   ├── 📄 PasswordHasher.cs
+│   ├── 📄 UserService.cs
+│   └── 📄 ViolationService.cs
+├── 📁 Views
+│   ├── 📁 Account
+│   │   ├── 📄 AccessDenied.cshtml
+│   │   ├── 📄 Login.cshtml
+│   │   └── 📄 Register.cshtml
+│   ├── 📁 Home
+│   │   ├── 📄 Index.cshtml
+│   │   └── 📄 Privacy.cshtml
+│   ├── 📁 Manager
+│   │   ├── 📄 ActivateKey.cshtml
+│   │   └── 📄 Index.cshtml
+│   ├── 📁 Shared
+│   │   ├── 📄 Error.cshtml
+│   │   ├── 📄 _Layout.cshtml
+│   │   ├── 🎨 _Layout.cshtml.css
+│   │   └── 📄 _ValidationScriptsPartial.cshtml
+│   ├── 📁 Violations
+│   │   └── 📄 Index.cshtml
+│   ├── 📄 _ViewImports.cshtml
+│   └── 📄 _ViewStart.cshtml
+├── 📁 wwwroot
+│   ├── 📁 css
+│   │   ├── 🎨 input.css
+│   │   ├── 🎨 output.css
+│   │   └── 🎨 site.css
+│   ├── 📁 js
+│   │   ├── 📄 login.js
+│   │   ├── 📄 register.js
+│   │   └── 📄 site.js
+│   ├── 📁 lib
+│   │   ├── 📁 bootstrap
+│   │   │   └── 📄 LICENSE
+│   │   ├── 📁 jquery
+│   │   │   └── 📄 LICENSE.txt
+│   │   ├── 📁 jquery-validation
+│   │   │   └── 📝 LICENSE.md
+│   │   └── 📁 jquery-validation-unobtrusive
+│   │       ├── 📄 LICENSE.txt
+│   │       └── 📄 jquery.validate.unobtrusive.js
+│   ├── 📁 uploads
+│   │   └── 📁 faces
+│   │       ├── 🖼️ h1_e9e104c7.jpg
+│   │       ├── 🖼️ hieubien_19073c7b.jpg
+│   │       ├── 🖼️ hieubienhoa_angle_0_4c1fcf03.jpg
+│   │       ├── 🖼️ hieubienhoa_angle_1_b3715385.jpg
+│   │       ├── 🖼️ hieubienhoa_angle_2_605f09a2.jpg
+│   │       ├── 🖼️ hieubienhoa_angle_3_0c225b24.jpg
+│   │       └── 🖼️ user1_1ae7d652.jpg
+│   └── 📄 favicon.ico
+├── ⚙️ .gitignore
+├── 📄 Program.cs
+├── 📄 Webapp_Quan_Li_Hanh_Vi_Vi_Pham.csproj
+├── 📄 Webapp_Quan_Li_Hanh_Vi_Vi_Pham.csproj.user
+├── ⚙️ appsettings.Development.json
+├── ⚙️ appsettings.json
+├── ⚙️ package-lock.json
+├── ⚙️ package.json
+├── 📄 tailwind.config.js
+└── 📝 tree_layer.md
 ```
 
 ---

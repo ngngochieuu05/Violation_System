@@ -3,11 +3,15 @@ import json
 import os
 import sys
 
-DEFAULT_MODEL_NAME = "ArcFace"
+# Cấu hình để DeepFace nhận diện thư mục lưu weights trong .venv của dự án
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.environ["DEEPFACE_HOME"] = os.path.abspath(os.path.join(script_dir, "..", "..", ".venv", "deepface-home"))
+
+DEFAULT_MODEL_NAME = "VGG-Face"
 DEFAULT_DETECTOR_BACKEND = "opencv"
 DEFAULT_ALIGN = True
 DEFAULT_ENFORCE_DETECTION = True
-FALLBACK_DETECTOR_BACKENDS = ["retinaface", "mtcnn"]
+FALLBACK_DETECTOR_BACKENDS = ["retinaface"]
 
 
 def parse_bool(value):

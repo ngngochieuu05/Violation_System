@@ -3,6 +3,7 @@
     if (!app) return;
 
     const biometricVerifyUrl = "/Account/VerifyCurrentUserFace";
+    const biometricRegistrationStatusUrl = "/Account/BiometricRegistrationStatus";
     const initialTab = app.dataset.initialTab || "home";
     const currentUserId = app.dataset.userId || "";
     const currentUsername = app.dataset.username || "";
@@ -14,7 +15,8 @@
         chats: `employee.chats.${userScope}`,
         profile: `employee.profile.${userScope}`,
         settings: `employee.settings.${userScope}`,
-        avatar: `employee.avatar.${userScope}`
+        avatar: `employee.avatar.${userScope}`,
+        tasks: `employee.tasks.${userScope}`
     };
 
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
@@ -47,6 +49,69 @@
     const attendanceMessage = document.querySelector("[data-attendance-message]");
     const attendanceDetailModal = document.querySelector("[data-attendance-detail-modal]");
     const attendanceCameraModal = document.querySelector("[data-attendance-camera-modal]");
+    const detailContent = document.querySelector("[data-attendance-detail-content]");
+    const detailHeader = document.querySelector("[data-attendance-detail-header]");
+
+    // Teleport modals to body to escape z-index stacking contexts
+    [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]")].forEach(modal => {
+        if (modal) {
+            document.body.appendChild(modal);
+        }
+    });
+
+    // Make attendance detail modal draggable
+    if (detailContent && detailHeader) {
+        let isDragging = false;
+        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
+        let xOffset = 0, yOffset = 0;
+
+        detailHeader.style.cursor = 'grab';
+
+        detailHeader.addEventListener("mousedown", (e) => {
+            if (e.target.closest("[data-attendance-detail-close]")) return;
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            
+            if (e.target === detailHeader || detailHeader.contains(e.target)) {
+                isDragging = true;
+                detailContent.style.transition = 'none';
+                detailHeader.style.cursor = 'grabbing';
+            }
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                detailContent.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            }
+        });
+
+        document.addEventListener("mouseup", () => {
+            if (isDragging) {
+                isDragging = false;
+                detailContent.style.transition = '';
+                detailHeader.style.cursor = 'grab';
+            }
+        });
+
+        // Reset position when modal closes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target.classList.contains('hidden')) {
+                    xOffset = 0;
+                    yOffset = 0;
+                    detailContent.style.transform = `translate3d(0, 0, 0)`;
+                }
+            });
+        });
+        if (attendanceDetailModal) {
+            observer.observe(attendanceDetailModal, { attributes: true, attributeFilter: ['class'] });
+        }
+    }
 
     let attendanceStream = null;
     let currentAttendanceAction = null;
@@ -174,6 +239,11 @@
     let attendance = normalizeAttendance(readStore(storageKeys.attendance, null));
     let requests = readStore(storageKeys.requests, []);
     let chats = readStore(storageKeys.chats, defaultChats);
+    let tasks = readStore(storageKeys.tasks, [
+        { id: "task-1", title: "Cập nhật báo cáo KPI tháng", status: "pending", time: "10:00 AM", date: toDateKey() },
+        { id: "task-2", title: "Họp phòng chuyên môn", status: "pending", time: "14:30 PM", date: toDateKey() },
+        { id: "task-3", title: "Chuẩn bị tài liệu dự án ABC", status: "done", time: "08:30 AM", date: toDateKey() }
+    ]);
     let settings = readStore(storageKeys.settings, {
         notifications: true,
         compact: false,
@@ -220,13 +290,13 @@
         }).format(new Date(value));
     };
 
-    const toDateKey = (value) => {
+    function toDateKey(value) {
         const date = value ? new Date(value) : new Date();
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
-    };
+    }
 
     const calculateSessionDurationMs = (session) => {
         if (!session?.checkInAt) return 0;
@@ -279,6 +349,10 @@
 
         if (homeHero) {
             homeHero.classList.toggle("hidden", normalized !== "home");
+        }
+
+        if (normalized === "home") {
+            loadMyViolations();
         }
 
         const url = new URL(window.location.href);
@@ -356,6 +430,108 @@
         }
     };
 
+    const loadMyViolations = async () => {
+        const countEl = document.getElementById("homeViolationCount");
+        const listEl = document.getElementById("homeViolationList");
+        const fullCountEl = document.getElementById("fullViolationCount");
+        const fullListEl = document.getElementById("fullViolationList");
+        
+        try {
+            const res = await fetch("/Employee/GetMyViolations");
+            const result = await res.json();
+            if (result.success && Array.isArray(result.data)) {
+                const list = result.data;
+                if (countEl) countEl.textContent = `${list.length} vi phạm`;
+                if (fullCountEl) fullCountEl.textContent = list.length;
+
+                // Home Tab Widget
+                if (listEl) {
+                    if (list.length === 0) {
+                        listEl.innerHTML = `
+                            <div class="text-center py-6 text-slate-400">
+                                <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
+                                <p class="text-xs">Không có vi phạm ghi nhận</p>
+                            </div>
+                        `;
+                    } else {
+                        listEl.innerHTML = list.map(item => {
+                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                            });
+                            let severityClass = "bg-amber-100 text-amber-700";
+                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
+                                severityClass = "bg-red-100 text-red-700";
+                            } else if (item.severity?.toLowerCase() === "low") {
+                                severityClass = "bg-slate-100 text-slate-700";
+                            }
+
+                            return `
+                                <div class="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-slate-800 truncate">${item.violationType}</span>
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full ${severityClass}">${item.severity}</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-camera mr-1"></i>${item.cameraLocation} • ${date}</p>
+                                    </div>
+                                    <span class="text-[10px] font-semibold ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}">${item.status}</span>
+                                </div>
+                            `;
+                        }).join("");
+                    }
+                }
+
+                // Violations Tab Grid
+                if (fullListEl) {
+                    if (list.length === 0) {
+                        fullListEl.innerHTML = `
+                            <div class="col-span-full text-center py-12 text-slate-400">
+                                <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-50 mb-4 shadow-inner">
+                                    <i class="fa-solid fa-circle-check text-2xl text-green-500"></i>
+                                </div>
+                                <p class="text-sm">Hồ sơ trong sạch. Chưa ghi nhận vi phạm nào.</p>
+                            </div>
+                        `;
+                    } else {
+                        fullListEl.innerHTML = list.map(item => {
+                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            });
+                            let severityClass = "bg-amber-100 text-amber-700";
+                            let iconClass = "fa-triangle-exclamation text-amber-500";
+                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
+                                severityClass = "bg-red-100 text-red-700";
+                                iconClass = "fa-ban text-red-500";
+                            } else if (item.severity?.toLowerCase() === "low") {
+                                severityClass = "bg-slate-100 text-slate-700";
+                                iconClass = "fa-circle-info text-slate-500";
+                            }
+
+                            return `
+                                <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner">
+                                            <i class="fa-solid ${iconClass} text-lg"></i>
+                                        </div>
+                                        <span class="px-2 py-1 text-[10px] font-bold rounded-md ${severityClass} uppercase tracking-widest">${item.severity}</span>
+                                    </div>
+                                    <h4 class="font-outfit text-base font-bold text-slate-900 mb-1 line-clamp-2">${item.violationType}</h4>
+                                    <div class="space-y-1 mt-3">
+                                        <p class="text-[11px] text-slate-500"><i class="fa-solid fa-camera text-slate-400 mr-2 w-3 text-center"></i>${item.cameraLocation}</p>
+                                        <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
+                                        <p class="text-[11px] font-semibold mt-2 ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${item.status}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("");
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load violations", err);
+        }
+    };
+
     const renderAttendance = () => {
         const latestCompleted = attendance.sessions[attendance.sessions.length - 1] || null;
         const referenceSession = attendance.currentSession || latestCompleted;
@@ -375,6 +551,30 @@
         if (totalEl) totalEl.textContent = formatDuration(getTodayTotalDurationMs());
         if (statusEl) {
             statusEl.textContent = attendance.currentSession ? "Đang làm việc" : (attendance.sessions.length ? "Đã check-out" : "Chưa check-in");
+        }
+
+        // Cập nhật trạng thái trang chủ
+        const homeDot = document.getElementById("attendanceStatusDot");
+        const homeText = document.getElementById("attendanceStatusText");
+        const homeSubText = document.getElementById("attendanceStatusSubText");
+        if (homeDot && homeText && homeSubText) {
+            if (attendance.currentSession) {
+                homeDot.className = "h-2 w-2 rounded-full bg-green-500 animate-pulse";
+                homeText.textContent = "Đang làm việc";
+                homeSubText.textContent = `Check-in lúc ${formatShortTime(attendance.currentSession.checkInAt)}`;
+            } else {
+                const todayKey = toDateKey();
+                const todaySessions = attendance.sessions.filter(s => toDateKey(s.checkInAt) === todayKey);
+                if (todaySessions.length > 0) {
+                    homeDot.className = "h-2 w-2 rounded-full bg-slate-500";
+                    homeText.textContent = "Đã check-out";
+                    homeSubText.textContent = "Hoàn thành ca làm việc";
+                } else {
+                    homeDot.className = "h-2 w-2 rounded-full bg-amber-500";
+                    homeText.textContent = "Chưa Check-in";
+                    homeSubText.textContent = "Yêu cầu xác thực khuôn mặt";
+                }
+            }
         }
 
         renderAttendancePreview(attendance.lastCapture || attendance.currentSession?.checkInImage || latestCompleted?.checkOutImage || latestCompleted?.checkInImage || null);
@@ -493,14 +693,143 @@
         title.textContent = activeChat === "manager" ? "Quản lý trực tiếp" : "Phòng nhân sự";
         thread.innerHTML = "";
 
-        (chats[activeChat] || []).forEach((message) => {
+        (chats[activeChat] || []).forEach((message, index) => {
+            const bubbleWrapper = document.createElement("div");
+            bubbleWrapper.className = message.author === "self" ? "flex flex-col items-end group" : "flex flex-col items-start";
+            
             const bubble = document.createElement("div");
-            bubble.className = message.author === "self"
-                ? "ml-auto max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white"
-                : "max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700";
-            bubble.textContent = message.text;
-            thread.appendChild(bubble);
+            
+            if (message.revoked) {
+                bubble.className = message.author === "self"
+                    ? "max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-400 italic border border-slate-200"
+                    : "max-w-md rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400 italic border border-slate-100";
+                bubble.textContent = "Tin nhắn đã bị thu hồi";
+                bubbleWrapper.appendChild(bubble);
+            } else {
+                bubble.className = message.author === "self"
+                    ? "max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white"
+                    : "max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700";
+                bubble.textContent = message.text;
+                
+                if (message.author === "self") {
+                    const row = document.createElement("div");
+                    row.className = "flex items-center gap-2";
+                    
+                    const revokeBtn = document.createElement("button");
+                    revokeBtn.className = "text-[10px] text-red-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg";
+                    revokeBtn.textContent = "Thu hồi";
+                    revokeBtn.onclick = () => {
+                        message.revoked = true;
+                        writeStore(storageKeys.chats, chats);
+                        renderChats();
+                    };
+                    
+                    row.appendChild(revokeBtn);
+                    row.appendChild(bubble);
+                    bubbleWrapper.appendChild(row);
+                } else {
+                    bubbleWrapper.appendChild(bubble);
+                }
+            }
+            
+            thread.appendChild(bubbleWrapper);
         });
+    };
+
+    const renderTasks = () => {
+        const todayKey = toDateKey();
+        const todayTasks = tasks.filter(t => t.date === todayKey);
+        const doneTasks = todayTasks.filter(t => t.status === "done");
+        
+        // Schedule Tab
+        const taskList = document.querySelector("[data-task-list]");
+        const doneList = document.querySelector("[data-task-done-list]");
+        const statsDone = document.querySelector("[data-task-stats-done]");
+        const statsTotal = document.querySelector("[data-task-stats-total]");
+        const progressBar = document.querySelector("[data-task-progress-bar]");
+        const progressText = document.querySelector("[data-task-progress-text]");
+
+        if (taskList) {
+            taskList.innerHTML = "";
+            const pendingTasks = todayTasks.filter(t => t.status === "pending");
+            if (pendingTasks.length === 0) {
+                taskList.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Tuyệt vời! Bạn đã hoàn thành hết công việc hôm nay.</div>';
+            } else {
+                pendingTasks.forEach(task => {
+                    const el = document.createElement("div");
+                    el.className = "flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-red-300 transition-colors cursor-pointer";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <input type="checkbox" data-task-checkbox="${task.id}" class="h-6 w-6 rounded-full border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" />
+                            <div>
+                                <p class="font-semibold text-slate-900">${task.title}</p>
+                                <p class="text-xs text-slate-500"><i class="fa-regular fa-clock mr-1"></i>${task.time}</p>
+                            </div>
+                        </div>
+                    `;
+                    taskList.appendChild(el);
+                });
+            }
+        }
+
+        if (doneList) {
+            doneList.innerHTML = "";
+            if (doneTasks.length === 0) {
+                doneList.innerHTML = '<div class="text-sm text-slate-500">Chưa hoàn thành công việc nào.</div>';
+            } else {
+                doneTasks.forEach(task => {
+                    const el = document.createElement("div");
+                    el.className = "flex items-center justify-between rounded-xl bg-slate-50 p-3 opacity-75";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-circle-check text-green-500"></i>
+                            <p class="text-sm font-medium text-slate-600 line-through">${task.title}</p>
+                        </div>
+                        <button type="button" data-task-undo="${task.id}" class="text-xs font-semibold text-slate-500 hover:text-slate-800"><i class="fa-solid fa-rotate-left"></i></button>
+                    `;
+                    doneList.appendChild(el);
+                });
+            }
+        }
+
+        if (statsTotal) {
+            statsTotal.textContent = todayTasks.length;
+            statsDone.textContent = doneTasks.length;
+            const pct = todayTasks.length === 0 ? 0 : Math.round((doneTasks.length / todayTasks.length) * 100);
+            progressBar.style.width = `${pct}%`;
+            progressText.textContent = `${pct}% hoàn thành`;
+        }
+
+        // Home Tab
+        const homeTotal = document.querySelector("[data-home-task-total]");
+        const homePending = document.querySelector("[data-home-task-pending]");
+        const homeDone = document.querySelector("[data-home-task-done]");
+        const homeList = document.querySelector("[data-home-task-list]");
+
+        if (homeTotal) homeTotal.textContent = todayTasks.length;
+        if (homePending) homePending.textContent = todayTasks.length - doneTasks.length;
+        if (homeDone) homeDone.textContent = doneTasks.length;
+
+        if (homeList) {
+            homeList.innerHTML = "";
+            const recentTasks = todayTasks.slice(0, 3);
+            if (recentTasks.length === 0) {
+                homeList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">Hôm nay chưa có nhiệm vụ nào.</div>';
+            } else {
+                recentTasks.forEach(task => {
+                    const el = document.createElement("div");
+                    el.className = "flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid ${task.status === "done" ? "fa-circle-check text-green-500" : "fa-circle text-slate-300"}"></i>
+                            <p class="text-sm font-medium ${task.status === "done" ? "text-slate-500 line-through" : "text-slate-800"}">${task.title}</p>
+                        </div>
+                        <span class="text-xs font-semibold text-slate-400">${task.time}</span>
+                    `;
+                    homeList.appendChild(el);
+                });
+            }
+        }
     };
 
     const applySettings = () => {
@@ -556,9 +885,81 @@
         attendanceScanline?.classList.add("hidden");
     };
 
-    const openAttendanceCameraModal = (action) => {
+    const ensureBiometricRegistration = async () => {
+        const response = await fetch(biometricRegistrationStatusUrl, {
+            method: "GET",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Không thể kiểm tra trạng thái sinh trắc học.");
+        }
+
+        return response.json();
+    };
+
+    const processAttendanceAction = async (action) => {
+        if (action === "checkin" && attendance.currentSession) {
+            alert("Báº¡n Ä‘Ã£ check-in rá»“i. HÃ£y check-out trÆ°á»›c khi táº¡o phiÃªn má»›i.");
+            if (attendanceMessage) attendanceMessage.textContent = "Báº¡n Ä‘Ã£ check-in rá»“i. HÃ£y check-out trÆ°á»›c khi táº¡o phiÃªn má»›i.";
+            return;
+        }
+
+        if (action === "checkout" && !attendance.currentSession) {
+            alert("Báº¡n cáº§n check-in trÆ°á»›c khi check-out.");
+            if (attendanceMessage) attendanceMessage.textContent = "Báº¡n cáº§n check-in trÆ°á»›c khi check-out.";
+            return;
+        }
+
+        try {
+            const biometricStatus = await ensureBiometricRegistration();
+            if (!biometricStatus.success || !biometricStatus.hasBiometricRegistration) {
+                const message = biometricStatus.message || "Báº¡n chÆ°a Ä‘Äƒng kÃ½ sinh tráº¯c há»c. Vui lÃ²ng cáº­p nháº­t á»Ÿ CÃ i Ä‘áº·t há»“ sÆ¡.";
+                alert(message);
+                if (attendanceMessage) attendanceMessage.textContent = message;
+                return;
+            }
+        } catch (error) {
+            const message = error.message || "KhÃ´ng thá»ƒ kiá»ƒm tra tráº¡ng thÃ¡i sinh tráº¯c há»c.";
+            alert(message);
+            if (attendanceMessage) attendanceMessage.textContent = message;
+            return;
+        }
+
+        const nowIso = new Date().toISOString();
+        attendance.lastCapture = null;
+
+        if (action === "checkin") {
+            attendance.currentSession = {
+                id: `session-${Date.now()}`,
+                checkInAt: nowIso,
+                checkInImage: null
+            };
+            attendance.status = "Äang lÃ m viá»‡c";
+            if (attendanceMessage) attendanceMessage.textContent = "Check-in thÃ nh cÃ´ng. TÃ i khoáº£n Ä‘Ã£ cÃ³ dá»¯ liá»‡u sinh tráº¯c há»c.";
+        } else {
+            attendance.sessions.push({
+                id: attendance.currentSession.id,
+                checkInAt: attendance.currentSession.checkInAt,
+                checkOutAt: nowIso,
+                checkInImage: attendance.currentSession.checkInImage || null,
+                checkOutImage: null,
+                status: "ÄÃ£ check-out"
+            });
+            attendance.currentSession = null;
+            attendance.status = "ÄÃ£ check-out";
+            if (attendanceMessage) attendanceMessage.textContent = "Check-out thÃ nh cÃ´ng. TÃ i khoáº£n Ä‘Ã£ cÃ³ dá»¯ liá»‡u sinh tráº¯c há»c.";
+        }
+
+        saveAttendance();
+        renderAttendance();
+    };
+
+    const openAttendanceCameraModal = async (action) => {
         currentAttendanceAction = action;
-        
+
         if (action === "checkin" && attendance.currentSession) {
             alert("Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.");
             if (attendanceMessage) attendanceMessage.textContent = "Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.";
@@ -567,6 +968,21 @@
         if (action === "checkout" && !attendance.currentSession) {
             alert("Bạn cần check-in trước khi check-out.");
             if (attendanceMessage) attendanceMessage.textContent = "Bạn cần check-in trước khi check-out.";
+            return;
+        }
+
+        try {
+            const biometricStatus = await ensureBiometricRegistration();
+            if (!biometricStatus.success || !biometricStatus.hasBiometricRegistration) {
+                const message = biometricStatus.message || "Bạn chưa đăng ký sinh trắc học. Vui lòng cập nhật ở Cài đặt hồ sơ.";
+                alert(message);
+                if (attendanceMessage) attendanceMessage.textContent = message;
+                return;
+            }
+        } catch (error) {
+            const message = error.message || "Không thể kiểm tra trạng thái sinh trắc học.";
+            alert(message);
+            if (attendanceMessage) attendanceMessage.textContent = message;
             return;
         }
 
@@ -697,7 +1113,7 @@
         const text = input?.value.trim();
         if (!text) return;
         chats[activeChat] = chats[activeChat] || [];
-        chats[activeChat].push({ author: "self", text });
+        chats[activeChat].push({ author: "self", text, id: Date.now().toString() });
         writeStore(storageKeys.chats, chats);
         input.value = "";
         renderChats();
@@ -988,13 +1404,316 @@
         }
     });
 
+    // --- Task Event Listeners ---
+    document.addEventListener("change", (e) => {
+        if (e.target.matches("[data-task-checkbox]")) {
+            const id = e.target.dataset.taskCheckbox;
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = e.target.checked ? "done" : "pending";
+                writeStore(storageKeys.tasks, tasks);
+                renderTasks();
+            }
+        }
+    });
+
+    document.addEventListener("click", (e) => {
+        const undoBtn = e.target.closest("[data-task-undo]");
+        if (undoBtn) {
+            const id = undoBtn.dataset.taskUndo;
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.status = "pending";
+                writeStore(storageKeys.tasks, tasks);
+                renderTasks();
+            }
+        }
+        
+        const addMockBtn = e.target.closest("[data-task-add-mock]");
+        if (addMockBtn) {
+            const newTask = {
+                id: `task-${Date.now()}`,
+                title: `Nhiệm vụ mới ${Math.floor(Math.random() * 1000)}`,
+                status: "pending",
+                time: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}),
+                date: toDateKey()
+            };
+            tasks.push(newTask);
+            writeStore(storageKeys.tasks, tasks);
+            renderTasks();
+        }
+    });
+
+    // --- Security / Profile Updates ---
+    document.querySelector("[data-profile-change-pwd]")?.addEventListener("click", async () => {
+        const oldPwd = document.querySelector("[data-profile-pwd-old]")?.value;
+        const newPwd = document.querySelector("[data-profile-pwd-new]")?.value;
+        const confirmPwd = document.querySelector("[data-profile-pwd-confirm]")?.value;
+        const msg = document.querySelector("[data-profile-pwd-msg]");
+
+        if (!oldPwd || !newPwd || !confirmPwd) {
+            msg.textContent = "Vui lòng điền đủ thông tin mật khẩu.";
+            msg.className = "text-xs font-semibold mt-2 text-red-600 block";
+            return;
+        }
+
+        if (newPwd !== confirmPwd) {
+            msg.textContent = "Mật khẩu xác nhận không khớp.";
+            msg.className = "text-xs font-semibold mt-2 text-red-600 block";
+            return;
+        }
+
+        msg.textContent = "Đang cập nhật...";
+        msg.className = "text-xs font-semibold mt-2 text-amber-600 block";
+
+        try {
+            const res = await fetch("/Account/ChangePassword", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ oldPassword: oldPwd, newPassword: newPwd })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                msg.textContent = "Đổi mật khẩu thành công!";
+                msg.className = "text-xs font-semibold mt-2 text-green-600 block";
+                document.querySelector("[data-profile-pwd-old]").value = "";
+                document.querySelector("[data-profile-pwd-new]").value = "";
+                document.querySelector("[data-profile-pwd-confirm]").value = "";
+            } else {
+                msg.textContent = data.message || "Đổi mật khẩu thất bại.";
+                msg.className = "text-xs font-semibold mt-2 text-red-600 block";
+            }
+        } catch (e) {
+            msg.textContent = "Lỗi kết nối máy chủ.";
+            msg.className = "text-xs font-semibold mt-2 text-red-600 block";
+        }
+    });
+
+    // --- Face Update ---
+    const faceModal = document.querySelector("[data-face-modal]");
+    const faceVideo = document.querySelector("[data-face-video]");
+    const faceCanvas = document.querySelector("[data-face-canvas]");
+    const faceStatus = document.querySelector("[data-face-status]");
+    const faceInstruction = document.querySelector("[data-face-instruction]");
+    const faceCaptureBtn = document.querySelector("[data-face-capture]");
+    
+    let faceStream = null;
+    let faceImages = [];
+    const maxFaces = 4;
+    const instructions = [
+        "Nhìn thẳng trực diện vào camera và nhấn chụp.",
+        "Hơi quay mặt sang TRÁI (khoảng 30 độ) và nhấn chụp.",
+        "Hơi quay mặt sang PHẢI (khoảng 30 độ) và nhấn chụp.",
+        "Ngước mặt LÊN một chút và nhấn chụp."
+    ];
+
+    const openFaceModal = async () => {
+        faceImages = [];
+        updateFaceStepUI(0);
+        faceModal?.classList.remove("hidden");
+        faceModal?.classList.add("flex");
+        
+        if (faceVideo) {
+            try {
+                faceStatus?.classList.remove("hidden");
+                faceStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                faceVideo.srcObject = faceStream;
+                faceStatus?.classList.add("hidden");
+            } catch {
+                if (faceInstruction) faceInstruction.textContent = "Lỗi camera. Vui lòng cấp quyền truy cập.";
+            }
+        }
+    };
+
+    const closeFaceModal = () => {
+        if (faceStream) {
+            faceStream.getTracks().forEach(t => t.stop());
+            faceStream = null;
+        }
+        if (faceVideo) faceVideo.srcObject = null;
+        faceModal?.classList.add("hidden");
+        faceModal?.classList.remove("flex");
+    };
+
+    const updateFaceStepUI = (step) => {
+        for (let i = 0; i < maxFaces; i++) {
+            const el = document.getElementById(`step-${i}`);
+            if (!el) continue;
+            if (i === step) {
+                el.className = "flex-1 rounded-lg bg-red-600/20 py-2 text-red-400 border border-red-600/30 transition-colors duration-300";
+            } else if (i < step) {
+                el.className = "flex-1 rounded-lg bg-green-500/20 py-2 text-green-400 border border-green-500/30 transition-colors duration-300";
+                el.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else {
+                el.className = "flex-1 rounded-lg bg-slate-800 py-2 text-slate-400 transition-colors duration-300";
+            }
+        }
+        if (faceInstruction && step < maxFaces) {
+            faceInstruction.textContent = instructions[step];
+        }
+    };
+
+    document.querySelector("[data-profile-update-face]")?.addEventListener("click", openFaceModal);
+    document.querySelector("[data-face-close]")?.addEventListener("click", closeFaceModal);
+
+    faceCaptureBtn?.addEventListener("click", async () => {
+        if (faceImages.length >= maxFaces || !faceVideo || !faceCanvas) return;
+        
+        const ctx = faceCanvas.getContext("2d");
+        faceCanvas.width = faceVideo.videoWidth;
+        faceCanvas.height = faceVideo.videoHeight;
+        ctx.drawImage(faceVideo, 0, 0, faceCanvas.width, faceCanvas.height);
+        
+        faceImages.push(faceCanvas.toDataURL("image/jpeg", 0.85));
+        
+        if (faceImages.length < maxFaces) {
+            updateFaceStepUI(faceImages.length);
+        } else {
+            // Done capturing 4 images, send to backend
+            updateFaceStepUI(4);
+            if (faceInstruction) faceInstruction.textContent = "Đang xử lý và cập nhật dữ liệu sinh trắc học...";
+            faceStatus?.classList.remove("hidden");
+            faceCaptureBtn.disabled = true;
+            
+            const payload = faceImages.join(";base64split;");
+            
+            try {
+                const res = await fetch("/Account/UpdateFace", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams({ faceImagesBase64: payload })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert("Cập nhật dữ liệu khuôn mặt thành công!");
+                    closeFaceModal();
+                } else {
+                    alert(data.message || "Cập nhật thất bại.");
+                    faceImages = [];
+                    updateFaceStepUI(0);
+                }
+            } catch (e) {
+                alert("Lỗi kết nối máy chủ.");
+                faceImages = [];
+                updateFaceStepUI(0);
+            } finally {
+                faceStatus?.classList.add("hidden");
+                faceCaptureBtn.disabled = false;
+            }
+        }
+    });
+
+    // --- Top Navigation Dropdowns ---
+    const notifTrigger = document.getElementById("dashboardNotificationTrigger");
+    const notifMenu = document.getElementById("dashboardNotificationMenu");
+    const userTrigger = document.getElementById("dashboardDropdownTrigger");
+    const userMenu = document.getElementById("dashboardDropdownMenu");
+
+    if (notifTrigger && notifMenu) {
+        notifTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            notifMenu.classList.toggle("hidden");
+            if (userMenu) userMenu.classList.add("hidden");
+        });
+    }
+
+    if (userTrigger && userMenu) {
+        userTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle("hidden");
+            if (notifMenu) notifMenu.classList.add("hidden");
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        if (notifMenu && !notifMenu.contains(e.target)) {
+            notifMenu.classList.add("hidden");
+        }
+        if (userMenu && !userMenu.contains(e.target)) {
+            userMenu.classList.add("hidden");
+        }
+    });
+
+    // --- Payroll PIN Logic ---
+    const unlockPayrollBtn = document.getElementById("unlockPayrollBtn");
+    const payrollPinModal = document.getElementById("payrollPinModal");
+    const closePayrollPinModal = document.getElementById("closePayrollPinModal");
+    const verifyPayrollPinBtn = document.getElementById("verifyPayrollPinBtn");
+    const payrollPinInput = document.getElementById("payrollPinInput");
+    const payrollPinError = document.getElementById("payrollPinError");
+    const payrollPinModalContent = document.getElementById("payrollPinModalContent");
+    
+    if (payrollPinModal) {
+        document.body.appendChild(payrollPinModal);
+    }
+
+    const openPayrollModal = () => {
+        if (!payrollPinModal) return;
+        payrollPinInput.value = "";
+        payrollPinError.classList.add("hidden");
+        payrollPinModal.classList.remove("hidden");
+        payrollPinModal.style.display = "flex";
+        setTimeout(() => {
+            if (payrollPinModalContent) {
+                payrollPinModalContent.style.transform = "scale(1)";
+                payrollPinModalContent.style.opacity = "1";
+            }
+            payrollPinInput?.focus();
+        }, 10);
+    };
+
+    const closePayrollModal = () => {
+        if (!payrollPinModal) return;
+        if (payrollPinModalContent) {
+            payrollPinModalContent.style.transform = "scale(0.95)";
+            payrollPinModalContent.style.opacity = "0";
+        }
+        setTimeout(() => {
+            payrollPinModal.style.display = "none";
+            payrollPinModal.classList.add("hidden");
+        }, 300);
+    };
+
+    unlockPayrollBtn?.addEventListener("click", openPayrollModal);
+    closePayrollPinModal?.addEventListener("click", closePayrollModal);
+    
+    payrollPinInput?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") verifyPayrollPinBtn?.click();
+    });
+
+    verifyPayrollPinBtn?.addEventListener("click", () => {
+        const pin = payrollPinInput?.value;
+        if (pin === "1234") {
+            closePayrollModal();
+            document.querySelectorAll(".payroll-secure-data").forEach(el => {
+                el.classList.remove("blur-md", "select-none");
+            });
+            if (unlockPayrollBtn) {
+                unlockPayrollBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2 text-green-400"></i>Đã mở khóa';
+                unlockPayrollBtn.classList.remove("bg-slate-800", "hover:bg-slate-700");
+                unlockPayrollBtn.classList.add("bg-green-600", "hover:bg-green-700");
+                setTimeout(() => {
+                    unlockPayrollBtn.classList.add("hidden");
+                }, 2000);
+            }
+        } else {
+            payrollPinError?.classList.remove("hidden");
+            payrollPinInput.value = "";
+            payrollPinInput.focus();
+        }
+    });
+
     renderDateTime();
     renderProfile();
     renderAttendance();
     renderRequests();
     updateRequestPreview();
     renderChats();
+    renderTasks();
     applySettings();
+    loadMyViolations();
     setActiveTab(initialTab);
 
     setInterval(() => {

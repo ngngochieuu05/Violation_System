@@ -1,0 +1,48 @@
+<section data-tab-panel="schedule" class="employee-tab-panel hidden">
+    <div class="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+        <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.24em] text-red-500">Lịch làm việc</p>
+                    <h3 class="mt-2 font-outfit text-2xl font-bold text-slate-900">Nhiệm vụ được giao</h3>
+                    <p class="mt-2 text-sm text-slate-500">
+                        Quản lý và đánh dấu các công việc bạn đã hoàn thành trong ngày.
+                    </p>
+                </div>
+                <button type="button" data-task-add-mock class="rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-xl hover:bg-red-700 flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i>Thêm Task (Demo)
+                </button>
+            </div>
+
+            <div class="mt-8 space-y-4" data-task-list>
+                <!-- Tasks will be injected here via JS -->
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Tiến độ</p>
+                <h3 class="mt-2 font-outfit text-xl font-bold text-slate-900">Hoàn thành hôm nay</h3>
+                
+                <div class="mt-6 flex items-end gap-3">
+                    <span class="font-outfit text-5xl font-black text-slate-900" data-task-stats-done>0</span>
+                    <span class="pb-1 text-lg font-semibold text-slate-400">/ <span data-task-stats-total>0</span></span>
+                </div>
+                
+                <div class="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full bg-red-600 transition-all duration-500" style="width: 0%" data-task-progress-bar></div>
+                </div>
+                <p class="mt-3 text-sm font-medium text-slate-500" data-task-progress-text>0% hoàn thành</p>
+            </div>
+
+            <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-green-500">Đã xong</p>
+                <h3 class="mt-2 font-outfit text-xl font-bold text-slate-900">Task gần nhất</h3>
+                
+                <div class="mt-5 space-y-3" data-task-done-list>
+                    <!-- Done tasks injected here via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

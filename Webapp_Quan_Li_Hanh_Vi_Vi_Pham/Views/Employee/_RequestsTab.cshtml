@@ -1,6 +1,6 @@
 <section data-tab-panel="requests" class="employee-tab-panel hidden">
     <div class="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
-        <div class="rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm sm:p-8 flex flex-col h-full">
+        <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8 flex flex-col h-full">
             <p class="text-xs font-bold uppercase tracking-[0.24em] text-emerald-500">Đơn từ</p>
             <h2 class="mt-2 font-outfit text-2xl font-bold text-slate-900">Tạo yêu cầu mới</h2>
             
@@ -9,7 +9,7 @@
                 <div class="flex-1 space-y-4">
                     <div>
                         <label class="mb-2 block text-sm font-semibold text-slate-700">Loại đơn</label>
-                        <select data-request-type class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300">
+                        <select data-request-type class="w-full rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300">
                             <option value="Nghỉ phép">Đơn xin nghỉ phép</option>
                             <option value="Đi muộn">Đơn xin đi muộn / về sớm</option>
                             <option value="Tăng ca">Đơn xin làm thêm giờ (Tăng ca)</option>
@@ -18,36 +18,36 @@
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-semibold text-slate-700">Ngày áp dụng</label>
-                        <input type="date" data-request-date class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
+                        <input type="date" data-request-date class="w-full rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" />
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-semibold text-slate-700">Lý do</label>
-                        <textarea data-request-reason rows="4" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" placeholder="Nhập lý do chi tiết..."></textarea>
+                        <textarea data-request-reason rows="4" class="w-full rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-3 text-sm text-slate-700 outline-none focus:border-red-300" placeholder="Nhập lý do chi tiết..."></textarea>
                     </div>
                     <div class="flex gap-3 pt-2">
-                        <button type="button" data-request-submit class="flex-1 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700">
+                        <button type="button" data-request-submit class="flex-1 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md hover:bg-red-700">
                             Gửi đơn
                         </button>
-                        <button type="button" data-request-draft class="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                        <button type="button" data-request-draft class="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md hover:bg-slate-50">
                             Lưu nháp
                         </button>
                     </div>
-                    <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600" data-request-message>
+                    <div class="mt-4 rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm px-4 py-3 text-sm text-slate-600" data-request-message>
                         Chọn loại đơn và điền lý do để xem bản xem trước.
                     </div>
                 </div>
 
                 <!-- Live Preview A4 Paper Style -->
-                <div class="flex-1 rounded-3xl border border-slate-200 bg-slate-100 p-4 md:p-6 shadow-inner overflow-hidden">
+                <div class="flex-1 rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md p-4 md:p-6 shadow-sm overflow-hidden">
                     <p class="mb-3 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500 text-center">Bản xem trước</p>
-                    <div class="bg-white rounded-md shadow-md p-6 h-[480px] md:h-[540px] overflow-y-auto w-full max-w-full">
+                    <div class="bg-white rounded-2xl shadow-md border border-slate-200 p-6 h-[480px] md:h-[540px] overflow-y-auto w-full max-w-full">
                         <div data-request-preview class="text-slate-800 text-sm leading-relaxed"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="rounded-[30px] border border-slate-200/70 bg-white p-6 shadow-sm">
+        <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl">
             <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Theo dõi</p>
             <h3 class="mt-2 font-outfit text-2xl font-bold text-slate-900">Danh sách yêu cầu</h3>
             <div class="mt-6 space-y-3" data-request-list>

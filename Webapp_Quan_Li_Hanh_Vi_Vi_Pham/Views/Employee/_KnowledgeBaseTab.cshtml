@@ -1,0 +1,100 @@
+<section data-tab-panel="knowledge" class="employee-tab-panel hidden">
+    <div class="rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.24em] text-red-500">Tủ Sách Nội Bộ</p>
+                <h3 class="mt-2 font-outfit text-2xl font-bold text-slate-900 employee-text">Tài liệu & Quy định</h3>
+                <p class="mt-2 text-sm text-slate-500 employee-subtext">
+                    Nơi lưu trữ các tài liệu, hướng dẫn và quy định quan trọng của công ty.
+                </p>
+            </div>
+            <div class="relative w-full sm:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input type="text" placeholder="Tìm kiếm tài liệu..." class="employee-input w-full bg-slate-50 border border-slate-200 rounded-[1rem] py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-red-100 focus:border-red-300 transition text-slate-700 shadow-inner outline-none">
+            </div>
+        </div>
+
+        <!-- Document Grid -->
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <!-- Card 1 -->
+            <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col">
+                <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-blue-50 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="flex items-start justify-between mb-4 relative z-10">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-book-open text-xl"></i>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider">PDF</span>
+                </div>
+                <h4 class="font-outfit text-lg font-bold text-slate-900 employee-text mb-2 relative z-10">Sổ tay nhân viên 2026</h4>
+                <p class="text-sm text-slate-500 employee-subtext mb-6 flex-1 relative z-10 line-clamp-2">Cẩm nang hướng dẫn văn hóa, phúc lợi và lộ trình thăng tiến dành cho nhân sự mới.</p>
+                
+                <div class="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto relative z-10">
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-clock mr-1"></i>Cập nhật: 10/05/2026</span>
+                    <button type="button" class="text-sm font-bold text-red-600 hover:text-red-700 hover:underline flex items-center group-hover:gap-1.5 gap-1 transition-all">
+                        Xem chi tiết <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col">
+                <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-emerald-50 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="flex items-start justify-between mb-4 relative z-10">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-shield-halved text-xl"></i>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider">PDF</span>
+                </div>
+                <h4 class="font-outfit text-lg font-bold text-slate-900 employee-text mb-2 relative z-10">Quy định Bảo mật Công ty</h4>
+                <p class="text-sm text-slate-500 employee-subtext mb-6 flex-1 relative z-10 line-clamp-2">Các điều khoản về bảo mật thông tin, an toàn dữ liệu và tuân thủ nội quy thiết bị kỹ thuật.</p>
+                
+                <div class="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto relative z-10">
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-clock mr-1"></i>Cập nhật: 01/01/2026</span>
+                    <button type="button" class="text-sm font-bold text-red-600 hover:text-red-700 hover:underline flex items-center group-hover:gap-1.5 gap-1 transition-all">
+                        Xem chi tiết <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col">
+                <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-amber-50 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="flex items-start justify-between mb-4 relative z-10">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-helmet-safety text-xl"></i>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider">DOCX</span>
+                </div>
+                <h4 class="font-outfit text-lg font-bold text-slate-900 employee-text mb-2 relative z-10">Hướng dẫn An toàn Lao động</h4>
+                <p class="text-sm text-slate-500 employee-subtext mb-6 flex-1 relative z-10 line-clamp-2">Quy trình PCCC, sơ cấp cứu cơ bản và thoát hiểm khẩn cấp trong tòa nhà.</p>
+                
+                <div class="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto relative z-10">
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-clock mr-1"></i>Cập nhật: 15/03/2026</span>
+                    <button type="button" class="text-sm font-bold text-red-600 hover:text-red-700 hover:underline flex items-center group-hover:gap-1.5 gap-1 transition-all">
+                        Tải xuống <i class="fa-solid fa-download text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden flex flex-col">
+                <div class="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-purple-50 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="flex items-start justify-between mb-4 relative z-10">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-purple-600 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-scale-balanced text-xl"></i>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 uppercase tracking-wider">PDF</span>
+                </div>
+                <h4 class="font-outfit text-lg font-bold text-slate-900 employee-text mb-2 relative z-10">Nội quy & Chế tài Vi phạm</h4>
+                <p class="text-sm text-slate-500 employee-subtext mb-6 flex-1 relative z-10 line-clamp-2">Bảng quy định mức phạt và xử lý kỷ luật đối với các hành vi vi phạm camera AI ghi nhận.</p>
+                
+                <div class="flex items-center justify-between border-t border-slate-100 pt-4 mt-auto relative z-10">
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-clock mr-1"></i>Cập nhật: 20/04/2026</span>
+                    <button type="button" class="text-sm font-bold text-red-600 hover:text-red-700 hover:underline flex items-center group-hover:gap-1.5 gap-1 transition-all">
+                        Xem chi tiết <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
