@@ -3564,10 +3564,6 @@ body {
   color: rgb(71 85 105 / var(--tw-text-opacity, 1));
 }
 
-.group:hover .group-hover\:opacity-100 {
-  opacity: 1;
-}
-
 @media (min-width: 640px) {
   .sm\:mr-44 {
     margin-right: 11rem;

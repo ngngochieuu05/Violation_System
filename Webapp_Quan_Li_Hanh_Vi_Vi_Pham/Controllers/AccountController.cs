@@ -16,10 +16,12 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 public class AccountController : Controller
 {
     private readonly IUserService _userService;
+    private readonly ViolationDbContext _dbContext;
 
-    public AccountController(IUserService userService)
+    public AccountController(IUserService userService, ViolationDbContext dbContext)
     {
         _userService = userService;
+        _dbContext = dbContext;
     }
 
     [HttpGet]
@@ -61,6 +63,10 @@ public class AccountController : Controller
     [HttpGet]
     public IActionResult Register()
     {
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToDashboard();
+        }
         return View();
     }
 
@@ -155,6 +161,75 @@ public class AccountController : Controller
             redirectUrl = Url.Action("Index", "Employee") ?? "/Employee";
         }
         return Json(new { success = true, redirectUrl = redirectUrl });
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    public IActionResult GoogleLogin(string? mode = "login", string? returnUrl = null)
+    {
+        var normalizedMode = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase) ? "register" : "login";
+        var redirectUrl = Url.Action(nameof(GoogleResponse), new { mode = normalizedMode, returnUrl }) ?? Url.Action(nameof(Login))!;
+        var properties = new AuthenticationProperties
+        {
+            RedirectUri = redirectUrl
+        };
+
+        return Challenge(properties, "Google");
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleResponse(string? mode = "login", string? returnUrl = null, CancellationToken cancellationToken = default)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            TempData["ErrorMessage"] = "Đăng nhập Google thất bại.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        var username = User.Identity?.Name;
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            TempData["ErrorMessage"] = "Không thể xác định tài khoản từ Google.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+        if (user == null)
+        {
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            TempData["ErrorMessage"] = "Tài khoản Google chưa được liên kết với hệ thống.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase) && !user.IsKeyActivated)
+        {
+            TempData["UsernameToActivate"] = user.Username;
+            return RedirectToAction("ActivateKey", "Manager");
+        }
+
+        var isRegisterFlow = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase);
+        var createdNow = string.Equals(User.FindFirst("GoogleAccountCreated")?.Value, "true", StringComparison.OrdinalIgnoreCase);
+
+        if (isRegisterFlow)
+        {
+            if (createdNow)
+            {
+                TempData["SuccessMessage"] = "Đăng ký bằng Google thành công. Hãy cập nhật sinh trắc học trong hồ sơ sau khi đăng nhập.";
+            }
+            else
+            {
+                TempData["SuccessMessage"] = "Tài khoản Google này đã tồn tại. Hệ thống đã đăng nhập cho bạn.";
+            }
+        }
+
+        if (!isRegisterFlow && !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
+
+        return RedirectToDashboard(user.Role);
     }
 
     [Authorize]

@@ -659,7 +659,7 @@
                     row.className = "flex items-center gap-2";
                     
                     const revokeBtn = document.createElement("button");
-                    revokeBtn.className = "text-[10px] text-red-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg";
+                    revokeBtn.className = "text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1";
                     revokeBtn.textContent = "Thu hồi";
                     revokeBtn.onclick = () => {
                         message.revoked = true;
