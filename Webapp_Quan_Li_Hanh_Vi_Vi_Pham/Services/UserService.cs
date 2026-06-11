@@ -77,20 +77,21 @@ public class UserService : IUserService
             throw new InvalidOperationException("Cần đúng 4 ảnh đăng ký");
         }
 
-        var tempFiles = new List<string>();
+        var savedFiles = new List<string>();
         try
         {
             for (int i = 0; i < base64List.Length; i++)
             {
-                var filePath = await SaveBase64ImageToTempAsync(
+                var filePath = await SaveBase64ImageToDatasetAsync(
                     base64List[i],
+                    user.Username,
                     $"{user.Username}_register_{i}_{Guid.NewGuid().ToString()[..8]}.jpg",
                     cancellationToken);
-                tempFiles.Add(filePath);
+                savedFiles.Add(filePath);
             }
 
-            var batchResult = await RunDeepFaceRepresentBatchAsync(tempFiles);
-            if (!batchResult.Success || batchResult.Results.Count != tempFiles.Count)
+            var batchResult = await RunDeepFaceRepresentBatchAsync(savedFiles);
+            if (!batchResult.Success || batchResult.Results.Count != savedFiles.Count)
             {
                 throw new InvalidOperationException(batchResult.Error);
             }
@@ -120,17 +121,13 @@ public class UserService : IUserService
                 });
             }
 
-            user.FaceImagePath = "embeddings_saved";
+            user.FaceImagePath = savedFiles.Count > 0 ? savedFiles[0] : "embeddings_saved";
             await _context.SaveChangesAsync(cancellationToken);
             return user;
         }
         catch
         {
             throw;
-        }
-        finally
-        {
-            DeleteFilesIfExist(tempFiles);
         }
     }
 
@@ -162,20 +159,21 @@ public class UserService : IUserService
             return false;
         }
 
-        var tempFiles = new List<string>();
+        var savedFiles = new List<string>();
         try
         {
             for (int i = 0; i < base64List.Length; i++)
             {
-                var filePath = await SaveBase64ImageToTempAsync(
+                var filePath = await SaveBase64ImageToDatasetAsync(
                     base64List[i],
+                    user.Username,
                     $"{user.Username}_update_{i}_{Guid.NewGuid().ToString()[..8]}.jpg",
                     cancellationToken);
-                tempFiles.Add(filePath);
+                savedFiles.Add(filePath);
             }
 
-            var batchResult = await RunDeepFaceRepresentBatchAsync(tempFiles);
-            if (!batchResult.Success || batchResult.Results.Count != tempFiles.Count)
+            var batchResult = await RunDeepFaceRepresentBatchAsync(savedFiles);
+            if (!batchResult.Success || batchResult.Results.Count != savedFiles.Count)
             {
                 return false;
             }
@@ -204,17 +202,13 @@ public class UserService : IUserService
                 });
             }
 
-            user.FaceImagePath = "embeddings_saved";
+            user.FaceImagePath = savedFiles.Count > 0 ? savedFiles[0] : "embeddings_saved";
             await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
         catch
         {
             return false;
-        }
-        finally
-        {
-            DeleteFilesIfExist(tempFiles);
         }
     }
 
@@ -373,6 +367,27 @@ public class UserService : IUserService
         return tempFile;
     }
 
+    private async Task<string> SaveBase64ImageToDatasetAsync(string base64Data, string username, string fileName, CancellationToken cancellationToken)
+    {
+        if (base64Data.Contains(","))
+        {
+            base64Data = base64Data.Split(',')[1];
+        }
+
+        base64Data = base64Data.Replace(" ", "+");
+
+        var datasetDir = Path.GetFullPath(Path.Combine(_webHostEnvironment.ContentRootPath, "..", "dataset", username));
+        if (!Directory.Exists(datasetDir))
+        {
+            Directory.CreateDirectory(datasetDir);
+        }
+
+        var filePath = Path.Combine(datasetDir, fileName);
+        var imageBytes = Convert.FromBase64String(base64Data);
+        await File.WriteAllBytesAsync(filePath, imageBytes, cancellationToken);
+        return filePath;
+    }
+
     private static string SanitizeProbeBase64(string faceImageBase64)
     {
         var base64Data = faceImageBase64
@@ -383,24 +398,6 @@ public class UserService : IUserService
             .Replace(";shadow;", "", StringComparison.Ordinal);
 
         return base64Data;
-    }
-
-    private static void DeleteFilesIfExist(IEnumerable<string> filePaths)
-    {
-        foreach (var filePath in filePaths)
-        {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(filePath) && File.Exists(filePath))
-                {
-                    File.Delete(filePath);
-                }
-            }
-            catch
-            {
-                // Ignore temp cleanup errors.
-            }
-        }
     }
 
     private string GetPythonExecutable()
