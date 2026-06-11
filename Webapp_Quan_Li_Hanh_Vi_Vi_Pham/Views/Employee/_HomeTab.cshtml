@@ -1,161 +1,229 @@
-<!-- Grid thông số cá nhân dạng hộp vuông nhỏ gọn -->
-<div class="grid gap-4 grid-cols-2 md:grid-cols-4 mb-6">
-    <!-- Hộp 1: Mã nhân viên -->
-    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
-        <div class="flex items-center justify-between text-slate-400">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Mã nhân viên</span>
-            <i class="fa-solid fa-id-card text-red-500 text-sm"></i>
-        </div>
-        <div>
-            <p class="font-outfit text-lg font-bold text-slate-800 employee-text mt-1 truncate" data-profile-id>...</p>
-            <span class="text-[10px] text-slate-400">Định danh chính thức</span>
-        </div>
-    </div>
-
-    <!-- Hộp 2: Phòng ban -->
-    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
-        <div class="flex items-center justify-between text-slate-400">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Phòng ban</span>
-            <i class="fa-solid fa-sitemap text-red-500 text-sm"></i>
-        </div>
-        <div>
-            <p class="font-outfit text-base font-bold text-slate-800 employee-text mt-1 truncate" data-profile-department>...</p>
-            <span class="text-[10px] text-slate-400">Đơn vị công tác</span>
-        </div>
-    </div>
-
-    <!-- Hộp 3: Ca làm việc -->
-    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
-        <div class="flex items-center justify-between text-slate-400">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Ca làm việc</span>
-            <i class="fa-solid fa-business-time text-red-500 text-sm"></i>
-        </div>
-        <div>
-            <p class="font-outfit text-base font-bold text-slate-800 employee-text mt-1">08:00 - 17:00</p>
-            <span class="text-[10px] text-slate-400">Giờ hành chính</span>
-        </div>
-    </div>
-
-    <!-- Hộp 4: Trạng thái chấm công -->
-    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
-        <div class="flex items-center justify-between text-slate-400">
-            <span class="text-[10px] font-bold uppercase tracking-wider">Chấm công ngày</span>
-            <i class="fa-solid fa-fingerprint text-red-500 text-sm"></i>
-        </div>
-        <div>
-            <div class="flex items-center gap-1.5 mt-1">
-                <span class="h-2 w-2 rounded-full bg-amber-500" id="attendanceStatusDot"></span>
-                <p class="font-outfit text-sm font-bold text-slate-800 employee-text" id="attendanceStatusText">Chưa Check-in</p>
-            </div>
-            <span class="text-[10px] text-slate-400" id="attendanceStatusSubText">Yêu cầu xác thực khuôn mặt</span>
-        </div>
-    </div>
-</div>
-
-<!-- Grid chính bên dưới: Nhiệm vụ và Lịch sử chấm công nhanh -->
-<section data-tab-panel="home" class="employee-tab-panel grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-    <!-- Cột trái: Nhiệm vụ hôm nay -->
-
-
-    <!-- Nhiệm vụ hôm nay (Cột trái - 1.2fr) -->
-    <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg flex flex-col justify-between">
-        <div>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Tiến độ</p>
-                    <h3 class="employee-text mt-1 font-outfit text-lg font-bold text-slate-800">Nhiệm vụ cần hoàn thiện</h3>
+<section data-tab-panel="home" class="employee-tab-panel active">
+    <!-- Hero Area -->
+    <div class="mb-6 relative">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div class="relative z-10 pt-4 pb-2">
+                <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm mb-4">
+                    <i class="fa-solid fa-user-tie"></i> EMPLOYEE WORKSPACE
+                </span>
+                <div class="flex items-center flex-wrap gap-3">
+                    <h1 class="text-3xl md:text-4xl font-outfit font-bold text-slate-900">
+                        Xin chào, <span class="text-red-600" data-profile-name>@User.FindFirst("FullName")?.Value</span>
+                    </h1>
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-sm font-bold text-amber-600 shadow-sm">
+                        <i class="fa-solid fa-star"></i> 1,500
+                    </span>
                 </div>
-                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'schedule\']').click()" class="text-xs font-bold text-red-600 hover:text-red-700 hover:underline">Chi tiết <i class="fa-solid fa-arrow-right ml-0.5"></i></button>
-            </div>
-
-            <div class="mt-4 grid gap-3 grid-cols-3">
-                <div class="rounded-xl border border-slate-150 bg-slate-50/70 p-3 flex items-center gap-2">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white text-xs shadow-sm">
-                        <i class="fa-solid fa-list-check"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-slate-500">Tổng số</p>
-                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-total>0</p>
-                    </div>
-                </div>
-                <div class="rounded-xl border border-amber-100 bg-amber-50/70 p-3 flex items-center gap-2">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white text-xs shadow-sm">
-                        <i class="fa-solid fa-clock"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-amber-500">Đang làm</p>
-                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-pending>0</p>
-                    </div>
-                </div>
-                <div class="rounded-xl border border-green-100 bg-green-50/70 p-3 flex items-center gap-2">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500 text-white text-xs shadow-sm">
-                        <i class="fa-solid fa-check-double"></i>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-semibold text-green-600">Đã xong</p>
-                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-done>0</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-4 space-y-2 max-h-[220px] overflow-y-auto pr-1" data-home-task-list>
-                <!-- Injected by JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Tiện ích nhanh & Vi phạm (Cột phải - 0.8fr) -->
-    <div class="flex flex-col gap-6">
-        <!-- Card Lối tắt nhanh -->
-        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg">
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400 mb-3">Thao tác nhanh</p>
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'attendance\']').click()" class="flex flex-col items-center justify-center p-3 rounded-xl border border-red-100 bg-red-50/30 hover:bg-red-50 text-red-600 transition-all duration-200 group active:scale-95">
-                    <i class="fa-solid fa-fingerprint text-xl mb-1 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs font-semibold">Chấm công</span>
-                </button>
-                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'requests\']').click()" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 text-slate-700 transition-all duration-200 group active:scale-95">
-                    <i class="fa-solid fa-file-signature text-xl mb-1 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs font-semibold">Gửi đơn từ</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Card Vi phạm của tôi gần đây -->
-        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg flex-1">
-            <div class="flex items-center justify-between mb-3">
-                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Vi phạm gần đây</p>
-                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600" id="homeViolationCount">0 vi phạm</span>
+                <p class="mt-2 text-slate-500">Chào mừng bạn đến với môi trường làm việc của mình.</p>
             </div>
             
-            <div class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1" id="homeViolationList">
-                <div class="text-center py-6 text-slate-400">
-                    <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
-                    <p class="text-xs">Không có vi phạm ghi nhận</p>
+            <!-- Illustration Placeholder (Optional) -->
+            <div class="hidden md:block absolute right-0 top-0 w-64 h-40 opacity-80 pointer-events-none" style="background-image: radial-gradient(circle at center, #fee2e2 0%, transparent 60%);">
+                <!-- Nơi đây có thể chèn ảnh minh họa vẫy tay -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Card 1 -->
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-user text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 mb-0.5 font-medium">Vai trò</p>
+                <p class="text-sm font-bold text-slate-900">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+            </div>
+        </div>
+        
+        <!-- Card 2 -->
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-fingerprint text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 mb-0.5 font-medium">Trạng thái</p>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <p class="text-sm font-bold text-slate-900">Online</p>
                 </div>
             </div>
         </div>
 
-        <!-- Card Khen Thưởng -->
-        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg relative overflow-hidden group">
-            <div class="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-200 blur-2xl opacity-40 group-hover:bg-amber-300 transition-all duration-500"></div>
-            <div class="relative z-10">
-                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500 mb-3"><i class="fa-solid fa-trophy mr-1"></i>Vinh danh</p>
-                <h4 class="font-outfit text-sm font-bold text-slate-800">Nhân viên xuất sắc tháng</h4>
-                
-                <div class="mt-4 flex items-center gap-3">
-                    <div class="relative">
-                        <img src="https://ui-avatars.com/api/?name=NV&background=f59e0b&color=fff&rounded=true&bold=true" alt="Avatar" class="h-10 w-10 rounded-full border-2 border-white shadow-sm" />
-                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 border border-white text-[8px] text-white">
-                            <i class="fa-solid fa-star"></i>
-                        </span>
+        <!-- Card 3 -->
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                <i class="fa-regular fa-calendar text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 mb-0.5 font-medium">Ngày</p>
+                <p class="text-sm font-bold text-slate-900" id="currentDateDisplay">--/--/----</p>
+            </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
+                <i class="fa-regular fa-clock text-xl"></i>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 mb-0.5 font-medium">Giờ hiện tại</p>
+                <p class="text-sm font-bold text-slate-900 font-mono" id="currentTimeDisplay">--:--:--</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+            
+            <!-- Nhiệm vụ cần hoàn thiện -->
+            <div class="saas-card p-6 flex-1">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="saas-heading text-lg flex items-center gap-2">
+                        <i class="fa-regular fa-clipboard text-red-600"></i> Nhiệm vụ cần hoàn thiện
+                    </h3>
+                    <a href="#" data-tab-trigger="schedule" class="text-sm font-bold text-red-600 hover:underline">Chi tiết &rarr;</a>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Task 1 -->
+                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                            <p class="text-sm font-semibold text-slate-700">Cập nhật báo cáo KPI tháng</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-slate-400 font-medium">10:00 AM</span>
+                            <span class="text-xs font-bold text-red-500 min-w-[70px] text-right">Quá hạn</span>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-sm font-bold text-slate-900">Trần Văn Khôi</p>
-                        <p class="text-[10px] text-slate-500">Khối Vận hành • 3,200 Điểm</p>
+                    
+                    <!-- Task 2 -->
+                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                            <p class="text-sm font-semibold text-slate-700">Họp phòng chuyên môn</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-slate-400 font-medium">14:30 PM</span>
+                            <span class="text-xs font-bold text-amber-500 min-w-[70px] text-right">Sắp đến hạn</span>
+                        </div>
+                    </div>
+
+                    <!-- Task 3 -->
+                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <p class="text-sm font-semibold text-slate-700">Chuẩn bị tài liệu dự án ABC</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-xs text-slate-400 font-medium">08:30 AM</span>
+                            <span class="text-xs font-bold text-emerald-500 min-w-[70px] text-right">Hoàn thành</span>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Nhân viên xuất sắc -->
+            <div class="saas-card overflow-hidden relative">
+                <div class="absolute inset-0 bg-gradient-to-r from-slate-50 to-white z-0"></div>
+                <!-- Optional background trophy watermark -->
+                <div class="absolute right-0 top-0 bottom-0 w-1/3 bg-[url('https://cdn-icons-png.flaticon.com/512/3112/3112946.png')] bg-no-repeat bg-right bg-contain opacity-5 transform scale-150 origin-right pointer-events-none"></div>
+                
+                <div class="relative z-10 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">VINH DANH</p>
+                        <h3 class="saas-heading text-lg mb-4">Nhân viên xuất sắc tháng</h3>
+                        
+                        <div class="flex items-center gap-4">
+                            <div class="relative">
+                                <div class="w-14 h-14 rounded-full bg-amber-400 flex items-center justify-center text-white font-bold text-xl shadow-lg border-2 border-white">NV</div>
+                                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                    <i class="fa-solid fa-crown text-[10px] text-amber-500"></i>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-900">Trần Văn Khôi</p>
+                                <p class="text-xs text-slate-500 mt-0.5">Khối Vận hành &bull; 3,200 Điểm</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="#" class="text-sm font-bold text-red-600 hover:underline flex items-center sm:self-end mt-4 sm:mt-0">
+                        Xem bảng xếp hạng &rarr;
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column -->
+        <div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+            
+            <!-- Thao tác nhanh -->
+            <div class="saas-card p-6">
+                <h3 class="saas-heading text-lg mb-6">Thao tác nhanh</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <button type="button" data-tab-trigger="attendance" class="flex flex-col items-center justify-center p-6 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition active:scale-95 group">
+                        <i class="fa-solid fa-fingerprint text-3xl mb-3 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-bold">Chấm công</span>
+                    </button>
+                    
+                    <button type="button" data-tab-trigger="requests" class="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-50 text-slate-700 hover:bg-slate-100 transition active:scale-95 group">
+                        <i class="fa-solid fa-file-pen text-3xl mb-3 text-slate-600 group-hover:scale-110 transition-transform"></i>
+                        <span class="text-sm font-bold">Gửi đơn từ</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vi phạm gần đây -->
+            <div class="saas-card p-6 flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="saas-heading text-lg">Vi phạm gần đây</h3>
+                    <span class="text-xs text-slate-400">0 vi phạm</span>
+                </div>
+                
+                <div class="flex-1 flex flex-col items-center justify-center py-8">
+                    <div class="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white text-3xl mb-4 shadow-lg shadow-emerald-500/20">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <p class="text-sm text-slate-500 font-medium">Không có vi phạm ghi nhận</p>
+                </div>
+            </div>
+
         </div>
     </div>
 </section>
+
+<!-- Scripts cho các tiện ích nhỏ trên Home -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Cập nhật đồng hồ và ngày tháng
+        const timeDisplay = document.getElementById('currentTimeDisplay');
+        const dateDisplay = document.getElementById('currentDateDisplay');
+        
+        function updateDateTime() {
+            const now = new Date();
+            
+            if (timeDisplay) {
+                timeDisplay.textContent = now.toLocaleTimeString('vi-VN', { hour12: false });
+            }
+            
+            if (dateDisplay) {
+                const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+                const dayName = days[now.getDay()];
+                const dateStr = now.toLocaleDateString('vi-VN', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
+                });
+                dateDisplay.textContent = `${dayName}, ${dateStr}`;
+            }
+        }
+        
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    });
+</script>

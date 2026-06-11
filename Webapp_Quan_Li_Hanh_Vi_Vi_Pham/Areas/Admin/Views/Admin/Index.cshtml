@@ -1,112 +1,12 @@
 @model Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ModelSetting
 @{
-    Layout = null;
-    ViewData["Title"] = "Admin Dashboard - ComplianceHub";
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
 
     var managers = ViewBag.Managers as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>();
     var aiModels = ViewBag.AiModels as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel>();
 }
-
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"]</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="~/css/output.css" asp-append-version="true" />
-    <style>
-            body {
-                font-family: 'Inter', sans-serif;
-                margin: 0;
-                padding: 0;
-            }
-    </style>
-</head>
-<body class="bg-zinc-50 text-zinc-900">
-
-    <div class="flex h-screen w-full overflow-hidden">
-
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity"></div>
-
-        <aside id="admin-sidebar" class="fixed md:relative w-64 h-full bg-white border-r border-zinc-200 transition-transform duration-300 z-50 md:z-0 -translate-x-full md:translate-x-0 shrink-0 flex flex-col">
-            <div class="p-6 border-b border-zinc-200 shrink-0">
-                <h1 class="text-2xl font-bold text-red-600 flex items-center gap-2">
-                    <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">C</span>
-                    </div>
-                    <a href="/Admin">ComplianceHub</a>
-                </h1>
-            </div>
-
-            <nav class="flex-1 overflow-y-auto p-4 space-y-2">
-                <div>
-                    <a href="/Admin" class="w-full flex items-center gap-3 px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
-                        Dashboard
-                    </a>
-                </div>
-                <div>
-                    <a href="/Admin/Models" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
-                        Quản lý Model
-                    </a>
-                </div>
-                <div class="space-y-1">
-                    <a href="/Admin/Personnel" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                        Quản lý Nhân sự
-                    </a>
-                </div>
-                <div>
-                    <a href="/Admin/AuditLogs" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>
-                        Nhật ký Hệ thống
-                    </a>
-                </div>
-                <div>
-                    <a href="/Admin/Settings" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
-                        Cài đặt Hệ thống
-                    </a>
-                </div>
-            </nav>
-
-            <div class="p-4 border-t border-zinc-200 shrink-0">
-                <a href="/Account/Logout" class="w-full flex items-center gap-3 px-4 py-2 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
-                    Đăng xuất
-                </a>
-            </div>
-        </aside>
-
-        <div class="flex flex-col flex-1 min-w-0 h-full overflow-hidden bg-zinc-50">
-
-            <header class="bg-white border-b border-zinc-200 shrink-0 z-40">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <div class="flex items-center gap-4">
-                        <button id="mobile-menu-btn" class="md:hidden p-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
-                        </button>
-                        <h2 class="text-xl font-semibold text-zinc-900">Admin Dashboard</h2>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <div class="hidden md:flex items-center bg-zinc-100 rounded-lg px-3 py-2 gap-2 flex-1 max-w-xs">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-zinc-500"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                            <input type="text" placeholder="Tìm kiếm..." class="bg-transparent border-none outline-none w-full text-sm placeholder:text-zinc-500" />
-                        </div>
-                        <button class="relative p-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                            <span class="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <main class="flex-1 overflow-y-auto p-6 space-y-6">
 
                 @if (TempData["SuccessMessage"] != null)
                 {
@@ -121,9 +21,67 @@
                     </div>
                 }
 
-                <div class="bg-gradient-to-r from-red-600 to-red-500 rounded-xl p-8 text-white shadow-sm">
-                    <h1 class="text-3xl font-bold mb-2">Chào mừng, Admin</h1>
-                    <p class="text-red-100">Quản lý hệ thống vi phạm nhân sự một cách hiệu quả</p>
+                <!-- Welcome Section -->
+                <div class="mb-6 flex flex-col gap-6">
+                    <div class="flex flex-col gap-2">
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                                <i class="fa-solid fa-user-shield text-[10px]"></i> ADMIN WORKSPACE
+                            </span>
+                        </div>
+                        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                            Xin chào, <span class="text-red-600">@User.FindFirst("FullName")?.Value</span>
+                            <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 shadow-sm">
+                                <i class="fa-solid fa-star text-[10px]"></i> 9,999
+                            </span>
+                        </h1>
+                        <p class="text-sm text-slate-500">Chào mừng bạn đến với môi trường quản trị hệ thống.</p>
+                    </div>
+
+                    <!-- Status Cards Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-id-badge"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vai trò</p>
+                                <p class="text-sm font-extrabold text-slate-800">Admin</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-fingerprint"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trạng thái</p>
+                                <p class="text-sm font-extrabold text-emerald-600 flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Online
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày</p>
+                                <p class="text-sm font-extrabold text-slate-800" id="live-date">...</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giờ hiện tại</p>
+                                <p class="text-sm font-extrabold text-slate-800" id="live-clock">...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -216,10 +174,10 @@
                                 <h3 class="text-lg font-semibold text-zinc-900">Quản lý Nhân sự / Key</h3>
                                 <p class="text-sm text-zinc-500">Mã kích hoạt cho tài khoản Manager</p>
                             </div>
-                            <button class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0">
+                            <a href="/Admin/Personnel?add=true" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0 no-underline">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                                Thêm Nhân viên
-                            </button>
+                                Thêm Quản Lý
+                            </a>
                         </div>
                         <div class="p-6 space-y-4 flex-1">
                             @if (!managers.Any())
@@ -416,7 +374,29 @@
         </div>
     </div>
 
+@section Scripts {
     <script>
+            function updateTime() {
+                const now = new Date();
+                const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+                const dayName = days[now.getDay()];
+                const dateStr = dayName + ', ' + 
+                    String(now.getDate()).padStart(2, '0') + '/' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '/' + 
+                    now.getFullYear();
+                
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+                    
+                const dateEl = document.getElementById('live-date');
+                const clockEl = document.getElementById('live-clock');
+                if (dateEl) dateEl.textContent = dateStr;
+                if (clockEl) clockEl.textContent = timeStr;
+            }
+            setInterval(updateTime, 1000);
+            updateTime();
+
             document.getElementById('mobile-menu-btn').addEventListener('click', function () {
                 document.getElementById('admin-sidebar').classList.toggle('-translate-x-full');
                 document.getElementById('sidebar-overlay').classList.toggle('hidden');
@@ -472,5 +452,4 @@
                 document.getElementById('edit_modelPath').value = isDF ? document.getElementById('edit_df_select').value : document.getElementById('edit_yolo_input').value;
             });
     </script>
-</body>
-</html>
+}

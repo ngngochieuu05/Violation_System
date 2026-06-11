@@ -142,6 +142,18 @@ public class AdminController : Controller
         return View("Settings");
     }
 
+    [HttpGet("ProfileSettings")]
+    public IActionResult ProfileSettings()
+    {
+        return View("ProfileSettings");
+    }
+
+    [HttpGet("GeneralSettings")]
+    public IActionResult GeneralSettings()
+    {
+        return View("GeneralSettings");
+    }
+
     private string GetRedirectUrl()
     {
         string referer = Request.Headers["Referer"].ToString();

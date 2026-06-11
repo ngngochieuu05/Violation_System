@@ -49,69 +49,12 @@
     const attendanceMessage = document.querySelector("[data-attendance-message]");
     const attendanceDetailModal = document.querySelector("[data-attendance-detail-modal]");
     const attendanceCameraModal = document.querySelector("[data-attendance-camera-modal]");
-    const detailContent = document.querySelector("[data-attendance-detail-content]");
-    const detailHeader = document.querySelector("[data-attendance-detail-header]");
-
     // Teleport modals to body to escape z-index stacking contexts
     [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]")].forEach(modal => {
         if (modal) {
             document.body.appendChild(modal);
         }
     });
-
-    // Make attendance detail modal draggable
-    if (detailContent && detailHeader) {
-        let isDragging = false;
-        let currentX = 0, currentY = 0, initialX = 0, initialY = 0;
-        let xOffset = 0, yOffset = 0;
-
-        detailHeader.style.cursor = 'grab';
-
-        detailHeader.addEventListener("mousedown", (e) => {
-            if (e.target.closest("[data-attendance-detail-close]")) return;
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            
-            if (e.target === detailHeader || detailHeader.contains(e.target)) {
-                isDragging = true;
-                detailContent.style.transition = 'none';
-                detailHeader.style.cursor = 'grabbing';
-            }
-        });
-
-        document.addEventListener("mousemove", (e) => {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-                xOffset = currentX;
-                yOffset = currentY;
-                detailContent.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-            }
-        });
-
-        document.addEventListener("mouseup", () => {
-            if (isDragging) {
-                isDragging = false;
-                detailContent.style.transition = '';
-                detailHeader.style.cursor = 'grab';
-            }
-        });
-
-        // Reset position when modal closes
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.target.classList.contains('hidden')) {
-                    xOffset = 0;
-                    yOffset = 0;
-                    detailContent.style.transform = `translate3d(0, 0, 0)`;
-                }
-            });
-        });
-        if (attendanceDetailModal) {
-            observer.observe(attendanceDetailModal, { attributes: true, attributeFilter: ['class'] });
-        }
-    }
 
     let attendanceStream = null;
     let currentAttendanceAction = null;
@@ -716,7 +659,7 @@
                     row.className = "flex items-center gap-2";
                     
                     const revokeBtn = document.createElement("button");
-                    revokeBtn.className = "text-[10px] text-red-600 font-semibold opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg";
+                    revokeBtn.className = "text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1";
                     revokeBtn.textContent = "Thu hồi";
                     revokeBtn.onclick = () => {
                         message.revoked = true;
@@ -1602,37 +1545,6 @@
                 faceStatus?.classList.add("hidden");
                 faceCaptureBtn.disabled = false;
             }
-        }
-    });
-
-    // --- Top Navigation Dropdowns ---
-    const notifTrigger = document.getElementById("dashboardNotificationTrigger");
-    const notifMenu = document.getElementById("dashboardNotificationMenu");
-    const userTrigger = document.getElementById("dashboardDropdownTrigger");
-    const userMenu = document.getElementById("dashboardDropdownMenu");
-
-    if (notifTrigger && notifMenu) {
-        notifTrigger.addEventListener("click", (e) => {
-            e.stopPropagation();
-            notifMenu.classList.toggle("hidden");
-            if (userMenu) userMenu.classList.add("hidden");
-        });
-    }
-
-    if (userTrigger && userMenu) {
-        userTrigger.addEventListener("click", (e) => {
-            e.stopPropagation();
-            userMenu.classList.toggle("hidden");
-            if (notifMenu) notifMenu.classList.add("hidden");
-        });
-    }
-
-    document.addEventListener("click", (e) => {
-        if (notifMenu && !notifMenu.contains(e.target)) {
-            notifMenu.classList.add("hidden");
-        }
-        if (userMenu && !userMenu.contains(e.target)) {
-            userMenu.classList.add("hidden");
         }
     });
 

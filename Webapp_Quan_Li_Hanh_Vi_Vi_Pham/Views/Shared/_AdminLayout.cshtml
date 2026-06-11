@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/output.css" asp-append-version="true" />
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        h1, h2, h3, h4, h5, h6, .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="bg-zinc-50 text-zinc-900">
+    <div class="flex h-screen w-full overflow-hidden">
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity"></div>
+
+        <!-- Sidebar -->
+        <aside id="admin-sidebar" class="fixed md:relative w-64 h-full bg-white border-r border-zinc-200 transition-transform duration-300 z-50 md:z-0 -translate-x-full md:translate-x-0 shrink-0 flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-zinc-200 shrink-0">
+                <h1 class="text-2xl font-bold text-red-600 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">C</span>
+                    </div>
+                    <a href="/Admin">ComplianceHub</a>
+                </h1>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+                <p class="px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3 mt-2">Workspace</p>
+                
+                <div>
+                    <a href="/Admin" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-house w-5 text-center mr-3"></i>Dashboard
+                    </a>
+                </div>
+                <div>
+                    <a href="/Admin/Models" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "Models" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-microchip w-5 text-center mr-3"></i>Quản lý Model
+                    </a>
+                </div>
+                <div>
+                    <a href="/Admin/Personnel" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "Personnel" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-users w-5 text-center mr-3"></i>Quản lý Nhân sự
+                    </a>
+                </div>
+                <div>
+                    <a href="/Admin/AuditLogs" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "AuditLogs" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-file-invoice w-5 text-center mr-3"></i>Nhật ký Hệ thống
+                    </a>
+                </div>
+                <div>
+                    <a href="/Admin/Settings" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "SettingsSystem" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-sliders w-5 text-center mr-3"></i>Cài đặt Hệ thống
+                    </a>
+                </div>
+                
+                <div class="my-4 border-t border-slate-200"></div>
+                <p class="px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Hệ thống</p>
+                
+                <div>
+                    <a href="/Admin/ProfileSettings" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "ProfileSettings" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-user-gear w-5 text-center mr-3"></i>Cài đặt hồ sơ
+                    </a>
+                </div>
+                <div>
+                    <a href="/Admin/GeneralSettings" class="w-full flex items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md @(ViewData["ActivePage"]?.ToString() == "GeneralSettings" ? "bg-red-600 text-white shadow" : "text-slate-600 hover:bg-red-50 hover:text-red-600")">
+                        <i class="fa-solid fa-gear w-5 text-center mr-3"></i>Cài đặt
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Logout -->
+            <div class="p-4 border-t border-zinc-200 shrink-0">
+                <a href="/Account/Logout" class="w-full flex items-center gap-3 px-4 py-2 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-md text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+                    Đăng xuất
+                </a>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="flex flex-col flex-1 min-w-0 h-full overflow-hidden bg-zinc-50">
+            <header class="bg-white border-b border-zinc-200 shrink-0 z-40">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <div class="flex items-center gap-4">
+                        <button id="mobile-menu-btn" class="md:hidden p-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
+                        </button>
+                        <h2 class="text-xl font-semibold text-zinc-900">@ViewData["Title"]</h2>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <!-- Search (Placeholder to match design) -->
+                        <div class="hidden md:flex items-center bg-zinc-100 rounded-lg px-3 py-2 gap-2 flex-1 max-w-xs">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-zinc-500"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                            <input type="text" placeholder="Tìm kiếm..." class="bg-transparent border-none outline-none w-full text-sm placeholder:text-zinc-500" />
+                        </div>
+
+                        <!-- Notifications Dropdown -->
+                        <div class="relative ml-2" id="dashboardNotificationDropdown">
+                            <button type="button" class="relative text-zinc-600 hover:bg-zinc-100 p-2 rounded-md focus:outline-none transition-all duration-200 hover:-translate-y-0.5 active:scale-95" id="dashboardNotificationTrigger">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                                <span class="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
+                            </button>
+                            
+                            <div id="dashboardNotificationMenu" class="absolute mt-2 w-80 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
+                                <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center gap-2">
+                                    <p class="text-sm font-semibold text-slate-900 whitespace-nowrap">Thông báo Quản trị</p>
+                                    <span class="text-xs text-red-600 cursor-pointer hover:underline whitespace-nowrap text-right">Đánh dấu đã đọc</span>
+                                </div>
+                                <div class="py-2 max-h-64 overflow-y-auto">
+                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
+                                        <p class="text-sm text-slate-800 font-medium">Manager <span class="font-semibold">mgrtest</span> đã gửi yêu cầu kích hoạt khóa thiết bị</p>
+                                        <p class="text-xs text-slate-500 mt-1">10 phút trước</p>
+                                    </div>
+                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
+                                        <p class="text-sm text-slate-800 font-medium">Manager <span class="font-semibold">nguyen_tung_duong</span> đã cập nhật thông tin cá nhân</p>
+                                        <p class="text-xs text-slate-500 mt-1">1 giờ trước</p>
+                                    </div>
+                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
+                                        <p class="text-sm text-slate-800 font-medium">Thiết bị của Manager <span class="font-semibold">tran_van_a</span> đã được reset kích hoạt</p>
+                                        <p class="text-xs text-slate-500 mt-1">3 giờ trước</p>
+                                    </div>
+                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
+                                        <p class="text-sm text-slate-800 font-medium">Đã cấp lại khóa kích hoạt mới cho Manager <span class="font-semibold">le_thi_b</span></p>
+                                        <p class="text-xs text-slate-500 mt-1">5 giờ trước</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Profile Dropdown -->
+                        <div class="relative ml-4 border-l border-zinc-200 pl-4" id="dashboardUserDropdown">
+                            <button type="button" class="flex items-center focus:outline-none transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md hover:opacity-80" id="dashboardDropdownTrigger">
+                                <div class="employee-avatar-placeholder relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-red-50 text-red-600 ring-2 ring-white shadow-sm">
+                                    <i class="fa-solid fa-user text-xl z-0"></i>
+                                </div>
+                            </button>
+                            
+                            <div id="dashboardDropdownMenu" class="absolute mt-2 w-52 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
+                                <div class="px-4 py-3 border-b border-slate-100">
+                                    <p class="text-sm font-semibold text-slate-900 truncate">@User.FindFirst("FullName")?.Value</p>
+                                    <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                                </div>
+                                <div class="py-1">
+                                    <button type="button" id="adminProfileModalTrigger" class="flex w-full items-center text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-95">
+                                        <i class="fa-solid fa-id-badge w-5 text-center mr-3"></i>Hồ sơ
+                                    </button>
+                                    <a href="/Admin/ProfileSettings" class="flex w-full items-center text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-95">
+                                        <i class="fa-solid fa-user-gear w-5 text-center mr-3"></i>Cài đặt hồ sơ
+                                    </a>
+                                </div>
+                                <div class="border-t border-slate-100 py-1">
+                                    <a href="/Account/Logout" class="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95">
+                                        <i class="fa-solid fa-right-from-bracket w-5 text-center mr-3"></i>Đăng xuất
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-6 space-y-6">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Sidebar and Dropdowns Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar Mobile Toggle
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const sidebar = document.getElementById('admin-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (mobileMenuBtn && sidebar && overlay) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('-translate-x-full');
+                    overlay.classList.toggle('hidden');
+                });
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.add('-translate-x-full');
+                    overlay.classList.add('hidden');
+                });
+            }
+
+            // User dropdown
+            const trigger = document.getElementById('dashboardDropdownTrigger');
+            const menu = document.getElementById('dashboardDropdownMenu');
+            const dropdownContainer = document.getElementById('dashboardUserDropdown');
+            
+            if (trigger && menu && dropdownContainer) {
+                trigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    menu.classList.toggle('hidden');
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!dropdownContainer.contains(e.target)) {
+                        menu.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Notification dropdown
+            const notifTrigger = document.getElementById('dashboardNotificationTrigger');
+            const notifMenu = document.getElementById('dashboardNotificationMenu');
+            const notifContainer = document.getElementById('dashboardNotificationDropdown');
+            
+            if (notifTrigger && notifMenu && notifContainer) {
+                notifTrigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    notifMenu.classList.toggle('hidden');
+                });
+                
+                document.addEventListener('click', function(e) {
+                    if (!notifContainer.contains(e.target)) {
+                        notifMenu.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Admin Profile Modal popup
+            const profileTrigger = document.getElementById('adminProfileModalTrigger');
+            const profileModal = document.getElementById('adminProfileModal');
+            const closeProfileModal = document.getElementById('closeAdminProfileModal');
+            const layoutUsername = '@User.Identity?.Name';
+            
+            if (profileTrigger && profileModal && closeProfileModal) {
+                profileTrigger.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Sync values from localStorage if available
+                    const savedProfile = localStorage.getItem('admin.profile.' + layoutUsername);
+                    if (savedProfile) {
+                        try {
+                            const data = JSON.parse(savedProfile);
+                            document.getElementById('modal-admin-name').textContent = data.name || '@User.FindFirst("FullName")?.Value';
+                            document.getElementById('modal-admin-empcode').textContent = data.employeeId || 'ADM-2026-001';
+                            document.getElementById('modal-admin-dept').textContent = data.department || 'Ban quản trị hệ thống';
+                            document.getElementById('modal-admin-email').textContent = data.email || 'admin@compliancehub.vn';
+                            document.getElementById('modal-admin-phone').textContent = data.phone || '0987 654 321';
+                        } catch(ex) {}
+                    }
+                    
+                    const savedAvatar = localStorage.getItem('admin.avatar.' + layoutUsername);
+                    const mAvatarImg = document.getElementById('modal-admin-avatar-img');
+                    const mAvatarFallback = document.getElementById('modal-admin-avatar-fallback');
+                    if (savedAvatar && mAvatarImg && mAvatarFallback) {
+                        mAvatarImg.src = savedAvatar;
+                        mAvatarImg.classList.remove('hidden');
+                        mAvatarFallback.classList.add('hidden');
+                    } else if (mAvatarImg && mAvatarFallback) {
+                        mAvatarImg.src = '';
+                        mAvatarImg.classList.add('hidden');
+                        mAvatarFallback.classList.remove('hidden');
+                    }
+
+                    profileModal.classList.remove('hidden');
+                    profileModal.classList.add('flex');
+                    menu.classList.add('hidden'); // Close dropdown
+                });
+
+                closeProfileModal.addEventListener('click', function() {
+                    profileModal.classList.add('hidden');
+                    profileModal.classList.remove('flex');
+                });
+
+                profileModal.addEventListener('click', function(e) {
+                    if (e.target === profileModal) {
+                        profileModal.classList.add('hidden');
+                        profileModal.classList.remove('flex');
+                    }
+                });
+            }
+
+            // Sync user avatar on layout load
+            const layoutSavedAvatar = localStorage.getItem('admin.avatar.' + layoutUsername);
+            if (layoutSavedAvatar) {
+                const hAvatars = document.querySelectorAll('.employee-avatar-placeholder img');
+                hAvatars.forEach(img => {
+                    img.src = layoutSavedAvatar;
+                    img.classList.remove('hidden');
+                    const fb = img.parentElement.querySelector('.fa-user');
+                    if (fb) fb.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+
+    <!-- Read-only Admin Profile Modal -->
+    <div id="adminProfileModal" class="fixed inset-0 hidden items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm transition-opacity" style="z-index: 9999;">
+        <div id="adminProfileModalContent" class="my-auto w-full max-w-xl overflow-hidden rounded-[20px] bg-white shadow-2xl relative text-zinc-900">
+            <!-- Header -->
+            <div class="bg-red-600 px-6 py-4 flex justify-between items-center">
+                <h2 class="text-white font-bold text-base uppercase tracking-wide">THÔNG TIN QUẢN TRỊ</h2>
+                <button type="button" id="closeAdminProfileModal" class="text-white hover:text-red-200 transition-all focus:outline-none">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="relative p-6 pb-8">
+                <!-- Avatar -->
+                <div class="absolute top-6 right-6 w-32 h-32 sm:w-36 sm:h-36">
+                    <div class="employee-avatar-placeholder w-full h-full rounded-full border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm relative">
+                        <img id="modal-admin-avatar-img" class="hidden absolute inset-0 h-full w-full object-cover z-10" alt="Avatar" />
+                        <i id="modal-admin-avatar-fallback" class="fa-solid fa-user text-5xl text-slate-300 z-0"></i>
+                    </div>
+                    <button type="button" onclick="window.location.href='/Admin/ProfileSettings'" style="position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: #1e293b; color: white; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; z-index: 20;" title="Sửa hồ sơ">
+                        <i class="fa-solid fa-pencil text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Info List -->
+                <div class="space-y-0 text-sm">
+                    <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                        <span class="w-1/3 text-slate-500 font-medium">Mã nhân viên:</span>
+                        <span class="w-2/3 text-slate-800 font-semibold" id="modal-admin-empcode">ADM-2026-001</span>
+                    </div>
+                    <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                        <span class="w-1/3 text-slate-500 font-medium">Họ & Tên:</span>
+                        <span class="w-2/3 text-slate-800 font-semibold" id="modal-admin-name">@User.FindFirst("FullName")?.Value</span>
+                    </div>
+                    <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                        <span class="w-1/3 text-slate-500 font-medium">Bộ phận:</span>
+                        <span class="w-2/3 text-slate-800 font-semibold" id="modal-admin-dept">Ban quản trị hệ thống</span>
+                    </div>
+                    <div class="flex py-3.5 border-b border-slate-100 items-center">
+                        <span class="w-1/3 text-slate-500 font-medium">Email:</span>
+                        <div class="w-2/3 flex justify-between items-center">
+                            <span class="text-slate-800 font-semibold" id="modal-admin-email">admin@compliancehub.vn</span>
+                            <button type="button" onclick="window.location.href='/Admin/ProfileSettings'" class="text-slate-400 hover:text-red-600 flex items-center justify-center w-6 h-6 rounded-full border border-slate-300 hover:border-red-600 transition-colors">
+                                <i class="fa-solid fa-pencil text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex py-3.5 border-b border-slate-100 items-center">
+                        <span class="w-1/3 text-slate-500 font-medium">SĐT:</span>
+                        <div class="w-2/3 flex justify-between items-center">
+                            <span class="text-slate-800 font-semibold" id="modal-admin-phone">0987 654 321</span>
+                            <button type="button" onclick="window.location.href='/Admin/ProfileSettings'" class="text-slate-400 hover:text-red-600 flex items-center justify-center w-6 h-6 rounded-full border border-slate-300 hover:border-red-600 transition-colors">
+                                <i class="fa-solid fa-pencil text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex justify-center sm:justify-start">
+                    <a href="/Admin/ProfileSettings" class="text-sm bg-white text-red-600 border border-red-200 font-semibold py-2 px-4 rounded hover:bg-red-50 transition-all shadow-sm flex items-center no-underline">
+                        <i class="fa-solid fa-user-gear mr-2"></i>Chuyển đến Cài đặt hồ sơ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

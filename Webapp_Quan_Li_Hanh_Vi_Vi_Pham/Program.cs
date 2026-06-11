@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
@@ -8,18 +10,111 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var googleClientId =
+    builder.Configuration["Authentication:Google:ClientId"]
+    ?? builder.Configuration["Google:ClientId"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Google__ClientId")
+    ?? Environment.GetEnvironmentVariable("Google__ClientId")
+    ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID")
+    ?? string.Empty;
+
+var googleClientSecret =
+    builder.Configuration["Authentication:Google:ClientSecret"]
+    ?? builder.Configuration["Google:ClientSecret"]
+    ?? Environment.GetEnvironmentVariable("Authentication__Google__ClientSecret")
+    ?? Environment.GetEnvironmentVariable("Google__ClientSecret")
+    ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
+    ?? string.Empty;
+
 // Add SQL Server DbContext
 builder.Services.AddDbContext<ViolationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add Authentication Cookie support
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+var authenticationBuilder = builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+});
+
+authenticationBuilder.AddCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+});
+
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authenticationBuilder.AddGoogle("Google", options =>
     {
-        options.LoginPath = "/Account/Login";
-        options.AccessDeniedPath = "/Account/AccessDenied";
-        options.ExpireTimeSpan = TimeSpan.FromHours(2);
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.CallbackPath = "/signin-google";
+        options.SaveTokens = false;
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            var redirectUri = QueryHelpers.AddQueryString(context.RedirectUri, "prompt", "select_account");
+            context.Response.Redirect(redirectUri);
+            return Task.CompletedTask;
+        };
+        options.Events.OnCreatingTicket = async context =>
+        {
+            var db = context.HttpContext.RequestServices.GetRequiredService<ViolationDbContext>();
+            var cancellationToken = context.HttpContext.RequestAborted;
+
+            var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                throw new InvalidOperationException("Google account did not provide an email address.");
+            }
+
+            var fullName =
+                context.Principal?.FindFirst(ClaimTypes.Name)?.Value
+                ?? email;
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == email, cancellationToken);
+            var createdNow = false;
+            if (user == null)
+            {
+                user = new User
+                {
+                    Username = email,
+                    PasswordHash = PasswordHasher.HashPassword(Guid.NewGuid().ToString("N")),
+                    FullName = fullName,
+                    Role = "Employee",
+                    FaceImagePath = string.Empty,
+                    ManagerKey = string.Empty,
+                    IsKeyActivated = true,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+
+                db.Users.Add(user);
+                await db.SaveChangesAsync(cancellationToken);
+                createdNow = true;
+            }
+            else if (!string.Equals(user.FullName, fullName, StringComparison.Ordinal))
+            {
+                user.FullName = fullName;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Name, user.Username),
+                new(ClaimTypes.Role, user.Role),
+                new("FullName", user.FullName),
+                new("UserId", user.Id.ToString()),
+                new(ClaimTypes.Email, email),
+                new("GoogleAccountCreated", createdNow ? "true" : "false")
+            };
+
+            context.Principal = new ClaimsPrincipal(
+                new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme));
+        };
     });
+}
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

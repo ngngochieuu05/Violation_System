@@ -1,61 +1,9 @@
 @model List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>
 @{
-    Layout = null;
-    ViewData["Title"] = "Quản lý Nhân sự - ComplianceHub";
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Quản lý Nhân sự";
+    ViewData["ActivePage"] = "Personnel";
 }
-
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"]</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="~/css/output.css" asp-append-version="true" />
-    <style>
-            body {
-                font-family: 'Inter', sans-serif;
-                margin: 0;
-                padding: 0;
-        }</style>
-    </head>
-    <body class="bg-zinc-50 text-zinc-900">
-
-        <div class="flex h-screen w-full overflow-hidden">
-            <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden transition-opacity"></div>
-
-            <aside id="admin-sidebar" class="fixed md:relative w-64 h-full bg-white border-r border-zinc-200 transition-transform duration-300 z-50 md:z-0 -translate-x-full md:translate-x-0 shrink-0 flex flex-col">
-                <div class="p-6 border-b border-zinc-200 shrink-0">
-                    <h1 class="text-2xl font-bold text-red-600 flex items-center gap-2">
-                        <div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-lg">C</span></div>
-                        <a href="/Admin">ComplianceHub</a>
-                    </h1>
-                </div>
-                <nav class="flex-1 overflow-y-auto p-4 space-y-2">
-                    <div><a href="/Admin" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>Dashboard</a></div>
-                    <div><a href="/Admin/Models" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1-1-1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>Quản lý Model</a></div>
-                    <div><a href="/Admin/Personnel" class="w-full flex items-center gap-3 px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>Quản lý Nhân sự</a></div>
-                    <div><a href="/Admin/AuditLogs" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg>Nhật ký Hệ thống</a></div>
-                    <div><a href="/Admin/Settings" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>Cài đặt Hệ thống</a></div>
-                </nav>
-                <div class="p-4 border-t border-zinc-200 shrink-0">
-                    <a href="/Account/Logout" class="w-full flex items-center gap-3 px-4 py-2 border border-zinc-200 text-zinc-700 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>Đăng xuất</a>
-                </div>
-            </aside>
-
-            <div class="flex flex-col flex-1 min-w-0 h-full overflow-hidden bg-zinc-50">
-                <header class="bg-white border-b border-zinc-200 shrink-0 z-40">
-                    <div class="flex items-center justify-between px-6 py-4">
-                        <div class="flex items-center gap-4">
-                            <button id="mobile-menu-btn" class="md:hidden p-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
-                            </button>
-                            <h2 class="text-xl font-semibold text-zinc-900">Quản lý Nhân sự</h2>
-                        </div>
-                    </div>
-                </header>
-
-                <main class="flex-1 overflow-y-auto p-6 space-y-6">
 
                     @if (TempData["SuccessMessage"] != null)
                     {
@@ -73,7 +21,7 @@
                         </div>
                         <button onclick="toggleForm('add-mgr-container')" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                            Thêm Nhân sự
+                            Thêm Quản Lý
                         </button>
                     </div>
 
@@ -110,8 +58,8 @@
                     <div id="add-mgr-container" class="hidden">
                         <div class="bg-white border border-red-200 rounded-xl shadow-sm mb-6">
                             <div class="p-6 border-b border-zinc-100">
-                                <h3 class="text-lg font-bold text-zinc-900">Thêm Nhân sự Mới</h3>
-                                <p class="text-sm text-zinc-500">Nhập thông tin chi tiết cho tài khoản nhân sự mới</p>
+                                <h3 class="text-lg font-bold text-zinc-900">Thêm Quản Lý Mới</h3>
+                                <p class="text-sm text-zinc-500">Nhập thông tin chi tiết cho tài khoản quản lý mới</p>
                             </div>
                             <div class="p-6">
                                 <form asp-action="AddPersonnel" method="post" class="space-y-4">
@@ -337,35 +285,36 @@
             </div>
         </div>
 
-        <script>
-                document.getElementById('mobile-menu-btn').addEventListener('click', function () {
-                    document.getElementById('admin-sidebar').classList.toggle('-translate-x-full');
-                    document.getElementById('sidebar-overlay').classList.toggle('hidden');
-                });
-                document.getElementById('sidebar-overlay').addEventListener('click', function () {
-                    document.getElementById('admin-sidebar').classList.add('-translate-x-full');
-                    this.classList.add('hidden');
-                });
-
-                function toggleForm(id) {
-                    const form = document.getElementById(id);
-                    form.classList.toggle('hidden');
+@section Scripts {
+    <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('add') === 'true') {
+                    const form = document.getElementById('add-mgr-container');
+                    if (form) {
+                        form.classList.remove('hidden');
+                    }
                 }
+            });
 
-                function triggerEdit(btn) {
-                    document.getElementById('edit-id').value = btn.getAttribute('data-id');
-                    document.getElementById('edit-fullName').value = btn.getAttribute('data-fullname');
-                    document.getElementById('edit-username').value = btn.getAttribute('data-username');
-                    document.getElementById('edit-employeeCode').value = btn.getAttribute('data-code');
-                    document.getElementById('edit-department').value = btn.getAttribute('data-dept');
-                    document.getElementById('edit-email').value = btn.getAttribute('data-email');
-                    document.getElementById('edit-phone').value = btn.getAttribute('data-phone');
-                    document.getElementById('edit-modal').classList.remove('hidden');
-                }
+            function toggleForm(id) {
+                const form = document.getElementById(id);
+                form.classList.toggle('hidden');
+            }
 
-                function closeEditModal() {
-                    document.getElementById('edit-modal').classList.add('hidden');
-                }
-        </script>
-    </body>
-</html>
+            function triggerEdit(btn) {
+                document.getElementById('edit-id').value = btn.getAttribute('data-id');
+                document.getElementById('edit-fullName').value = btn.getAttribute('data-fullname');
+                document.getElementById('edit-username').value = btn.getAttribute('data-username');
+                document.getElementById('edit-employeeCode').value = btn.getAttribute('data-code');
+                document.getElementById('edit-department').value = btn.getAttribute('data-dept');
+                document.getElementById('edit-email').value = btn.getAttribute('data-email');
+                document.getElementById('edit-phone').value = btn.getAttribute('data-phone');
+                document.getElementById('edit-modal').classList.remove('hidden');
+            }
+
+            function closeEditModal() {
+                document.getElementById('edit-modal').classList.add('hidden');
+            }
+    </script>
+}
