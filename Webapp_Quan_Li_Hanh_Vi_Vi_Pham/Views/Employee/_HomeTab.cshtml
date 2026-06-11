@@ -1,109 +1,161 @@
-<section data-tab-panel="home" class="employee-tab-panel grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-    <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-red-500">Trang chủ</p>
-                <h3 class="employee-text mt-2 font-outfit text-2xl font-bold text-slate-900">Thông tin cá nhân trong ngày</h3>
-            </div>
-            <span class="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-                <span class="mr-2 h-2 w-2 rounded-full bg-green-500"></span>
-                Phiên làm việc ổn định
-            </span>
+<!-- Grid thông số cá nhân dạng hộp vuông nhỏ gọn -->
+<div class="grid gap-4 grid-cols-2 md:grid-cols-4 mb-6">
+    <!-- Hộp 1: Mã nhân viên -->
+    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between text-slate-400">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Mã nhân viên</span>
+            <i class="fa-solid fa-id-card text-red-500 text-sm"></i>
         </div>
-
-        <div class="mt-6 grid gap-4 md:grid-cols-3">
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-5">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Ngày hiện tại</p>
-                <p class="employee-text mt-3 text-base font-semibold text-slate-900" data-home-date>--/--/----</p>
-            </div>
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-5">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Thời gian</p>
-                <p class="employee-text mt-3 font-mono text-2xl font-bold text-slate-900" data-home-time>--:--:--</p>
-            </div>
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-5">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Ca làm việc</p>
-                <p class="employee-text mt-3 font-outfit text-2xl font-bold text-slate-900">08:00 - 17:00</p>
-            </div>
+        <div>
+            <p class="font-outfit text-lg font-bold text-slate-800 employee-text mt-1 truncate" data-profile-id>...</p>
+            <span class="text-[10px] text-slate-400">Định danh chính thức</span>
         </div>
     </div>
 
-    <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
-        <div class="flex items-start gap-4">
-            <div class="employee-avatar-placeholder relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-red-50 text-red-600 ring-1 ring-red-100">
-                <img data-avatar-image class="absolute inset-0 hidden h-full w-full object-cover" alt="Avatar employee" />
-                <i data-avatar-fallback class="fa-solid fa-user text-4xl"></i>
-            </div>
-            <div class="min-w-0 flex-1">
-                <p class="employee-text truncate font-outfit text-3xl font-bold text-slate-900" data-home-name>@User.FindFirst("FullName")?.Value</p>
-                <p class="employee-subtext mt-1 truncate text-sm text-slate-500" data-home-username>@User.Identity?.Name</p>
-                <p class="employee-subtext mt-3 text-sm text-slate-500">Khu vực này chỉ hiển thị thông tin cá nhân cơ bản của nhân viên.</p>
-            </div>
+    <!-- Hộp 2: Phòng ban -->
+    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between text-slate-400">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Phòng ban</span>
+            <i class="fa-solid fa-sitemap text-red-500 text-sm"></i>
         </div>
-
-        <div class="mt-6 space-y-4">
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-4">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Mã nhân viên</p>
-                <p class="employee-text mt-2 font-semibold text-slate-900" data-profile-id>EMP-2026-014</p>
-            </div>
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-4">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Phòng ban</p>
-                <p class="employee-text mt-2 font-semibold text-slate-900" data-profile-department>Khối vận hành</p>
-            </div>
-            <div class="employee-muted rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md shadow-sm p-4">
-                <p class="text-xs uppercase tracking-[0.18em] text-slate-400">Quyền truy cập</p>
-                <p class="employee-text mt-2 font-semibold text-slate-900">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
-            </div>
+        <div>
+            <p class="font-outfit text-base font-bold text-slate-800 employee-text mt-1 truncate" data-profile-department>...</p>
+            <span class="text-[10px] text-slate-400">Đơn vị công tác</span>
         </div>
     </div>
 
-    <!-- Nhiệm vụ hôm nay (Full width in grid row) -->
-    <div class="xl:col-span-2 employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-6 shadow-xl sm:p-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-500">Thông báo</p>
-                <h3 class="employee-text mt-1 font-outfit text-xl font-bold text-slate-900">Nhiệm vụ cần hoàn thiện trong ngày</h3>
-            </div>
-            <button type="button" onclick="document.querySelector('[data-tab-trigger=\'schedule\']').click()" class="text-sm font-semibold text-red-600 hover:text-red-700 hover:underline">Xem tất cả <i class="fa-solid fa-arrow-right ml-1"></i></button>
+    <!-- Hộp 3: Ca làm việc -->
+    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between text-slate-400">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Ca làm việc</span>
+            <i class="fa-solid fa-business-time text-red-500 text-sm"></i>
         </div>
+        <div>
+            <p class="font-outfit text-base font-bold text-slate-800 employee-text mt-1">08:00 - 17:00</p>
+            <span class="text-[10px] text-slate-400">Giờ hành chính</span>
+        </div>
+    </div>
 
-        <div class="mt-5 grid gap-4 md:grid-cols-3">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm">
+    <!-- Hộp 4: Trạng thái chấm công -->
+    <div class="employee-surface rounded-2xl border border-white/60 bg-white/95 backdrop-blur-xl p-4 shadow-md flex flex-col justify-between h-28 hover:shadow-lg transition-all duration-200">
+        <div class="flex items-center justify-between text-slate-400">
+            <span class="text-[10px] font-bold uppercase tracking-wider">Chấm công ngày</span>
+            <i class="fa-solid fa-fingerprint text-red-500 text-sm"></i>
+        </div>
+        <div>
+            <div class="flex items-center gap-1.5 mt-1">
+                <span class="h-2 w-2 rounded-full bg-amber-500" id="attendanceStatusDot"></span>
+                <p class="font-outfit text-sm font-bold text-slate-800 employee-text" id="attendanceStatusText">Chưa Check-in</p>
+            </div>
+            <span class="text-[10px] text-slate-400" id="attendanceStatusSubText">Yêu cầu xác thực khuôn mặt</span>
+        </div>
+    </div>
+</div>
+
+<!-- Grid chính bên dưới: Nhiệm vụ và Lịch sử chấm công nhanh -->
+<section data-tab-panel="home" class="employee-tab-panel grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+    <!-- Cột trái: Nhiệm vụ hôm nay -->
+
+
+    <!-- Nhiệm vụ hôm nay (Cột trái - 1.2fr) -->
+    <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg flex flex-col justify-between">
+        <div>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Tiến độ</p>
+                    <h3 class="employee-text mt-1 font-outfit text-lg font-bold text-slate-800">Nhiệm vụ cần hoàn thiện</h3>
+                </div>
+                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'schedule\']').click()" class="text-xs font-bold text-red-600 hover:text-red-700 hover:underline">Chi tiết <i class="fa-solid fa-arrow-right ml-0.5"></i></button>
+            </div>
+
+            <div class="mt-4 grid gap-3 grid-cols-3">
+                <div class="rounded-xl border border-slate-150 bg-slate-50/70 p-3 flex items-center gap-2">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white text-xs shadow-sm">
                         <i class="fa-solid fa-list-check"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-semibold text-slate-600">Tổng số lượng</p>
-                        <p class="font-outfit text-2xl font-bold text-slate-900" data-home-task-total>0</p>
+                        <p class="text-[10px] font-semibold text-slate-500">Tổng số</p>
+                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-total>0</p>
                     </div>
                 </div>
-            </div>
-            <div class="rounded-2xl border border-amber-100 bg-amber-50 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
+                <div class="rounded-xl border border-amber-100 bg-amber-50/70 p-3 flex items-center gap-2">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500 text-white text-xs shadow-sm">
                         <i class="fa-solid fa-clock"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-semibold text-amber-600">Đang thực hiện</p>
-                        <p class="font-outfit text-2xl font-bold text-slate-900" data-home-task-pending>0</p>
+                        <p class="text-[10px] font-semibold text-amber-500">Đang làm</p>
+                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-pending>0</p>
                     </div>
                 </div>
-            </div>
-            <div class="rounded-2xl border border-green-100 bg-green-50 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500 text-white shadow-sm">
+                <div class="rounded-xl border border-green-100 bg-green-50/70 p-3 flex items-center gap-2">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500 text-white text-xs shadow-sm">
                         <i class="fa-solid fa-check-double"></i>
                     </div>
                     <div>
-                        <p class="text-xs font-semibold text-green-600">Đã hoàn thành</p>
-                        <p class="font-outfit text-2xl font-bold text-slate-900" data-home-task-done>0</p>
+                        <p class="text-[10px] font-semibold text-green-600">Đã xong</p>
+                        <p class="font-outfit text-base font-bold text-slate-800 employee-text" data-home-task-done>0</p>
                     </div>
+                </div>
+            </div>
+
+            <div class="mt-4 space-y-2 max-h-[220px] overflow-y-auto pr-1" data-home-task-list>
+                <!-- Injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Tiện ích nhanh & Vi phạm (Cột phải - 0.8fr) -->
+    <div class="flex flex-col gap-6">
+        <!-- Card Lối tắt nhanh -->
+        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg">
+            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400 mb-3">Thao tác nhanh</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'attendance\']').click()" class="flex flex-col items-center justify-center p-3 rounded-xl border border-red-100 bg-red-50/30 hover:bg-red-50 text-red-600 transition-all duration-200 group active:scale-95">
+                    <i class="fa-solid fa-fingerprint text-xl mb-1 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-semibold">Chấm công</span>
+                </button>
+                <button type="button" onclick="document.querySelector('[data-tab-trigger=\'requests\']').click()" class="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-100 text-slate-700 transition-all duration-200 group active:scale-95">
+                    <i class="fa-solid fa-file-signature text-xl mb-1 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-semibold">Gửi đơn từ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Card Vi phạm của tôi gần đây -->
+        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg flex-1">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Vi phạm gần đây</p>
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600" id="homeViolationCount">0 vi phạm</span>
+            </div>
+            
+            <div class="space-y-2.5 max-h-[160px] overflow-y-auto pr-1" id="homeViolationList">
+                <div class="text-center py-6 text-slate-400">
+                    <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
+                    <p class="text-xs">Không có vi phạm ghi nhận</p>
                 </div>
             </div>
         </div>
 
-        <div class="mt-5 space-y-3" data-home-task-list>
-            <!-- Injected by JS -->
+        <!-- Card Khen Thưởng -->
+        <div class="employee-surface rounded-[2rem] border border-white/60 bg-white/90 backdrop-blur-xl p-5 shadow-lg relative overflow-hidden group">
+            <div class="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-200 blur-2xl opacity-40 group-hover:bg-amber-300 transition-all duration-500"></div>
+            <div class="relative z-10">
+                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500 mb-3"><i class="fa-solid fa-trophy mr-1"></i>Vinh danh</p>
+                <h4 class="font-outfit text-sm font-bold text-slate-800">Nhân viên xuất sắc tháng</h4>
+                
+                <div class="mt-4 flex items-center gap-3">
+                    <div class="relative">
+                        <img src="https://ui-avatars.com/api/?name=NV&background=f59e0b&color=fff&rounded=true&bold=true" alt="Avatar" class="h-10 w-10 rounded-full border-2 border-white shadow-sm" />
+                        <span class="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 border border-white text-[8px] text-white">
+                            <i class="fa-solid fa-star"></i>
+                        </span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-900">Trần Văn Khôi</p>
+                        <p class="text-[10px] text-slate-500">Khối Vận hành • 3,200 Điểm</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>

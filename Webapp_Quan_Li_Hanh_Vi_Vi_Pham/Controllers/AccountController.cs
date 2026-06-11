@@ -119,7 +119,7 @@ public class AccountController : Controller
             return Json(new { success = false, message = "Vui lòng cung cấp tên đăng nhập và hình ảnh khuôn mặt." });
         }
 
-        var verified = await _userService.VerifyBiometricsAsync(username, faceImage, cancellationToken);
+        var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "login", cancellationToken);
         if (!verified)
         {
             return Json(new { success = false, message = "Nhận diện khuôn mặt thất bại hoặc không khớp." });
@@ -167,7 +167,7 @@ public class AccountController : Controller
             return Json(new { success = false, message = "Thiếu dữ liệu xác thực khuôn mặt." });
         }
 
-        var verified = await _userService.VerifyBiometricsAsync(username, faceImage, cancellationToken);
+        var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "attendance", cancellationToken);
         if (!verified)
         {
             return Json(new { success = false, message = "Khuôn mặt không khớp với tài khoản đang đăng nhập." });

@@ -351,6 +351,10 @@
             homeHero.classList.toggle("hidden", normalized !== "home");
         }
 
+        if (normalized === "home") {
+            loadMyViolations();
+        }
+
         const url = new URL(window.location.href);
         url.searchParams.set("tab", normalized);
         window.history.replaceState({}, "", url);
@@ -426,6 +430,108 @@
         }
     };
 
+    const loadMyViolations = async () => {
+        const countEl = document.getElementById("homeViolationCount");
+        const listEl = document.getElementById("homeViolationList");
+        const fullCountEl = document.getElementById("fullViolationCount");
+        const fullListEl = document.getElementById("fullViolationList");
+        
+        try {
+            const res = await fetch("/Employee/GetMyViolations");
+            const result = await res.json();
+            if (result.success && Array.isArray(result.data)) {
+                const list = result.data;
+                if (countEl) countEl.textContent = `${list.length} vi phạm`;
+                if (fullCountEl) fullCountEl.textContent = list.length;
+
+                // Home Tab Widget
+                if (listEl) {
+                    if (list.length === 0) {
+                        listEl.innerHTML = `
+                            <div class="text-center py-6 text-slate-400">
+                                <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
+                                <p class="text-xs">Không có vi phạm ghi nhận</p>
+                            </div>
+                        `;
+                    } else {
+                        listEl.innerHTML = list.map(item => {
+                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                            });
+                            let severityClass = "bg-amber-100 text-amber-700";
+                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
+                                severityClass = "bg-red-100 text-red-700";
+                            } else if (item.severity?.toLowerCase() === "low") {
+                                severityClass = "bg-slate-100 text-slate-700";
+                            }
+
+                            return `
+                                <div class="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-slate-800 truncate">${item.violationType}</span>
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full ${severityClass}">${item.severity}</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-camera mr-1"></i>${item.cameraLocation} • ${date}</p>
+                                    </div>
+                                    <span class="text-[10px] font-semibold ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}">${item.status}</span>
+                                </div>
+                            `;
+                        }).join("");
+                    }
+                }
+
+                // Violations Tab Grid
+                if (fullListEl) {
+                    if (list.length === 0) {
+                        fullListEl.innerHTML = `
+                            <div class="col-span-full text-center py-12 text-slate-400">
+                                <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-50 mb-4 shadow-inner">
+                                    <i class="fa-solid fa-circle-check text-2xl text-green-500"></i>
+                                </div>
+                                <p class="text-sm">Hồ sơ trong sạch. Chưa ghi nhận vi phạm nào.</p>
+                            </div>
+                        `;
+                    } else {
+                        fullListEl.innerHTML = list.map(item => {
+                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            });
+                            let severityClass = "bg-amber-100 text-amber-700";
+                            let iconClass = "fa-triangle-exclamation text-amber-500";
+                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
+                                severityClass = "bg-red-100 text-red-700";
+                                iconClass = "fa-ban text-red-500";
+                            } else if (item.severity?.toLowerCase() === "low") {
+                                severityClass = "bg-slate-100 text-slate-700";
+                                iconClass = "fa-circle-info text-slate-500";
+                            }
+
+                            return `
+                                <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
+                                    <div class="flex justify-between items-start mb-3">
+                                        <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner">
+                                            <i class="fa-solid ${iconClass} text-lg"></i>
+                                        </div>
+                                        <span class="px-2 py-1 text-[10px] font-bold rounded-md ${severityClass} uppercase tracking-widest">${item.severity}</span>
+                                    </div>
+                                    <h4 class="font-outfit text-base font-bold text-slate-900 mb-1 line-clamp-2">${item.violationType}</h4>
+                                    <div class="space-y-1 mt-3">
+                                        <p class="text-[11px] text-slate-500"><i class="fa-solid fa-camera text-slate-400 mr-2 w-3 text-center"></i>${item.cameraLocation}</p>
+                                        <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
+                                        <p class="text-[11px] font-semibold mt-2 ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${item.status}</p>
+                                    </div>
+                                </div>
+                            `;
+                        }).join("");
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load violations", err);
+        }
+    };
+
     const renderAttendance = () => {
         const latestCompleted = attendance.sessions[attendance.sessions.length - 1] || null;
         const referenceSession = attendance.currentSession || latestCompleted;
@@ -445,6 +551,30 @@
         if (totalEl) totalEl.textContent = formatDuration(getTodayTotalDurationMs());
         if (statusEl) {
             statusEl.textContent = attendance.currentSession ? "Đang làm việc" : (attendance.sessions.length ? "Đã check-out" : "Chưa check-in");
+        }
+
+        // Cập nhật trạng thái trang chủ
+        const homeDot = document.getElementById("attendanceStatusDot");
+        const homeText = document.getElementById("attendanceStatusText");
+        const homeSubText = document.getElementById("attendanceStatusSubText");
+        if (homeDot && homeText && homeSubText) {
+            if (attendance.currentSession) {
+                homeDot.className = "h-2 w-2 rounded-full bg-green-500 animate-pulse";
+                homeText.textContent = "Đang làm việc";
+                homeSubText.textContent = `Check-in lúc ${formatShortTime(attendance.currentSession.checkInAt)}`;
+            } else {
+                const todayKey = toDateKey();
+                const todaySessions = attendance.sessions.filter(s => toDateKey(s.checkInAt) === todayKey);
+                if (todaySessions.length > 0) {
+                    homeDot.className = "h-2 w-2 rounded-full bg-slate-500";
+                    homeText.textContent = "Đã check-out";
+                    homeSubText.textContent = "Hoàn thành ca làm việc";
+                } else {
+                    homeDot.className = "h-2 w-2 rounded-full bg-amber-500";
+                    homeText.textContent = "Chưa Check-in";
+                    homeSubText.textContent = "Yêu cầu xác thực khuôn mặt";
+                }
+            }
         }
 
         renderAttendancePreview(attendance.lastCapture || attendance.currentSession?.checkInImage || latestCompleted?.checkOutImage || latestCompleted?.checkInImage || null);
@@ -828,7 +958,8 @@
     };
 
     const openAttendanceCameraModal = async (action) => {
-        
+        currentAttendanceAction = action;
+
         if (action === "checkin" && attendance.currentSession) {
             alert("Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.");
             if (attendanceMessage) attendanceMessage.textContent = "Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.";
@@ -1474,6 +1605,106 @@
         }
     });
 
+    // --- Top Navigation Dropdowns ---
+    const notifTrigger = document.getElementById("dashboardNotificationTrigger");
+    const notifMenu = document.getElementById("dashboardNotificationMenu");
+    const userTrigger = document.getElementById("dashboardDropdownTrigger");
+    const userMenu = document.getElementById("dashboardDropdownMenu");
+
+    if (notifTrigger && notifMenu) {
+        notifTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            notifMenu.classList.toggle("hidden");
+            if (userMenu) userMenu.classList.add("hidden");
+        });
+    }
+
+    if (userTrigger && userMenu) {
+        userTrigger.addEventListener("click", (e) => {
+            e.stopPropagation();
+            userMenu.classList.toggle("hidden");
+            if (notifMenu) notifMenu.classList.add("hidden");
+        });
+    }
+
+    document.addEventListener("click", (e) => {
+        if (notifMenu && !notifMenu.contains(e.target)) {
+            notifMenu.classList.add("hidden");
+        }
+        if (userMenu && !userMenu.contains(e.target)) {
+            userMenu.classList.add("hidden");
+        }
+    });
+
+    // --- Payroll PIN Logic ---
+    const unlockPayrollBtn = document.getElementById("unlockPayrollBtn");
+    const payrollPinModal = document.getElementById("payrollPinModal");
+    const closePayrollPinModal = document.getElementById("closePayrollPinModal");
+    const verifyPayrollPinBtn = document.getElementById("verifyPayrollPinBtn");
+    const payrollPinInput = document.getElementById("payrollPinInput");
+    const payrollPinError = document.getElementById("payrollPinError");
+    const payrollPinModalContent = document.getElementById("payrollPinModalContent");
+    
+    if (payrollPinModal) {
+        document.body.appendChild(payrollPinModal);
+    }
+
+    const openPayrollModal = () => {
+        if (!payrollPinModal) return;
+        payrollPinInput.value = "";
+        payrollPinError.classList.add("hidden");
+        payrollPinModal.classList.remove("hidden");
+        payrollPinModal.style.display = "flex";
+        setTimeout(() => {
+            if (payrollPinModalContent) {
+                payrollPinModalContent.style.transform = "scale(1)";
+                payrollPinModalContent.style.opacity = "1";
+            }
+            payrollPinInput?.focus();
+        }, 10);
+    };
+
+    const closePayrollModal = () => {
+        if (!payrollPinModal) return;
+        if (payrollPinModalContent) {
+            payrollPinModalContent.style.transform = "scale(0.95)";
+            payrollPinModalContent.style.opacity = "0";
+        }
+        setTimeout(() => {
+            payrollPinModal.style.display = "none";
+            payrollPinModal.classList.add("hidden");
+        }, 300);
+    };
+
+    unlockPayrollBtn?.addEventListener("click", openPayrollModal);
+    closePayrollPinModal?.addEventListener("click", closePayrollModal);
+    
+    payrollPinInput?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") verifyPayrollPinBtn?.click();
+    });
+
+    verifyPayrollPinBtn?.addEventListener("click", () => {
+        const pin = payrollPinInput?.value;
+        if (pin === "1234") {
+            closePayrollModal();
+            document.querySelectorAll(".payroll-secure-data").forEach(el => {
+                el.classList.remove("blur-md", "select-none");
+            });
+            if (unlockPayrollBtn) {
+                unlockPayrollBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2 text-green-400"></i>Đã mở khóa';
+                unlockPayrollBtn.classList.remove("bg-slate-800", "hover:bg-slate-700");
+                unlockPayrollBtn.classList.add("bg-green-600", "hover:bg-green-700");
+                setTimeout(() => {
+                    unlockPayrollBtn.classList.add("hidden");
+                }, 2000);
+            }
+        } else {
+            payrollPinError?.classList.remove("hidden");
+            payrollPinInput.value = "";
+            payrollPinInput.focus();
+        }
+    });
+
     renderDateTime();
     renderProfile();
     renderAttendance();
@@ -1482,6 +1713,7 @@
     renderChats();
     renderTasks();
     applySettings();
+    loadMyViolations();
     setActiveTab(initialTab);
 
     setInterval(() => {

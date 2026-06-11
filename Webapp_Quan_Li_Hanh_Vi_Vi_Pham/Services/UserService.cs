@@ -212,7 +212,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<bool> VerifyBiometricsAsync(string username, string faceImageBase64, CancellationToken cancellationToken = default)
+    public async Task<bool> VerifyBiometricsAsync(string username, string faceImageBase64, string verificationContext = "generic", CancellationToken cancellationToken = default)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
         if (user == null) return false;
@@ -251,7 +251,7 @@ public class UserService : IUserService
             var representResult = await RunDeepFaceRepresentAsync(tempFile);
             if (!representResult.Success || representResult.Embedding == null || representResult.Embedding.Count == 0)
             {
-                Console.WriteLine($"[DEBUG BIOMETRICS] Login face embedding failed: {representResult.Error}");
+                Console.WriteLine($"[DEBUG BIOMETRICS][{verificationContext}] User: {username}, embedding failed: {representResult.Error}");
                 return false;
             }
 
@@ -277,7 +277,7 @@ public class UserService : IUserService
                 }
             }
 
-            Console.WriteLine($"[DEBUG BIOMETRICS] User: {username}, Matches: {matchedCount}/4, Distances: {string.Join(", ", distances.Select(d => d.ToString("F4")))}, Threshold: {threshold:F4}");
+            Console.WriteLine($"[DEBUG BIOMETRICS][{verificationContext}] User: {username}, Matches: {matchedCount}/4, Distances: {string.Join(", ", distances.Select(d => d.ToString("F4")))}, Threshold: {threshold:F4}");
             return matchedCount >= 2;
         }
         finally
