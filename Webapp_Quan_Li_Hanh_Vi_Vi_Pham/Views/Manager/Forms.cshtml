@@ -1,0 +1,38 @@
+﻿@{
+    ViewData["Title"] = "Quản lý biểu mẫu";
+    Layout = "_ManagerLayout";
+}
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Quản lý biểu mẫu</h1>
+            <p class="text-sm text-slate-500 mt-1">Kho biểu mẫu dành cho nhân viên tải về.</p>
+        </div>
+        <button class="bg-red-600 text-white px-4 py-2 rounded-[8px] text-sm font-medium hover:bg-red-700 transition">
+            <i class="fa-solid fa-plus mr-1"></i> Thêm biểu mẫu
+        </button>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6">
+        <div class="system-card p-5 border border-slate-200 hover:border-red-300 transition cursor-pointer">
+            <i class="fa-solid fa-file-word text-3xl text-blue-600 mb-4"></i>
+            <h3 class="font-bold text-slate-900 text-base">Đơn xin nghỉ phép</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Cập nhật: 15/10/2023</p>
+            <div class="border-t border-slate-100 pt-3 flex justify-between">
+                <span class="text-xs font-medium text-red-600">Sửa mẫu</span>
+                <span class="text-xs font-medium text-slate-500"><i class="fa-solid fa-download"></i> Tải xuống</span>
+            </div>
+        </div>
+
+        <div class="system-card p-5 border border-slate-200 hover:border-red-300 transition cursor-pointer">
+            <i class="fa-solid fa-file-excel text-3xl text-green-600 mb-4"></i>
+            <h3 class="font-bold text-slate-900 text-base">Mẫu báo cáo tiến độ</h3>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Cập nhật: 10/10/2023</p>
+            <div class="border-t border-slate-100 pt-3 flex justify-between">
+                <span class="text-xs font-medium text-red-600">Sửa mẫu</span>
+                <span class="text-xs font-medium text-slate-500"><i class="fa-solid fa-download"></i> Tải xuống</span>
+            </div>
+        </div>
+    </div>
+</div>

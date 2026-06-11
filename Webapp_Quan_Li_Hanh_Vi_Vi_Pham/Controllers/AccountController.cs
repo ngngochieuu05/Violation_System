@@ -72,11 +72,11 @@ public class AccountController : Controller
 
     [HttpPost]
     public async Task<IActionResult> Register(
-        string username, 
-        string password, 
-        string fullName, 
-        string role, 
-        string faceImage, 
+        string username,
+        string password,
+        string fullName,
+        string role,
+        string faceImage,
         string? managerKey,
         CancellationToken cancellationToken)
     {
@@ -148,9 +148,11 @@ public class AccountController : Controller
 
         await SignInUserAsync(user);
         string redirectUrl;
+
+        // Đã sửa cứng URL cho Admin tại đây
         if (user.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
-            redirectUrl = Url.Action("Index", "Violations") ?? "/Violations";
+            redirectUrl = "/Admin";
         }
         else if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase))
         {
@@ -365,9 +367,10 @@ public class AccountController : Controller
 
         if (activeRole != null)
         {
+            // Đã sửa cứng URL cho Admin tại đây
             if (activeRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
-                return RedirectToAction("Index", "Violations");
+                return Redirect("/Admin");
             }
             if (activeRole.Equals("Manager", StringComparison.OrdinalIgnoreCase))
             {
