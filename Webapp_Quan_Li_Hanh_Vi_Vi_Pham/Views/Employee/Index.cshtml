@@ -75,51 +75,40 @@
         .dashboard-content {
             flex: 1;
             overflow-y: auto;
-            padding: 24px;
+            padding: 32px;
+            background-color: #f8fafc;
         }
 
-        /* Dark Mode overrides for Employee */
-        .employee-dark body,
-        body.employee-dark {
-            background-color: #0f172a !important;
-            color: #e2e8f0 !important;
+        /* SaaS Global Utility Classes */
+        .saas-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-        body.employee-dark .dashboard-sidebar {
-            background-color: #1e293b !important;
-            border-color: #334155 !important;
+        
+        .saas-card:hover {
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
         }
-        body.employee-dark .dashboard-header {
-            background-color: #0f172a !important;
-            border-color: #334155 !important;
+
+        .saas-heading {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            color: #0f172a;
         }
-        body.employee-dark .employee-surface {
-            background: #111827 !important;
-            border-color: rgba(148, 163, 184, 0.18) !important;
-            color: #e2e8f0 !important;
+
+        .saas-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #94a3b8;
         }
-        body.employee-dark .employee-muted {
-            background: #1e293b !important;
-            color: #cbd5e1 !important;
-            border-color: rgba(148, 163, 184, 0.14) !important;
-        }
-        body.employee-dark .employee-text { color: #e2e8f0 !important; }
-        body.employee-dark .employee-subtext { color: #94a3b8 !important; }
-        body.employee-dark .employee-input {
-            background: #1e293b !important;
-            border-color: rgba(148, 163, 184, 0.18) !important;
-            color: #e2e8f0 !important;
-        }
-        body.employee-dark .employee-tab-shell {
-            background: #111827 !important;
-            border-color: rgba(148, 163, 184, 0.18) !important;
-        }
-        body.employee-dark .employee-avatar-placeholder {
-            background: #1e293b !important;
-            color: #f87171 !important;
-        }
+
     </style>
 </head>
-<body class="text-slate-800">
+<body class="text-slate-800 bg-slate-50">
 
 <div class="dashboard-layout"
      data-employee-app
@@ -131,10 +120,10 @@
     <!-- Sidebar -->
     <aside class="dashboard-sidebar shadow-sm">
         <!-- Logo -->
-        <div class="h-16 flex items-center px-6 border-b border-slate-100">
+        <div class="h-16 flex items-center px-6 border-b border-slate-200">
             <a class="flex items-center space-x-2 text-red-600 hover:text-red-700 transition" asp-area="" asp-controller="Home" asp-action="Index">
                 <i class="fa-solid fa-shield-halved text-2xl"></i>
-                <span class="font-outfit font-extrabold text-xl tracking-tight text-slate-900 employee-text">Compliance<span class="text-red-600">Hub</span></span>
+                <span class="font-outfit font-extrabold text-xl tracking-tight text-slate-900">Compliance<span class="text-red-600">Hub</span></span>
             </a>
         </div>
         
@@ -166,8 +155,7 @@
             <button type="button" data-tab-trigger="knowledge" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
                 <i class="fa-solid fa-book-open-reader w-5 text-center mr-3"></i>Tủ sách nội bộ
             </button>
-            
-            <div class="my-4 border-t border-slate-100 employee-muted border-opacity-50"></div>
+            <div class="my-4 border-t border-slate-200"></div>
             <p class="px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Hệ thống</p>
             
             <button type="button" data-tab-trigger="profile" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
@@ -180,16 +168,12 @@
     </aside>
 
     <!-- Main Content Wrapper -->
-    <div class="dashboard-main relative overflow-hidden">
-        <div class="absolute inset-0 -z-10 pointer-events-none">
-            <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm opacity-10" style="background-image: url('@Url.Content("~/images/anh_nen123.png")');"></div>
-            <div class="absolute inset-0 bg-gradient-to-br from-slate-50/80 via-white/60 to-slate-100/80"></div>
-        </div>
+    <div class="dashboard-main relative overflow-x-hidden overflow-y-visible bg-[#F5F7FA]">
         
         <!-- Dashboard Header -->
-        <header class="dashboard-header relative z-10 bg-transparent">
+        <header class="dashboard-header relative z-10 overflow-visible bg-white shadow-sm border-b border-slate-200">
             <div>
-                <h2 class="font-outfit text-lg font-bold text-slate-800 employee-text">Workspace Dashboard</h2>
+                <h2 class="font-outfit text-xl font-bold text-slate-900">Workspace Dashboard</h2>
             </div>
             
             <div class="flex items-center space-x-4">
@@ -262,47 +246,7 @@
         <!-- Main Content Area -->
         <main class="dashboard-content relative" style="background: transparent;">
             <div class="max-w-5xl mx-auto space-y-8 pb-12">
-                <!-- Hero Section for Home Tab -->
-                <section data-tab-panel="home" data-home-hero class="employee-tab-panel relative overflow-hidden rounded-[2rem] bg-white/90 backdrop-blur-xl border border-white/60 px-6 py-8 text-black shadow-xl shadow-slate-200/50 sm:px-8 lg:px-10">
-                    <div class="absolute -right-14 -top-16 h-52 w-52 rounded-full bg-red-100 blur-3xl opacity-60"></div>
-                    <div class="absolute bottom-0 left-1/3 h-28 w-28 rounded-full bg-slate-100 blur-2xl"></div>
-                    <div class="relative grid gap-6 lg:grid-cols-[1.35fr_0.95fr] lg:items-end">
-                        <div class="space-y-5">
-                            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 backdrop-blur-md px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-slate-700">
-                                <i class="fa-solid fa-user-check text-[11px]"></i>
-                                Employee Workspace
-                            </span>
-                            <div class="space-y-3">
-                                <h1 class="font-outfit text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl flex items-center gap-3">
-                                    <span>Xin chào, <span class="text-red-600" data-home-name>@User.FindFirst("FullName")?.Value</span></span>
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700 shadow-sm border border-amber-200" title="Điểm chuyên cần và thành tích"><i class="fa-solid fa-star text-amber-500"></i> 1,500</span>
-                                </h1>
-                                <p class="max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-                                    Chào mừng bạn đến với môi trường làm việc của mình.
-                                </p>
-                            </div>
-                        </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <div class="rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md p-4">
-                                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Vai trò</p>
-                                <p class="mt-3 font-outfit text-2xl font-bold text-slate-900">Employee</p>
-                            </div>
-                            <div class="rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md p-4">
-                                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Trạng thái</p>
-                                <p class="mt-3 font-outfit text-2xl font-bold text-green-600" data-live-status>Online</p>
-                            </div>
-                            <div class="rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md p-4">
-                                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Ngày</p>
-                                <p class="mt-3 text-sm font-semibold text-slate-900" data-home-date>--/--/----</p>
-                            </div>
-                            <div class="rounded-[1.5rem] border border-white/60 bg-white/80 backdrop-blur-md p-4">
-                                <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Giờ hiện tại</p>
-                                <p class="mt-3 font-mono text-lg font-semibold text-slate-900" data-home-time>--:--:--</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
 
                 <partial name="_HomeTab" />
                 <partial name="_ScheduleTab" />
@@ -320,60 +264,67 @@
 </div>
 
 <!-- Read-only Profile Modal -->
-<div id="profileModal" class="fixed inset-0 hidden flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity" style="z-index: 9999;">
-    <div id="profileModalContent" class="bg-white rounded-xl shadow-2xl w-[90%] max-w-2xl overflow-hidden transform transition-all">
+<div id="profileModal" class="fixed inset-0 hidden items-center justify-center overflow-y-auto bg-slate-900/50 p-4 backdrop-blur-sm transition-opacity" style="z-index: 9999;">
+    <div id="profileModalContent" class="my-auto w-full max-w-xl overflow-hidden rounded-md bg-white shadow-2xl relative">
         <!-- Header -->
-        <div id="profileModalHeader" class="bg-red-600 px-6 py-4 flex justify-between items-center cursor-move select-none">
-            <h2 class="text-white font-bold text-lg uppercase tracking-wide">THÔNG TIN NHÂN VIÊN</h2>
-            <button id="closeProfileModal" class="text-white hover:text-red-200 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none">
-                <i class="fa-solid fa-xmark text-xl"></i>
+        <div id="profileModalHeader" class="bg-red-600 px-6 py-4 flex justify-between items-center">
+            <h2 class="text-white font-bold text-base uppercase tracking-wide">THÔNG TIN NHÂN VIÊN</h2>
+            <button id="closeProfileModal" class="text-white hover:text-red-200 transition-all focus:outline-none">
+                <i class="fa-solid fa-xmark text-lg"></i>
             </button>
         </div>
 
         <!-- Body -->
-        <div class="p-6">
-            <div class="flex flex-col-reverse md:flex-row gap-8">
-                <!-- Info List (Left side) -->
-                <div class="flex-1 space-y-0">
-                    <div class="flex py-3 border-b border-slate-200">
-                        <span class="w-1/3 text-slate-500 text-sm font-medium">Mã nhân viên:</span>
-                        <span class="w-2/3 text-slate-800 text-sm font-semibold" data-profile-id>EMP-2026-014</span>
-                    </div>
-                    <div class="flex py-3 border-b border-slate-200">
-                        <span class="w-1/3 text-slate-500 text-sm font-medium">Họ & Tên:</span>
-                        <span class="w-2/3 text-slate-800 text-sm font-semibold" data-profile-name>@User.FindFirst("FullName")?.Value</span>
-                    </div>
-                    <div class="flex py-3 border-b border-slate-200">
-                        <span class="w-1/3 text-slate-500 text-sm font-medium">Bộ phận:</span>
-                        <span class="w-2/3 text-slate-800 text-sm font-semibold" data-profile-department-view>Khối vận hành</span>
-                    </div>
-                    <div class="flex py-3 border-b border-slate-200">
-                        <span class="w-1/3 text-slate-500 text-sm font-medium">Email:</span>
-                        <span class="w-2/3 text-slate-800 text-sm font-semibold" data-profile-email-view>employee@compliancehub.vn</span>
-                    </div>
-                    <div class="flex py-3 border-b border-slate-200">
-                        <span class="w-1/3 text-slate-500 text-sm font-medium">SĐT:</span>
-                        <span class="w-2/3 text-slate-800 text-sm font-semibold" data-profile-phone-view>0123 456 789</span>
+        <div class="relative p-6 pb-8">
+            <!-- Avatar -->
+            <div class="absolute top-6 right-6 w-32 h-32 sm:w-36 sm:h-36">
+                <div class="employee-avatar-placeholder w-full h-full rounded-full border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm relative">
+                    <img data-avatar-image class="hidden absolute inset-0 h-full w-full object-cover z-10" alt="Avatar" />
+                    <i data-avatar-fallback class="fa-solid fa-user text-5xl text-slate-300 z-0"></i>
+                </div>
+                <label class="transition hover:bg-slate-700" style="position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: #1e293b; color: white; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; z-index: 20;" title="Cập nhật ảnh đại diện">
+                    <input type="file" accept="image/*" data-avatar-input style="display: none;" />
+                    <i class="fa-solid fa-pencil text-xs"></i>
+                </label>
+            </div>
+
+            <!-- Info List -->
+            <div class="space-y-0 text-sm">
+                <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                    <span class="w-1/3 text-slate-500">Mã nhân viên:</span>
+                    <span class="w-2/3 text-slate-800 font-semibold" data-profile-id>EMP-2026-014</span>
+                </div>
+                <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                    <span class="w-1/3 text-slate-500">Họ & Tên:</span>
+                    <span class="w-2/3 text-slate-800 font-semibold" data-profile-name>@User.FindFirst("FullName")?.Value</span>
+                </div>
+                <div class="flex py-4 border-b border-slate-100 mr-36 sm:mr-44">
+                    <span class="w-1/3 text-slate-500">Bộ phận:</span>
+                    <span class="w-2/3 text-slate-800 font-semibold" data-profile-department-view>Khối vận hành</span>
+                </div>
+                <div class="flex py-3.5 border-b border-slate-100 items-center">
+                    <span class="w-1/3 text-slate-500">Email:</span>
+                    <div class="w-2/3 flex justify-between items-center">
+                        <span class="text-slate-800 font-semibold" data-profile-email-view>employee@compliancehub.vn</span>
+                        <button type="button" class="btn-edit-profile-icon text-slate-400 hover:text-red-600 flex items-center justify-center w-6 h-6 rounded-full border border-slate-300 hover:border-red-600 transition-colors">
+                            <i class="fa-solid fa-pencil text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
-
-                <div class="flex-shrink-0 flex justify-center items-start pt-2">
-                    <div class="relative w-32 h-32 md:w-36 md:h-36">
-                        <div class="employee-avatar-placeholder w-full h-full rounded-full border border-slate-200 overflow-hidden bg-slate-50 flex items-center justify-center shadow-sm relative">
-                            <img data-avatar-image class="hidden absolute inset-0 h-full w-full object-cover z-10" alt="Avatar" />
-                            <i data-avatar-fallback class="fa-solid fa-user text-5xl text-slate-300 z-0"></i>
-                        </div>
-                        <label class="transition hover:bg-red-600" style="position: absolute; bottom: 4px; right: 4px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background-color: #1e293b; color: white; border: 2px solid white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer; z-index: 20;" title="Cập nhật ảnh đại diện">
-                            <input type="file" accept="image/*" data-avatar-input style="display: none;" />
-                            <i class="fa-solid fa-camera" style="font-size: 0.875rem;"></i>
-                        </label>
+                <div class="flex py-3.5 border-b border-slate-100 items-center">
+                    <span class="w-1/3 text-slate-500">SĐT:</span>
+                    <div class="w-2/3 flex justify-between items-center">
+                        <span class="text-slate-800 font-semibold" data-profile-phone-view>0123 456 789</span>
+                        <button type="button" class="btn-edit-profile-icon text-slate-400 hover:text-red-600 flex items-center justify-center w-6 h-6 rounded-full border border-slate-300 hover:border-red-600 transition-colors">
+                            <i class="fa-solid fa-pencil text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
             </div>
             
-            <div class="mt-8 flex justify-end">
-                <button type="button" id="btnGoToProfileSettings" class="text-sm bg-white text-red-600 border border-red-600 font-semibold py-2 px-6 rounded-lg hover:bg-red-50 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-sm flex items-center">
-                    <i class="fa-solid fa-user-gear mr-3"></i>Chuyển đến Cài đặt hồ sơ
+            <div class="mt-8 flex justify-center sm:justify-start">
+                <button type="button" id="btnGoToProfileSettings" class="text-sm bg-white text-red-600 border border-red-200 font-semibold py-2 px-4 rounded hover:bg-red-50 transition-all shadow-sm flex items-center">
+                    <i class="fa-solid fa-user-gear mr-2"></i>Chuyển đến Cài đặt hồ sơ
                 </button>
             </div>
         </div>
@@ -442,146 +393,40 @@
             openModalBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 modal.classList.remove('hidden');
+                modal.classList.add('flex');
             });
             
             closeModalBtn.addEventListener('click', () => {
                 modal.classList.add('hidden');
+                modal.classList.remove('flex');
             });
             
             // close on backdrop click
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     modal.classList.add('hidden');
+                    modal.classList.remove('flex');
                 }
             });
             
             if (goToSettingsBtn) {
                 goToSettingsBtn.addEventListener('click', () => {
                     modal.classList.add('hidden');
+                    modal.classList.remove('flex');
                     const settingsBtn = document.querySelector('[data-tab-trigger="profile"]');
                     if (settingsBtn) settingsBtn.click();
                 });
             }
 
-            // Draggable Modal Logic
-            const modalContent = document.getElementById('profileModalContent');
-            const modalHeader = document.getElementById('profileModalHeader');
-            let isDragging = false;
-            let currentX;
-            let currentY;
-            let initialX;
-            let initialY;
-            let xOffset = 0;
-            let yOffset = 0;
-
-            if (modalContent && modalHeader) {
-                modalHeader.addEventListener('mousedown', dragStart);
-                document.addEventListener('mousemove', drag);
-                document.addEventListener('mouseup', dragEnd);
-
-                function dragStart(e) {
-                    if (e.target.closest('#closeProfileModal')) return; // Ignore close button
-                    initialX = e.clientX - xOffset;
-                    initialY = e.clientY - yOffset;
-                    
-                    if (e.target === modalHeader || modalHeader.contains(e.target)) {
-                        isDragging = true;
-                        modalContent.style.transition = 'none'; // Disable transition while dragging
-                    }
-                }
-
-                function drag(e) {
-                    if (isDragging) {
-                        e.preventDefault();
-                        currentX = e.clientX - initialX;
-                        currentY = e.clientY - initialY;
-
-                        xOffset = currentX;
-                        yOffset = currentY;
-
-                        setTranslate(currentX, currentY, modalContent);
-                    }
-                }
-
-                function dragEnd(e) {
-                    initialX = currentX;
-                    initialY = currentY;
-                    isDragging = false;
-                    modalContent.style.transition = ''; // Re-enable original transition
-                }
-
-                function setTranslate(xPos, yPos, el) {
-                    el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-                }
-
-                // Reset position when modal is closed
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.target.classList.contains('hidden')) {
-                            xOffset = 0;
-                            yOffset = 0;
-                            setTranslate(0, 0, modalContent);
-                        }
-                    });
+            document.querySelectorAll('.btn-edit-profile-icon').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    const settingsBtn = document.querySelector('[data-tab-trigger="profile"]');
+                    if (settingsBtn) settingsBtn.click();
                 });
-                observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
-            }
-            
-            // Attendance Detail Drag & Teleport Logic (Inline to bypass caching)
-            const detailModal = document.querySelector('[data-attendance-detail-modal]');
-            const detailContent = document.querySelector('[data-attendance-detail-content]');
-            const detailHeader = document.querySelector('[data-attendance-detail-header]');
-            
-            if (detailModal) document.body.appendChild(detailModal);
-            
-            if (detailContent && detailHeader) {
-                let isDraggingAtt = false;
-                let currentXAtt = 0, currentYAtt = 0, initialXAtt = 0, initialYAtt = 0;
-                let xOffsetAtt = 0, yOffsetAtt = 0;
+            });
 
-                detailHeader.style.cursor = 'grab';
-                detailHeader.addEventListener('mousedown', (e) => {
-                    if (e.target.closest('[data-attendance-detail-close]')) return;
-                    initialXAtt = e.clientX - xOffsetAtt;
-                    initialYAtt = e.clientY - yOffsetAtt;
-                    
-                    if (e.target === detailHeader || detailHeader.contains(e.target)) {
-                        isDraggingAtt = true;
-                        detailContent.style.transition = 'none';
-                        detailHeader.style.cursor = 'grabbing';
-                    }
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (isDraggingAtt) {
-                        e.preventDefault();
-                        currentXAtt = e.clientX - initialXAtt;
-                        currentYAtt = e.clientY - initialYAtt;
-                        xOffsetAtt = currentXAtt;
-                        yOffsetAtt = currentYAtt;
-                        detailContent.style.transform = `translate3d(${currentXAtt}px, ${currentYAtt}px, 0)`;
-                    }
-                });
-
-                document.addEventListener('mouseup', () => {
-                    if (isDraggingAtt) {
-                        isDraggingAtt = false;
-                        detailContent.style.transition = '';
-                        detailHeader.style.cursor = 'grab';
-                    }
-                });
-
-                const observerAtt = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.target.classList.contains('hidden')) {
-                            xOffsetAtt = 0;
-                            yOffsetAtt = 0;
-                            detailContent.style.transform = `translate3d(0, 0, 0)`;
-                        }
-                    });
-                });
-                observerAtt.observe(detailModal, { attributes: true, attributeFilter: ['class'] });
-            }
         }
     });
 </script>
