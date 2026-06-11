@@ -49,7 +49,7 @@
                     </a>
                 </div>
                 <div>
-                    <a href="/Admin" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
+                    <a href="/Admin/Models" class="w-full flex items-center gap-3 px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-md text-sm font-medium transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
                         Quản lý Model
                     </a>
@@ -129,23 +129,23 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                         <h3 class="text-sm font-medium text-zinc-500 mb-2">Tổng Nhân viên</h3>
-                        <div class="text-3xl font-bold text-zinc-900">250</div>
-                        <p class="text-xs text-zinc-500 mt-1">+5% từ tháng trước</p>
+                        <div class="text-3xl font-bold text-zinc-900">@ViewBag.TotalEmployees</div>
+                        <p class="text-xs text-zinc-500 mt-1">Đang hoạt động</p>
                     </div>
                     <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                         <h3 class="text-sm font-medium text-zinc-500 mb-2">Vi phạm Hôm nay</h3>
-                        <div class="text-3xl font-bold text-red-600">12</div>
-                        <p class="text-xs text-zinc-500 mt-1">Chưa xử lý</p>
+                        <div class="text-3xl font-bold text-red-600">@ViewBag.ViolationsToday</div>
+                        <p class="text-xs text-zinc-500 mt-1">Ghi nhận trong ngày</p>
                     </div>
                     <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                         <h3 class="text-sm font-medium text-zinc-500 mb-2">Đơn Xin Nghỉ</h3>
-                        <div class="text-3xl font-bold text-zinc-900">8</div>
+                        <div class="text-3xl font-bold text-zinc-900">@ViewBag.PendingRequests</div>
                         <p class="text-xs text-zinc-500 mt-1">Chờ duyệt</p>
                     </div>
                     <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                         <h3 class="text-sm font-medium text-zinc-500 mb-2">Mức Tuân Thủ</h3>
-                        <div class="text-3xl font-bold text-red-500">94%</div>
-                        <p class="text-xs text-zinc-500 mt-1">Tỷ lệ tốt</p>
+                        <div class="text-3xl font-bold text-red-500">@ViewBag.ComplianceRate%</div>
+                        <p class="text-xs text-zinc-500 mt-1">Hôm nay</p>
                     </div>
                 </div>
 
@@ -280,17 +280,27 @@
                     </div>
                     <div class="p-6">
                         <div class="space-y-3">
-                            @for (int i = 1; i <= 5; i++)
+                            @{
+                                var recentViolations = ViewBag.RecentViolations as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ViolationRecord> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ViolationRecord>();
+                            }
+                            @if (!recentViolations.Any())
                             {
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-zinc-200 rounded-lg gap-2 hover:bg-zinc-50 transition">
-                                    <div class="flex-1">
-                                        <p class="font-medium text-zinc-900">Nhân viên @i - Vi phạm chấm công</p>
-                                        <p class="text-sm text-zinc-500">Ngày 2024-06-0@(i) &bull; 09:30</p>
+                                <p class="text-sm text-zinc-400 text-center py-4">Chưa ghi nhận vi phạm nào gần đây.</p>
+                            }
+                            else
+                            {
+                                @foreach (var item in recentViolations)
+                                {
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-zinc-200 rounded-lg gap-2 hover:bg-zinc-50 transition">
+                                        <div class="flex-1">
+                                            <p class="font-medium text-zinc-900">@item.EmployeeName (@item.EmployeeCode) - @item.ViolationType</p>
+                                            <p class="text-sm text-zinc-500">Camera: @item.CameraLocation &bull; Lúc: @item.DetectedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                                        </div>
+                                        <span class="text-xs px-3 py-1 rounded-full bg-red-50 text-red-600 font-medium self-start sm:self-center shrink-0">
+                                            @item.Status
+                                        </span>
                                     </div>
-                                    <span class="text-xs px-3 py-1 rounded-full bg-red-50 text-red-600 font-medium self-start sm:self-center shrink-0">
-                                        Chưa xử lý
-                                    </span>
-                                </div>
+                                }
                             }
                         </div>
                     </div>

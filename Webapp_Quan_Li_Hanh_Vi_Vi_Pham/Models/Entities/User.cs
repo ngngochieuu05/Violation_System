@@ -12,5 +12,9 @@ public class User
     public string FaceImagePath { get; set; } = string.Empty;
     public string ManagerKey { get; set; } = string.Empty;
     public bool IsKeyActivated { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Phone { get; set; } = string.Empty;
+    public string Department { get; set; } = string.Empty;
+    public string EmployeeCode { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
 }

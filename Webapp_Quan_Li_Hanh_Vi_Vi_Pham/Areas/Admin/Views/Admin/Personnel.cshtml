@@ -1,4 +1,4 @@
-﻿@model List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>
+@model List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>
 @{
     Layout = null;
     ViewData["Title"] = "Quản lý Nhân sự - ComplianceHub";
@@ -50,7 +50,7 @@
                             <button id="mobile-menu-btn" class="md:hidden p-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12" /><line x1="4" x2="20" y1="6" y2="6" /><line x1="4" x2="20" y1="18" y2="18" /></svg>
                             </button>
-                            <h2 class="text-xl font-semibold text-zinc-900">Quản lý Nhân sự - Quản lý</h2>
+                            <h2 class="text-xl font-semibold text-zinc-900">Quản lý Nhân sự</h2>
                         </div>
                     </div>
                 </header>
@@ -59,7 +59,7 @@
 
                     @if (TempData["SuccessMessage"] != null)
                     {
-                        <div class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm font-medium border border-emerald-100">@TempData["SuccessMessage"]</div>
+                        <div class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm font-medium border border-emerald-100 animate-pulse">@TempData["SuccessMessage"]</div>
                     }
                     @if (TempData["ErrorMessage"] != null)
                     {
@@ -68,12 +68,12 @@
 
                     <div class="flex items-start justify-between">
                         <div>
-                            <h1 class="text-3xl font-bold text-zinc-900 mb-2">Quản lý Nhân sự - Quản lý</h1>
-                            <p class="text-zinc-500">Quản lý thông tin và phân quyền cho các quản lý</p>
+                            <h1 class="text-3xl font-bold text-zinc-900 mb-2">Danh sách Quản lý</h1>
+                            <p class="text-zinc-500">Quản lý tài khoản, khóa bảo mật và thông tin liên lạc của các Quản lý (Manager)</p>
                         </div>
                         <button onclick="toggleForm('add-mgr-container')" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
-                            Thêm Quản lý
+                            Thêm Nhân sự
                         </button>
                     </div>
 
@@ -81,7 +81,7 @@
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <div class="flex items-start justify-between">
                                 <div>
-                                    <p class="text-sm text-zinc-500 mb-1">Tổng Quản lý</p>
+                                    <p class="text-sm text-zinc-500 mb-1">Tổng Quản lý (Manager)</p>
                                     <p class="text-3xl font-bold text-red-600">@Model.Count</p>
                                 </div>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
@@ -90,19 +90,19 @@
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <div class="flex items-start justify-between">
                                 <div>
-                                    <p class="text-sm text-zinc-500 mb-1">Đang hoạt động</p>
+                                    <p class="text-sm text-zinc-500 mb-1">Quản lý đã kích hoạt</p>
                                     <p class="text-3xl font-bold text-emerald-600">@Model.Count(m => m.IsKeyActivated)</p>
                                 </div>
-                                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Hoạt động</span>
+                                <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Activated</span>
                             </div>
                         </div>
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <div class="flex items-start justify-between">
                                 <div>
-                                    <p class="text-sm text-zinc-500 mb-1">Không hoạt động</p>
-                                    <p class="text-3xl font-bold text-red-600">@Model.Count(m => !m.IsKeyActivated)</p>
+                                    <p class="text-sm text-zinc-500 mb-1">Quản lý chờ kích hoạt</p>
+                                    <p class="text-3xl font-bold text-amber-600">@Model.Count(m => !m.IsKeyActivated)</p>
                                 </div>
-                                <span class="px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Chờ kích hoạt</span>
+                                <span class="px-2.5 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">Pending</span>
                             </div>
                         </div>
                     </div>
@@ -110,36 +110,51 @@
                     <div id="add-mgr-container" class="hidden">
                         <div class="bg-white border border-red-200 rounded-xl shadow-sm mb-6">
                             <div class="p-6 border-b border-zinc-100">
-                                <h3 class="text-lg font-bold text-zinc-900">Thêm Quản lý Mới</h3>
-                                <p class="text-sm text-zinc-500">Nhập thông tin cho tài khoản quản lý (Manager) mới</p>
+                                <h3 class="text-lg font-bold text-zinc-900">Thêm Nhân sự Mới</h3>
+                                <p class="text-sm text-zinc-500">Nhập thông tin chi tiết cho tài khoản nhân sự mới</p>
                             </div>
                             <div class="p-6">
-                                <form action="#" method="post" class="space-y-4">
+                                <form asp-action="AddPersonnel" method="post" class="space-y-4">
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Họ tên</label>
-                                            <input type="text" placeholder="VD: Nguyễn Dương" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Họ tên *</label>
+                                            <input type="text" name="fullName" required placeholder="VD: Nguyễn Văn A" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Tên đăng nhập (Username)</label>
-                                            <input type="text" placeholder="nguyenduong_mgr" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Tên đăng nhập (Username) *</label>
+                                            <input type="text" name="username" required placeholder="VD: nguyenmana" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Mật khẩu</label>
-                                            <input type="password" placeholder="••••••••" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Mật khẩu *</label>
+                                            <input type="password" name="password" required placeholder="••••••••" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
+                                        </div>
+                                        <input type="hidden" name="role" value="Manager" />
+                                        <div>
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Mã nhân viên (Employee Code)</label>
+                                            <input type="text" name="employeeCode" placeholder="VD: NV014" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
                                         </div>
                                         <div>
                                             <label class="block text-sm font-medium text-zinc-900 mb-2">Phòng ban</label>
-                                            <select class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm">
-                                                <option>Nhân sự (HR)</option>
-                                                <option>Bảo vệ / An ninh</option>
-                                                <option>Công nghệ thông tin</option>
+                                            <select name="department" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm">
+                                                <option value="Khối vận hành">Khối vận hành</option>
+                                                <option value="Nhân sự (HR)">Nhân sự (HR)</option>
+                                                <option value="Bảo vệ / An ninh">Bảo vệ / An ninh</option>
+                                                <option value="Công nghệ thông tin">Công nghệ thông tin</option>
+                                                <option value="Ban Giám Đốc">Ban Giám Đốc</option>
                                             </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Email</label>
+                                            <input type="email" name="email" placeholder="VD: email@company.com" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-zinc-900 mb-2">Số điện thoại</label>
+                                            <input type="text" name="phone" placeholder="VD: 0123456789" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 text-sm" />
                                         </div>
                                     </div>
                                     <div class="flex gap-2 justify-end pt-2">
                                         <button type="button" onclick="toggleForm('add-mgr-container')" class="px-4 py-2 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors">Hủy</button>
-                                        <button type="button" onclick="alert('Tính năng đang phát triển!')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors">Lưu Quản lý</button>
+                                        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors cursor-pointer">Lưu Nhân sự</button>
                                     </div>
                                 </form>
                             </div>
@@ -148,30 +163,38 @@
 
                     <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
                         <div class="p-6 border-b border-zinc-100">
-                            <h3 class="text-xl font-bold text-zinc-900">Danh sách Quản lý (@Model.Count)</h3>
-                            <p class="text-sm text-zinc-500">Quản lý tài khoản và mã kích hoạt cho cấp Manager</p>
-                        </div>
+                                                            <h3 class="text-xl font-bold text-zinc-900">Danh sách Quản lý (@Model.Count)</h3>
+                                                            <p class="text-sm text-zinc-500">Xem và cấu hình thông tin kết nối, khóa Manager kích hoạt và vi phạm</p>
+                                                        </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm text-left whitespace-nowrap">
                                 <thead class="text-xs text-zinc-800 bg-zinc-100 border-b border-zinc-200 uppercase font-bold">
                                     <tr>
-                                        <th class="px-6 py-4">Tên Quản lý</th>
+                                        <th class="px-6 py-4">Mã Quản lý</th>
+                                        <th class="px-6 py-4">Họ tên</th>
                                         <th class="px-6 py-4">Tài khoản</th>
+                                        <th class="px-6 py-4">Phòng ban</th>
+                                        <th class="px-6 py-4">Email / SĐT</th>
                                         <th class="px-6 py-4">Mã kích hoạt (Key)</th>
-                                        <th class="px-6 py-4 text-center">Trạng thái</th>
                                         <th class="px-6 py-4 text-center">Vi phạm</th>
-                                        <th class="px-6 py-4">Ngày tham gia</th>
                                         <th class="px-6 py-4 text-right">Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if (!Model.Any())
                                     {
-                                        <tr><td colspan="7" class="px-6 py-8 text-center text-zinc-500">Chưa có dữ liệu Quản lý.</td></tr>
+                                        <tr><td colspan="8" class="px-6 py-8 text-center text-zinc-500">Chưa có dữ liệu nhân sự.</td></tr>
                                     }
                                     @foreach (var mgr in Model)
                                     {
+                                        var violationCounts = ViewBag.ViolationCounts as Dictionary<string, int> ?? new Dictionary<string, int>();
+                                        int violations = 0;
+                                        if (!string.IsNullOrEmpty(mgr.EmployeeCode))
+                                        {
+                                            violationCounts.TryGetValue(mgr.EmployeeCode, out violations);
+                                        }
                                         <tr class="border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
+                                            <td class="px-6 py-4 text-zinc-600 font-mono text-xs">@(string.IsNullOrEmpty(mgr.EmployeeCode) ? "---" : mgr.EmployeeCode)</td>
                                             <td class="px-6 py-4">
                                                 <div class="flex items-center gap-3">
                                                     <div class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
@@ -181,52 +204,72 @@
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 text-zinc-500 font-mono text-xs">@@@mgr.Username</td>
-                                            <td class="px-6 py-4">
-                                                <form asp-action="UpdateManagerKey" method="post" class="flex items-center gap-2 m-0">
-                                                    <input type="hidden" name="managerId" value="@mgr.Id" />
-                                                    <input type="text" name="newKey" value="@mgr.ManagerKey" required placeholder="Nhập Key..."
-                                                           class="w-48 px-3 py-1.5 bg-white border border-zinc-200 rounded-md text-xs focus:ring-2 focus:ring-red-600 outline-none transition" />
-                                                    <button type="submit" class="text-xs px-3 py-1.5 bg-zinc-800 text-white rounded-md hover:bg-zinc-900 font-medium transition cursor-pointer">Lưu</button>
-                                                </form>
+                                            <td class="px-6 py-4 text-zinc-600 text-xs">
+                                                <div class="font-semibold text-zinc-700">@mgr.Department</div>
                                             </td>
-
-                                            <td class="px-6 py-4 text-center">
-                                                @if (mgr.IsKeyActivated)
+                                            <td class="px-6 py-4 text-zinc-500 text-xs">
+                                                <div>@(string.IsNullOrEmpty(mgr.Email) ? "---" : mgr.Email)</div>
+                                                <div class="text-[10px] text-zinc-400 mt-0.5">@(string.IsNullOrEmpty(mgr.Phone) ? "---" : mgr.Phone)</div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                @if (mgr.Role == "Manager")
                                                 {
-                                                    <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">Hoạt động</span>
+                                                    <form asp-action="UpdateManagerKey" method="post" class="flex items-center gap-2 m-0">
+                                                        <input type="hidden" name="managerId" value="@mgr.Id" />
+                                                        <input type="text" name="newKey" value="@mgr.ManagerKey" required placeholder="Nhập Key..."
+                                                               class="w-32 px-2 py-1.5 bg-white border border-zinc-200 rounded text-xs focus:ring-1 focus:ring-red-600 outline-none transition" />
+                                                        <button type="submit" class="text-xs px-2.5 py-1.5 bg-zinc-800 text-white rounded hover:bg-zinc-900 font-medium transition cursor-pointer">Lưu</button>
+                                                    </form>
+                                                    <div class="text-[10px] mt-1">
+                                                        @if (mgr.IsKeyActivated)
+                                                        {
+                                                            <span class="text-emerald-600 font-semibold">Đã kích hoạt</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="text-amber-500 font-semibold">Chờ nhập</span>
+                                                        }
+                                                    </div>
                                                 }
                                                 else
                                                 {
-                                                    <span class="px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">Không hoạt động</span>
+                                                    <span class="text-zinc-400 text-xs">Không áp dụng</span>
                                                 }
                                             </td>
 
                                             <td class="px-6 py-4 text-center">
-                                                <span class="text-green-600 font-semibold">0</span>
+                                                <span class="@(violations > 0 ? "text-red-600 font-bold" : "text-green-600 font-semibold")">@violations</span>
                                             </td>
 
-                                            <td class="px-6 py-4 text-zinc-500 text-sm">@mgr.CreatedAtUtc.ToString("dd/MM/yyyy")</td>
                                             <td class="px-6 py-4 text-right">
                                                 <div class="flex items-center justify-end gap-1">
-
-                                                    <button type="button" onclick="alert('Tính năng sửa thông tin đang được hoàn thiện dưới Backend!')" class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-blue-600 hover:bg-blue-100 rounded-md transition cursor-pointer" title="Hiệu chỉnh thông tin">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+                                                    <button type="button" 
+                                                            data-id="@mgr.Id"
+                                                            data-fullname="@mgr.FullName"
+                                                            data-username="@mgr.Username"
+                                                            data-code="@mgr.EmployeeCode"
+                                                            data-dept="@mgr.Department"
+                                                            data-email="@mgr.Email"
+                                                            data-phone="@mgr.Phone"
+                                                            onclick="triggerEdit(this)"
+                                                            class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-blue-600 hover:bg-blue-100 rounded-md transition cursor-pointer" title="Sửa thông tin">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                                                     </button>
-
-                                                    @if (mgr.IsKeyActivated)
+                                                    @if (mgr.Role == "Manager" && mgr.IsKeyActivated)
                                                     {
-                                                        <form asp-action="ResetManagerActivation" method="post" onsubmit="return confirm('Khôi phục trạng thái cho tài khoản này?')" class="m-0 inline-block">
+                                                        <form asp-action="ResetManagerActivation" method="post" onsubmit="return confirm('Khôi phục trạng thái cho tài khoản quản lý này?')" class="m-0 inline-block">
                                                             <input type="hidden" name="managerId" value="@mgr.Id" />
-                                                            <button type="submit" class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-amber-600 hover:bg-amber-100 rounded-md transition cursor-pointer" title="Khôi phục trạng thái (Reset Key)">
-                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
+                                                            <button type="submit" class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-amber-600 hover:bg-amber-100 rounded-md transition cursor-pointer" title="Reset kích hoạt khóa">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg>
                                                             </button>
                                                         </form>
                                                     }
-
-                                                    <button type="button" onclick="alert('Tính năng xóa tài khoản đang được hoàn thiện dưới Backend!')" class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-100 rounded-md transition cursor-pointer" title="Xóa tài khoản">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                                                    </button>
-
+                                                    <form asp-action="DeletePersonnel" method="post" onsubmit="return confirm('Bạn có chắc muốn xóa tài khoản này?')" class="m-0 inline-block">
+                                                        <input type="hidden" name="id" value="@mgr.Id" />
+                                                        <button type="submit" class="p-1.5 bg-zinc-100 text-zinc-500 hover:text-red-600 hover:bg-red-100 rounded-md transition cursor-pointer" title="Xóa tài khoản">
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             </td>
                                         </tr>
@@ -236,6 +279,61 @@
                         </div>
                     </div>
                 </main>
+            </div>
+        </div>
+
+        <!-- Modal Sửa Quản lý -->
+        <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden">
+            <div class="bg-white border border-zinc-200 rounded-xl shadow-lg w-full max-w-lg overflow-hidden transition-all">
+                <div class="p-6 border-b border-zinc-100 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-zinc-900">Sửa thông tin Quản lý</h3>
+                    <button type="button" onclick="closeEditModal()" class="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <form asp-action="EditPersonnel" method="post" class="p-6 space-y-4">
+                    <input type="hidden" id="edit-id" name="id" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Họ tên *</label>
+                            <input type="text" id="edit-fullName" name="fullName" required class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Tên đăng nhập *</label>
+                            <input type="text" id="edit-username" name="username" required class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Mật khẩu mới (để trống nếu giữ nguyên)</label>
+                            <input type="password" name="password" placeholder="••••••••" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Mã Quản lý</label>
+                            <input type="text" id="edit-employeeCode" name="employeeCode" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Phòng ban</label>
+                            <select id="edit-department" name="department" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600">
+                                <option value="Khối vận hành">Khối vận hành</option>
+                                <option value="Nhân sự (HR)">Nhân sự (HR)</option>
+                                <option value="Bảo vệ / An ninh">Bảo vệ / An ninh</option>
+                                <option value="Công nghệ thông tin">Công nghệ thông tin</option>
+                                <option value="Ban Giám Đốc">Ban Giám Đốc</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Email</label>
+                            <input type="email" id="edit-email" name="email" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-900 mb-1">Số điện thoại</label>
+                            <input type="text" id="edit-phone" name="phone" class="w-full px-3 py-2 bg-white border border-zinc-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+                        </div>
+                    </div>
+                    <div class="flex gap-2 justify-end pt-2">
+                        <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 rounded-md text-sm font-medium">Hủy</button>
+                        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium cursor-pointer">Lưu thay đổi</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -249,10 +347,24 @@
                     this.classList.add('hidden');
                 });
 
-                // Hàm bật/tắt Card Form Thêm Quản lý
                 function toggleForm(id) {
                     const form = document.getElementById(id);
                     form.classList.toggle('hidden');
+                }
+
+                function triggerEdit(btn) {
+                    document.getElementById('edit-id').value = btn.getAttribute('data-id');
+                    document.getElementById('edit-fullName').value = btn.getAttribute('data-fullname');
+                    document.getElementById('edit-username').value = btn.getAttribute('data-username');
+                    document.getElementById('edit-employeeCode').value = btn.getAttribute('data-code');
+                    document.getElementById('edit-department').value = btn.getAttribute('data-dept');
+                    document.getElementById('edit-email').value = btn.getAttribute('data-email');
+                    document.getElementById('edit-phone').value = btn.getAttribute('data-phone');
+                    document.getElementById('edit-modal').classList.remove('hidden');
+                }
+
+                function closeEditModal() {
+                    document.getElementById('edit-modal').classList.add('hidden');
                 }
         </script>
     </body>

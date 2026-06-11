@@ -26,6 +26,10 @@ public static class DbSeeder
                 FaceImagePath = "",
                 ManagerKey = "",
                 IsKeyActivated = true,
+                Email = "admin@compliancehub.vn",
+                Phone = "0987 654 321",
+                Department = "Quản trị hệ thống",
+                EmployeeCode = "ADM-001",
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -39,10 +43,31 @@ public static class DbSeeder
                 FaceImagePath = "",
                 ManagerKey = "hieudeptraivcl",
                 IsKeyActivated = false,
+                Email = "manager@compliancehub.vn",
+                Phone = "0912 345 678",
+                Department = "Ban Giám Đốc",
+                EmployeeCode = "MGR-001",
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            context.Users.AddRange(adminUser, managerUser);
+            var employeeUser = new User
+            {
+                Id = Guid.NewGuid(),
+                Username = "employee",
+                PasswordHash = PasswordHasher.HashPassword("employee123"),
+                FullName = "Nguyen Van Employee",
+                Role = "Employee",
+                FaceImagePath = "",
+                ManagerKey = "",
+                IsKeyActivated = true,
+                Email = "employee@compliancehub.vn",
+                Phone = "0123 456 789",
+                Department = "Khối vận hành",
+                EmployeeCode = "NV014",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            context.Users.AddRange(adminUser, managerUser, employeeUser);
         }
 
         // Seed ModelSettings
@@ -142,6 +167,75 @@ public static class DbSeeder
                 }
             };
             context.ViolationRecords.AddRange(seedViolations);
+        }
+
+        // Seed AuditLogs
+        if (!context.AuditLogs.Any())
+        {
+            var seedLogs = new List<AuditLog>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddMinutes(-10),
+                    Username = "Nguyễn Dương",
+                    Action = "Đăng nhập",
+                    Details = "Quản lý đã đăng nhập hệ thống",
+                    IpAddress = "192.168.1.50",
+                    Status = "Thành công"
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddMinutes(-30),
+                    Username = "admin",
+                    Action = "Cập nhật cấu hình",
+                    Details = "Cập nhật Model Chấm công - ngưỡng độ tin cậy 85%",
+                    IpAddress = "127.0.0.1",
+                    Status = "Thành công"
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddHours(-1),
+                    Username = "System",
+                    Action = "Camera",
+                    Details = "Camera Tầng 3 - Lối thoát hiểm đã mất kết nối",
+                    IpAddress = "127.0.0.1",
+                    Status = "Cảnh báo"
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddHours(-2),
+                    Username = "Trần Văn Minh",
+                    Action = "Đăng nhập",
+                    Details = "Mật khẩu không chính xác - Lần 1/3",
+                    IpAddress = "192.168.1.182",
+                    Status = "Lỗi"
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddHours(-3),
+                    Username = "admin",
+                    Action = "Webhook Zalo",
+                    Details = "Gửi thông báo về vi phạm qua Webhook Zalo",
+                    IpAddress = "127.0.0.1",
+                    Status = "Thành công"
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Timestamp = DateTime.UtcNow.AddHours(-4),
+                    Username = "System",
+                    Action = "Dọn dẹp dữ liệu",
+                    Details = "Xóa dữ liệu cũ hơn 90 ngày (15 bản ghi)",
+                    IpAddress = "127.0.0.1",
+                    Status = "Thành công"
+                }
+            };
+            context.AuditLogs.AddRange(seedLogs);
         }
 
         context.SaveChanges();

@@ -1,4 +1,5 @@
-﻿@{
+@model List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AuditLog>
+@{
     Layout = null;
     ViewData["Title"] = "Nhật ký hệ thống - ComplianceHub";
 }
@@ -53,9 +54,9 @@
                     <div class="flex items-start justify-between">
                         <div>
                             <h1 class="text-3xl font-bold text-zinc-900 mb-2">Nhật ký Hệ thống</h1>
-                            <p class="text-zinc-500">Theo dõi lịch sử hoạt động của toàn bộ hệ thống (Mock Data)</p>
+                            <p class="text-zinc-500">Theo dõi lịch sử hoạt động thực tế trên toàn hệ thống</p>
                         </div>
-                        <button onclick="downloadMockCSV()" class="flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm">
+                        <button onclick="downloadCSV()" class="flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm cursor-pointer">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
                             Xuất CSV
                         </button>
@@ -64,19 +65,19 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <p class="text-sm text-zinc-500 mb-1">Thành công</p>
-                            <p class="text-3xl font-bold text-emerald-600">4</p>
+                            <p class="text-3xl font-bold text-emerald-600">@Model.Count(l => l.Status == "Thành công")</p>
                         </div>
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <p class="text-sm text-zinc-500 mb-1">Cảnh báo</p>
-                            <p class="text-3xl font-bold text-amber-600">1</p>
+                            <p class="text-3xl font-bold text-amber-600">@Model.Count(l => l.Status == "Cảnh báo")</p>
                         </div>
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <p class="text-sm text-zinc-500 mb-1">Lỗi</p>
-                            <p class="text-3xl font-bold text-red-600">1</p>
+                            <p class="text-3xl font-bold text-red-600">@Model.Count(l => l.Status == "Lỗi")</p>
                         </div>
                         <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
                             <p class="text-sm text-zinc-500 mb-1">Tổng hoạt động</p>
-                            <p class="text-3xl font-bold text-zinc-900">6</p>
+                            <p class="text-3xl font-bold text-zinc-900">@Model.Count</p>
                         </div>
                     </div>
 
@@ -86,15 +87,9 @@
                                 <h3 class="text-lg font-bold text-zinc-900">Danh sách hoạt động</h3>
                                 <p class="text-sm text-zinc-500">Hiển thị các bản ghi gần đây nhất</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <button class="flex items-center gap-2 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors shadow-sm">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
-                                    Tất cả trạng thái
-                                </button>
-                            </div>
                         </div>
                         <div class="overflow-x-auto">
-                            <table class="w-full text-sm text-left whitespace-nowrap">
+                            <table class="w-full text-sm text-left whitespace-nowrap" id="logsTable">
                                 <thead class="text-xs text-zinc-800 bg-zinc-100 border-b border-zinc-200 uppercase font-bold">
                                     <tr>
                                         <th class="px-6 py-4">Thời gian</th>
@@ -106,54 +101,51 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 14:35:22</td>
-                                        <td class="px-6 py-4">Nguyễn Dương</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Đăng nhập</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Quản lý đã đăng nhập hệ thống</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">192.168.1.50</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Thành công</span></td>
-                                    </tr>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 14:30:15</td>
-                                        <td class="px-6 py-4">Admin System</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Cập nhật cấu hình</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Cập nhật Model Chấm công - ngưỡng độ tin cậy 85%</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">127.0.0.1</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Thành công</span></td>
-                                    </tr>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 14:20:33</td>
-                                        <td class="px-6 py-4">Admin System</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Camera</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Camera Tầng 3 - Lối thoát hiểm đã mất kết nối</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">127.0.0.1</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">Cảnh báo</span></td>
-                                    </tr>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 14:05:45</td>
-                                        <td class="px-6 py-4">Trần Văn Minh</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Đăng nhập</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Mật khẩu không chính xác - Lần 1/3</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">192.168.1.182</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Lỗi</span></td>
-                                    </tr>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 13:58:30</td>
-                                        <td class="px-6 py-4">Admin System</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Webhook Zalo</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Gửi thông báo về vi phạm qua Webhook Zalo</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">127.0.0.1</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Thành công</span></td>
-                                    </tr>
-                                    <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
-                                        <td class="px-6 py-4 font-medium">2024-06-11 13:45:28</td>
-                                        <td class="px-6 py-4">System</td>
-                                        <td class="px-6 py-4"><span class="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md border border-blue-100">Dọn dẹp dữ liệu</span></td>
-                                        <td class="px-6 py-4 text-zinc-500">Xóa dữ liệu cũ hơn 90 ngày (15 bản ghi)</td>
-                                        <td class="px-6 py-4 font-mono text-xs text-zinc-500">127.0.0.1</td>
-                                        <td class="px-6 py-4"><span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">Thành công</span></td>
-                                    </tr>
+                                    @if (!Model.Any())
+                                    {
+                                        <tr><td colspan="6" class="px-6 py-8 text-center text-zinc-500">Chưa có nhật ký hoạt động.</td></tr>
+                                    }
+                                    @foreach (var log in Model)
+                                    {
+                                        <tr class="border-b border-zinc-100 hover:bg-zinc-50 transition-colors">
+                                            <td class="px-6 py-4 font-medium">@log.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
+                                            <td class="px-6 py-4">@log.Username</td>
+                                            <td class="px-6 py-4">
+                                                @{
+                                                    string badgeClass = "bg-blue-50 text-blue-700 border-blue-100";
+                                                    if (log.Action.Contains("Xóa") || log.Action.Contains("Tắt") || log.Action.Contains("Reset") || log.Action.Contains("Delete"))
+                                                    {
+                                                        badgeClass = "bg-red-50 text-red-700 border-red-100";
+                                                    }
+                                                    else if (log.Action.Contains("Cập nhật") || log.Action.Contains("Sửa") || log.Action.Contains("Toggle"))
+                                                    {
+                                                        badgeClass = "bg-amber-50 text-amber-700 border-amber-100";
+                                                    }
+                                                    else if (log.Action.Contains("Thêm") || log.Action.Contains("Tạo") || log.Action.Contains("Add"))
+                                                    {
+                                                        badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
+                                                    }
+                                                }
+                                                <span class="px-2 py-1 text-xs rounded-md border @badgeClass">@log.Action</span>
+                                            </td>
+                                            <td class="px-6 py-4 text-zinc-500">@log.Details</td>
+                                            <td class="px-6 py-4 font-mono text-xs text-zinc-500">@log.IpAddress</td>
+                                            <td class="px-6 py-4">
+                                                @{
+                                                    string statusClass = "bg-emerald-100 text-emerald-700";
+                                                    if (log.Status == "Cảnh báo")
+                                                    {
+                                                        statusClass = "bg-amber-100 text-amber-700";
+                                                    }
+                                                    else if (log.Status == "Lỗi")
+                                                    {
+                                                        statusClass = "bg-red-100 text-red-700";
+                                                    }
+                                                }
+                                                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold @statusClass">@log.Status</span>
+                                            </td>
+                                        </tr>
+                                    }
                                 </tbody>
                             </table>
                         </div>
@@ -172,25 +164,21 @@
                     this.classList.add('hidden');
                 });
 
-                // Hàm giả lập chức năng Xuất file Excel (CSV)
-                function downloadMockCSV() {
-                    // Dữ liệu CSV giả lập
-                    const csvContent = "data:text/csv;charset=utf-8,"
-                        + "Thời gian,Người dùng,Hành động,Chi tiết,IP Address,Trạng thái\n"
-                        + "2024-06-11 14:35:22,Nguyễn Dương,Đăng nhập,Quản lý đã đăng nhập hệ thống,192.168.1.50,Thành công\n"
-                        + "2024-06-11 14:30:15,Admin System,Cập nhật cấu hình AI,Cập nhật Model Chấm công - ngưỡng độ tin cậy 85%,127.0.0.1,Thành công\n"
-                        + "2024-06-11 14:20:33,Admin System,Camera mất kết nối,Camera Tầng 3 - Lối thoát hiểm đã mất kết nối,127.0.0.1,Cảnh báo\n"
-                        + "2024-06-11 14:05:45,Trần Văn Minh,Đăng nhập thất bại,Mật khẩu không chính xác - Lần 1/3,192.168.1.182,Lỗi\n"
-                        + "2024-06-11 13:58:30,Admin System,Webhook Zalo gửi,Gửi thông báo về vi phạm qua Webhook Zalo,127.0.0.1,Thành công\n"
-                        + "2024-06-11 13:45:28,System,Dọn dẹp dữ liệu,Xóa dữ liệu cũ hơn 90 ngày (15 bản ghi),127.0.0.1,Thành công";
+                function downloadCSV() {
+                    let csv = "Thời gian,Người dùng,Hành động,Chi tiết,IP Address,Trạng thái\n";
+                    const rows = document.querySelectorAll("#logsTable tbody tr");
+                    rows.forEach(row => {
+                        const cols = row.querySelectorAll("td");
+                        if (cols.length >= 6) {
+                            const data = Array.from(cols).map(col => `"${col.innerText.replace(/"/g, '""')}"`);
+                            csv += data.join(",") + "\n";
+                        }
+                    });
 
-                    // Mã hóa URI và tạo link tải xuống
-                    const encodedUri = encodeURI(csvContent);
+                    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: "text/csv;charset=utf-8;" });
                     const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", "nhat_ky_he_thong.csv");
-
-                    // Tự động bấm tải
+                    link.href = URL.createObjectURL(blob);
+                    link.download = "nhat_ky_he_thong.csv";
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Areas.Admin.Controllers;
@@ -25,6 +26,31 @@ public class AdminController : Controller
         _context = context;
     }
 
+    private async Task WriteLogAsync(string action, string details, string status = "Thành công")
+    {
+        try
+        {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            var username = User.Identity?.Name ?? "Admin System";
+            var log = new AuditLog
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow,
+                Username = username,
+                Action = action,
+                Details = details,
+                IpAddress = ip,
+                Status = status
+            };
+            _context.AuditLogs.Add(log);
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Ignore logging failures to prevent disrupting the application
+        }
+    }
+
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
@@ -32,8 +58,40 @@ public class AdminController : Controller
         var managers = await _context.Users.Where(u => u.Role == "Manager").OrderByDescending(u => u.CreatedAtUtc).ToListAsync(cancellationToken);
         var aiModels = await _context.AiModels.OrderByDescending(m => m.CreatedAtUtc).ToListAsync(cancellationToken);
 
+        // Calculate actual statistics from the database
+        var totalEmployees = await _context.Users.CountAsync(u => u.Role == "Manager" || u.Role == "Employee", cancellationToken);
+        
+        var todayUtc = DateTime.UtcNow.Date;
+        var violationsToday = await _context.ViolationRecords.CountAsync(v => v.DetectedAtUtc >= todayUtc, cancellationToken);
+        
+        var pendingRequests = await _context.ApprovalRequests.CountAsync(r => r.Status == "Chờ duyệt", cancellationToken);
+
+        // Compliance rate: percentage of employees who did NOT violate today
+        var usersWithViolationsToday = await _context.ViolationRecords
+            .Where(v => v.DetectedAtUtc >= todayUtc)
+            .Select(v => v.EmployeeCode)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        var complianceRate = totalEmployees > 0 
+            ? (int)Math.Round((double)(totalEmployees - usersWithViolationsToday) / totalEmployees * 100) 
+            : 100;
+        complianceRate = Math.Max(0, Math.Min(100, complianceRate));
+
+        // Get 5 most recent violations
+        var recentViolations = await _context.ViolationRecords
+            .OrderByDescending(v => v.DetectedAtUtc)
+            .Take(5)
+            .ToListAsync(cancellationToken);
+
         ViewBag.Managers = managers;
         ViewBag.AiModels = aiModels;
+        ViewBag.TotalEmployees = totalEmployees;
+        ViewBag.ViolationsToday = violationsToday;
+        ViewBag.PendingRequests = pendingRequests;
+        ViewBag.ComplianceRate = complianceRate;
+        ViewBag.RecentViolations = recentViolations;
+
         return View("Index", activeSetting);
     }
 
@@ -50,21 +108,32 @@ public class AdminController : Controller
         return View("Models", aiModels);
     }
 
-    // --- CÁC TRANG MỚI ---
     [HttpGet("Personnel")]
     public async Task<IActionResult> Personnel(CancellationToken cancellationToken)
     {
-        var managers = await _context.Users
+        var users = await _context.Users
             .Where(u => u.Role == "Manager")
             .OrderByDescending(u => u.CreatedAtUtc)
             .ToListAsync(cancellationToken);
-        return View("Personnel", managers);
+
+        // Compute real violation counts for each user based on EmployeeCode
+        var violationCounts = await _context.ViolationRecords
+            .GroupBy(v => v.EmployeeCode)
+            .Select(g => new { EmployeeCode = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.EmployeeCode, x => x.Count, cancellationToken);
+            
+        ViewBag.ViolationCounts = violationCounts;
+
+        return View("Personnel", users);
     }
 
     [HttpGet("AuditLogs")]
-    public IActionResult AuditLogs()
+    public async Task<IActionResult> AuditLogs(CancellationToken cancellationToken)
     {
-        return View("AuditLogs");
+        var logs = await _context.AuditLogs
+            .OrderByDescending(l => l.Timestamp)
+            .ToListAsync(cancellationToken);
+        return View("AuditLogs", logs);
     }
 
     [HttpGet("Settings")]
@@ -73,14 +142,139 @@ public class AdminController : Controller
         return View("Settings");
     }
 
-    // --- CÁC HÀM XỬ LÝ (GIỮ NGUYÊN) ---
     private string GetRedirectUrl()
     {
         string referer = Request.Headers["Referer"].ToString();
         return string.IsNullOrEmpty(referer) ? "/Admin" : referer;
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("AddPersonnel")]
+    public async Task<IActionResult> AddPersonnel(
+        string fullName,
+        string username,
+        string password,
+        string role,
+        string department,
+        string email,
+        string phone,
+        string employeeCode,
+        CancellationToken cancellationToken)
+    {
+        role = "Manager";
+        if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        {
+            TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin bắt buộc.";
+            return RedirectToAction("Personnel");
+        }
+
+        var existingUser = await _context.Users.AnyAsync(u => u.Username == username, cancellationToken);
+        if (existingUser)
+        {
+            TempData["ErrorMessage"] = "Tên đăng nhập đã tồn tại.";
+            return RedirectToAction("Personnel");
+        }
+
+        var newUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = username,
+            FullName = fullName,
+            PasswordHash = PasswordHasher.HashPassword(password),
+            Role = role,
+            Department = department ?? string.Empty,
+            Email = email ?? string.Empty,
+            Phone = phone ?? string.Empty,
+            EmployeeCode = employeeCode ?? string.Empty,
+            FaceImagePath = "",
+            ManagerKey = role.Equals("Manager", StringComparison.OrdinalIgnoreCase) ? "hieudeptraivcl" : string.Empty,
+            IsKeyActivated = !role.Equals("Manager", StringComparison.OrdinalIgnoreCase),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _context.Users.Add(newUser);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Thêm Nhân sự", $"Tạo tài khoản {username} với vai trò {role}", "Thành công");
+
+        TempData["SuccessMessage"] = $"Đã thêm nhân viên {fullName} thành công!";
+        return RedirectToAction("Personnel");
+    }
+
+    [HttpPost("EditPersonnel")]
+    public async Task<IActionResult> EditPersonnel(
+        Guid id,
+        string fullName,
+        string username,
+        string password,
+        string department,
+        string email,
+        string phone,
+        string employeeCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(username))
+        {
+            TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin bắt buộc.";
+            return RedirectToAction("Personnel");
+        }
+
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy tài khoản quản lý.";
+            return RedirectToAction("Personnel");
+        }
+
+        if (user.Username != username)
+        {
+            var existingUser = await _context.Users.AnyAsync(u => u.Username == username, cancellationToken);
+            if (existingUser)
+            {
+                TempData["ErrorMessage"] = "Tên đăng nhập đã tồn tại.";
+                return RedirectToAction("Personnel");
+            }
+        }
+
+        user.FullName = fullName;
+        user.Username = username;
+        user.Department = department ?? string.Empty;
+        user.Email = email ?? string.Empty;
+        user.Phone = phone ?? string.Empty;
+        user.EmployeeCode = employeeCode ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(password))
+        {
+            user.PasswordHash = PasswordHasher.HashPassword(password);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Cập nhật Nhân sự", $"Cập nhật tài khoản quản lý {username}", "Thành công");
+
+        TempData["SuccessMessage"] = $"Đã cập nhật tài khoản quản lý {fullName} thành công!";
+        return RedirectToAction("Personnel");
+    }
+
+    [HttpPost("DeletePersonnel")]
+    public async Task<IActionResult> DeletePersonnel(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
+        {
+            TempData["ErrorMessage"] = "Không tìm thấy tài khoản nhân sự.";
+            return RedirectToAction("Personnel");
+        }
+
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Xóa Nhân sự", $"Đã xóa tài khoản {user.Username}", "Thành công");
+
+        TempData["SuccessMessage"] = $"Đã xóa tài khoản {user.FullName} thành công!";
+        return RedirectToAction("Personnel");
+    }
+
+    [HttpPost("UpdateModelSettings")]
     public async Task<IActionResult> UpdateModelSettings(string yoloModelPath, decimal yoloConfThreshold, decimal yoloIouThreshold, decimal deepfaceConfThreshold, CancellationToken cancellationToken)
     {
         var setting = new ModelSetting
@@ -91,11 +285,14 @@ public class AdminController : Controller
             DeepfaceConfThreshold = deepfaceConfThreshold
         };
         await _modelSettingService.UpdateSettingAsync(setting, cancellationToken);
+
+        await WriteLogAsync("Cập nhật cấu hình", "Cập nhật thông số mô hình AI chung");
+
         TempData["SuccessMessage"] = "Cập nhật cấu hình AI thành công!";
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("UpdateManagerKey")]
     public async Task<IActionResult> UpdateManagerKey(Guid managerId, string newKey, CancellationToken cancellationToken)
     {
         var manager = await _context.Users.FindAsync(new object[] { managerId }, cancellationToken);
@@ -103,12 +300,15 @@ public class AdminController : Controller
         {
             manager.ManagerKey = newKey;
             await _context.SaveChangesAsync(cancellationToken);
+
+            await WriteLogAsync("Cập nhật Key Manager", $"Cập nhật mã kích hoạt cho {manager.Username}");
+
             TempData["SuccessMessage"] = $"Đã cập nhật khóa cho {manager.FullName}!";
         }
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("ResetManagerActivation")]
     public async Task<IActionResult> ResetManagerActivation(Guid managerId, CancellationToken cancellationToken)
     {
         var manager = await _context.Users.FindAsync(new object[] { managerId }, cancellationToken);
@@ -116,12 +316,15 @@ public class AdminController : Controller
         {
             manager.IsKeyActivated = false;
             await _context.SaveChangesAsync(cancellationToken);
+
+            await WriteLogAsync("Reset thiết bị", $"Gỡ kích hoạt thiết bị đối với {manager.Username}");
+
             TempData["SuccessMessage"] = $"Đã reset thiết bị cho {manager.FullName}!";
         }
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("AddAiModel")]
     public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, decimal confThreshold, decimal iouThreshold, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type) || string.IsNullOrEmpty(modelPath))
@@ -143,11 +346,14 @@ public class AdminController : Controller
         };
         _context.AiModels.Add(newModel);
         await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Thêm Model AI", $"Đã thêm mô hình {name} ({type})");
+
         TempData["SuccessMessage"] = $"Đã thêm mô hình {name} thành công!";
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("EditAiModel")]
     public async Task<IActionResult> EditAiModel(Guid id, string name, string modelPath, decimal confThreshold, decimal iouThreshold, CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
@@ -158,11 +364,14 @@ public class AdminController : Controller
         model.ConfThreshold = confThreshold;
         model.IouThreshold = iouThreshold;
         await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Sửa Model AI", $"Cập nhật thông số mô hình {name}");
+
         TempData["SuccessMessage"] = $"Đã cập nhật mô hình {name} thành công!";
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("ToggleAiModel")]
     public async Task<IActionResult> ToggleAiModel(Guid id, CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
@@ -181,10 +390,13 @@ public class AdminController : Controller
             TempData["SuccessMessage"] = $"Đã tắt mô hình {model.Name}!";
         }
         await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Bật/Tắt Model AI", $"Thay đổi kích hoạt mô hình {model.Name} sang {(model.IsActive ? "Bật" : "Tắt")}");
+
         return Redirect(GetRedirectUrl());
     }
 
-    [HttpPost("[action]")]
+    [HttpPost("DeleteAiModel")]
     public async Task<IActionResult> DeleteAiModel(Guid id, CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
@@ -192,6 +404,9 @@ public class AdminController : Controller
 
         _context.AiModels.Remove(model);
         await _context.SaveChangesAsync(cancellationToken);
+
+        await WriteLogAsync("Xóa Model AI", $"Đã xóa mô hình {model.Name}");
+
         TempData["SuccessMessage"] = $"Đã xóa mô hình {model.Name}!";
         return Redirect(GetRedirectUrl());
     }
