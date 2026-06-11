@@ -25,52 +25,42 @@
     </div>
 
     <!-- 4 Stats Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <!-- Card 1 -->
-        <div class="saas-card p-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-user text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs text-slate-500 mb-0.5 font-medium">Vai trò</p>
-                <p class="text-sm font-bold text-slate-900">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
-            </div>
+        <div class="saas-card p-6 border-slate-200 relative overflow-hidden group">
+            <div class="absolute right-0 top-0 w-24 h-24 bg-red-50 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+            <p class="text-xs text-slate-500 font-semibold mb-2 relative z-10 uppercase tracking-wider">Vị trí công việc</p>
+            <p class="text-2xl font-bold text-slate-900 relative z-10 truncate" title="@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value">
+                @User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value 
+                <span class="text-xs text-red-500 font-normal ml-1 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">Cấp Quyền</span>
+            </p>
         </div>
         
         <!-- Card 2 -->
-        <div class="saas-card p-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-fingerprint text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs text-slate-500 mb-0.5 font-medium">Trạng thái</p>
-                <div class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <p class="text-sm font-bold text-slate-900">Online</p>
-                </div>
+        <div class="saas-card p-6 border-slate-200 relative overflow-hidden group">
+            <div class="absolute right-0 top-0 w-24 h-24 bg-emerald-50 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+            <p class="text-xs text-slate-500 font-semibold mb-2 relative z-10 uppercase tracking-wider">Trạng thái hệ thống</p>
+            <div class="flex items-center gap-2 relative z-10">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <p class="text-2xl font-bold text-slate-900">Online</p>
             </div>
         </div>
 
         <!-- Card 3 -->
-        <div class="saas-card p-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-                <i class="fa-regular fa-calendar text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs text-slate-500 mb-0.5 font-medium">Ngày</p>
-                <p class="text-sm font-bold text-slate-900" id="currentDateDisplay">--/--/----</p>
-            </div>
+        <div class="saas-card p-6 border-slate-200 relative overflow-hidden group">
+            <div class="absolute right-0 top-0 w-24 h-24 bg-blue-50 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+            <p class="text-xs text-slate-500 font-semibold mb-2 relative z-10 uppercase tracking-wider">Ngày làm việc</p>
+            <p class="text-xl lg:text-2xl font-bold text-slate-900 relative z-10" id="currentDateDisplay">--/--/----</p>
         </div>
 
         <!-- Card 4 -->
-        <div class="saas-card p-4 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
-                <i class="fa-regular fa-clock text-xl"></i>
-            </div>
-            <div>
-                <p class="text-xs text-slate-500 mb-0.5 font-medium">Giờ hiện tại</p>
-                <p class="text-sm font-bold text-slate-900 font-mono" id="currentTimeDisplay">--:--:--</p>
-            </div>
+        <div class="saas-card p-6 border-slate-200 relative overflow-hidden group">
+            <div class="absolute right-0 top-0 w-24 h-24 bg-purple-50 rounded-full blur-2xl -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-500"></div>
+            <p class="text-xs text-slate-500 font-semibold mb-2 relative z-10 uppercase tracking-wider">Giờ hiện tại</p>
+            <p class="text-2xl font-bold text-slate-900 font-mono relative z-10" id="currentTimeDisplay">--:--:--</p>
         </div>
     </div>
 
