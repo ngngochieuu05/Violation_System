@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
@@ -11,9 +12,11 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 {
     [DbContext(typeof(ViolationDbContext))]
-    partial class ViolationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611155340_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -91,38 +94,6 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.EmployeeTask", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("EmployeeTasks");
-                });
-
             modelBuilder.Entity("Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ModelSetting", b =>
                 {
                     b.Property<int>("Id")
@@ -152,56 +123,11 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
                     b.ToTable("ModelSettings");
                 });
 
-            modelBuilder.Entity("Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.PayrollRecord", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("BaseSalary")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("KpiBonus")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("NetSalary")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("ViolationDeduction")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("PayrollRecords");
-                });
-
             modelBuilder.Entity("Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("BaseSalary")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");

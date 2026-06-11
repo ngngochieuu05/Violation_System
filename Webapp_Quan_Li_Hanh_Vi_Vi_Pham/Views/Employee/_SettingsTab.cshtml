@@ -59,17 +59,51 @@
         <div class="lg:col-span-4 flex flex-col gap-6">
             <div class="saas-card p-6">
                 <div class="mb-6 border-b border-slate-100 pb-4">
-                    <p class="saas-label mb-1">Tài khoản</p>
-                    <h3 class="saas-heading text-lg">Phiên làm việc</h3>
+                    <p class="saas-label mb-1">Tài khoản & Bảo mật</p>
+                    <h3 class="saas-heading text-lg">Phiên làm việc & 2FA</h3>
                 </div>
                 
-                <div class="space-y-3">
+                <div class="space-y-3 mb-6">
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-emerald-500"></i>
+                                <span class="text-sm font-bold text-slate-800">Xác thực 2 yếu tố (2FA)</span>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Đang Tắt</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-3">Tăng cường bảo mật bằng mã OTP gửi qua Email hoặc ứng dụng Authenticator.</p>
+                        <button type="button" class="w-full sm:w-auto rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition">Thiết lập 2FA</button>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-bold text-slate-800">Phiên đăng nhập hiện tại</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-slate-600 mt-2">
+                            <i class="fa-brands fa-windows text-slate-400 text-lg"></i>
+                            <div>
+                                <p class="font-semibold">Windows PC - Trình duyệt Chrome</p>
+                                <p class="text-slate-400">IP: 192.168.1.5 • Đang hoạt động (Hiện tại)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs text-slate-600 mt-3 pt-3 border-t border-slate-200">
+                            <i class="fa-brands fa-apple text-slate-400 text-lg"></i>
+                            <div>
+                                <p class="font-semibold">iPhone 14 Pro - Safari</p>
+                                <p class="text-slate-400">IP: 14.161.43.12 • Đăng nhập 2 ngày trước</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-4 border-t border-slate-100">
                     <button type="button" data-tab-trigger="profile" class="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition group active:scale-95">
                         <span class="text-sm font-bold">Mở trang hồ sơ</span>
                         <i class="fa-solid fa-angle-right text-slate-400 group-hover:text-slate-600 transition"></i>
                     </button>
                     
-                    <a asp-controller="Account" asp-action="Logout" class="w-full flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition group active:scale-95 no-underline">
+                    <a href="/Account/Logout" class="w-full flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition group active:scale-95 no-underline">
                         <span class="text-sm font-bold">Đăng xuất an toàn</span>
                         <i class="fa-solid fa-right-from-bracket group-hover:translate-x-1 transition-transform"></i>
                     </a>

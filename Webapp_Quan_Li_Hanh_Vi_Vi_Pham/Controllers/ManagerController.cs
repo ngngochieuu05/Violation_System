@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
@@ -14,6 +15,7 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
+[Authorize(Roles = "Manager")]
 public class ManagerController : Controller
 {
     private readonly IUserService _userService;
@@ -25,19 +27,21 @@ public class ManagerController : Controller
         _context = context;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public IActionResult ActivateKey()
     {
         var username = TempData["UsernameToActivate"] as string;
         if (string.IsNullOrEmpty(username))
         {
-            return RedirectToAction("Login", "Auth");
+            return RedirectToAction("Login", "Account");
         }
         ViewBag.Username = username;
         TempData.Keep("UsernameToActivate");
         return View();
     }
 
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> ActivateKey(string username, string key, CancellationToken cancellationToken)
     {
@@ -69,10 +73,6 @@ public class ManagerController : Controller
     [HttpGet]
     public IActionResult CreateForm()
     {
-        if (User.Identity?.IsAuthenticated != true || !User.IsInRole("Manager"))
-        {
-            return RedirectToAction("Login", "Auth");
-        }
         return View();
     }
 
@@ -80,69 +80,221 @@ public class ManagerController : Controller
     [HttpPost]
     public async Task<IActionResult> CreateForm(FormTemplate form)
     {
-        if (User.Identity?.IsAuthenticated != true || !User.IsInRole("Manager"))
-        {
-            return RedirectToAction("Login", "Auth");
-        }
-
         if (ModelState.IsValid)
         {
-            // Tự động cập nhật ngày giờ hiện tại
             form.LastUpdated = DateTime.Now;
-
-            // Lưu vào Database
             _context.FormTemplates.Add(form);
             await _context.SaveChangesAsync();
-
-            // Lưu thành công thì quay về trang danh sách biểu mẫu
-            return RedirectToAction("Forms");
+            return RedirectToAction("Index", new { tab = "forms" });
         }
-
-        // Nếu có lỗi, hiển thị lại trang form cùng với dữ liệu đã nhập
         return View(form);
     }
 
-    public async Task<IActionResult> Index()
+    public IActionResult Index()
     {
-        if (User.Identity?.IsAuthenticated != true || !User.IsInRole("Manager"))
-        {
-            return RedirectToAction("Login", "Auth");
-        }
         return View();
     }
 
-    // --- CÁC ENDPOINT LẤY DỮ LIỆU ĐỘNG ---
+    // --- Tab Navigation Redirects ---
+    public IActionResult WorkSessions() => RedirectToAction(nameof(Index), new { tab = "attendance" });
+    public IActionResult Approvals() => RedirectToAction(nameof(Index), new { tab = "requests" });
+    public IActionResult Messages() => RedirectToAction(nameof(Index), new { tab = "messages" });
+    public IActionResult Forms() => RedirectToAction(nameof(Index), new { tab = "forms" });
 
-    public async Task<IActionResult> WorkSessions()
+    // --- API ENDPOINTS FOR SPA ---
+
+    [HttpGet]
+    public async Task<IActionResult> GetHomeStats(CancellationToken cancellationToken)
+    {
+        var today = DateTime.UtcNow.Date;
+        var employeesCount = await _context.Users.CountAsync(u => u.Role == "Employee", cancellationToken);
+        var attendanceCount = await _context.WorkSessions.CountAsync(w => w.Date.Date == today, cancellationToken);
+        var violationsCount = await _context.ViolationRecords.CountAsync(v => v.DetectedAtUtc.Date == today, cancellationToken);
+        var requestsCount = await _context.ApprovalRequests.CountAsync(r => r.Status == "Pending", cancellationToken);
+
+        return Json(new {
+            success = true,
+            data = new {
+                employees = employeesCount,
+                attendance = attendanceCount,
+                violations = violationsCount,
+                requests = requestsCount
+            }
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllEmployees(CancellationToken cancellationToken)
+    {
+        var employees = await _context.Users
+            .Where(u => u.Role == "Employee")
+            .Select(u => new {
+                u.Id,
+                u.EmployeeCode,
+                u.FullName,
+                u.Department,
+                u.Username,
+                u.Role,
+                u.BaseSalary
+            })
+            .ToListAsync(cancellationToken);
+        
+        return Json(new { success = true, data = employees });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllWorkSessions(CancellationToken cancellationToken)
     {
         var sessions = await _context.WorkSessions
             .OrderByDescending(w => w.Date)
-            .ToListAsync();
-        return View(sessions);
+            .Take(100)
+            .ToListAsync(cancellationToken);
+        return Json(new { success = true, data = sessions });
     }
 
-    public async Task<IActionResult> Approvals()
+    [HttpGet]
+    public async Task<IActionResult> GetAllViolations(CancellationToken cancellationToken)
     {
-        var approvals = await _context.ApprovalRequests
+        var violations = await _context.ViolationRecords
+            .OrderByDescending(v => v.DetectedAtUtc)
+            .Take(100)
+            .ToListAsync(cancellationToken);
+        return Json(new { success = true, data = violations });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllRequests(CancellationToken cancellationToken)
+    {
+        var requests = await _context.ApprovalRequests
             .OrderByDescending(a => a.SubmittedAt)
-            .ToListAsync();
-        return View(approvals);
+            .Take(100)
+            .ToListAsync(cancellationToken);
+        return Json(new { success = true, data = requests });
     }
 
-    public async Task<IActionResult> Messages()
+    [HttpGet]
+    public async Task<IActionResult> GetAllMessages(CancellationToken cancellationToken)
     {
-        var messages = await _context.EmployeeMessages
+        var msgs = await _context.EmployeeMessages
             .OrderByDescending(m => m.SentAt)
-            .ToListAsync();
-        return View(messages);
+            .Take(100)
+            .ToListAsync(cancellationToken);
+        return Json(new { success = true, data = msgs });
     }
 
-    public async Task<IActionResult> Forms()
+    [HttpGet]
+    public async Task<IActionResult> GetAllForms(CancellationToken cancellationToken)
     {
         var forms = await _context.FormTemplates
             .OrderByDescending(f => f.LastUpdated)
-            .ToListAsync();
-        return View(forms);
+            .ToListAsync(cancellationToken);
+        return Json(new { success = true, data = forms });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllTasks(CancellationToken cancellationToken)
+    {
+        var tasks = await _context.EmployeeTasks
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync(cancellationToken);
+        
+        var users = await _context.Users.ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        var result = tasks.Select(t => new {
+            t.Id,
+            t.EmployeeId,
+            EmployeeName = users.ContainsKey(t.EmployeeId) ? users[t.EmployeeId] : "Unknown",
+            t.Title,
+            t.Description,
+            t.DueDate,
+            t.Status
+        });
+        return Json(new { success = true, data = result });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AssignTask([FromBody] EmployeeTask task, CancellationToken cancellationToken)
+    {
+        task.Id = Guid.NewGuid();
+        task.CreatedAt = DateTime.Now;
+        task.Status = "Pending";
+        _context.EmployeeTasks.Add(task);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Json(new { success = true, message = "Đã giao nhiệm vụ thành công." });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAllPayrolls(int month, int year, CancellationToken cancellationToken)
+    {
+        var payrolls = await _context.PayrollRecords
+            .Where(p => p.Month == month && p.Year == year)
+            .ToListAsync(cancellationToken);
+
+        var users = await _context.Users.ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        var result = payrolls.Select(p => new {
+            p.Id,
+            p.EmployeeId,
+            EmployeeName = users.ContainsKey(p.EmployeeId) ? users[p.EmployeeId] : "Unknown",
+            p.Month,
+            p.Year,
+            p.BaseSalary,
+            p.KpiBonus,
+            p.ViolationDeduction,
+            p.NetSalary,
+            p.Status
+        });
+        return Json(new { success = true, data = result });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CalculateMonthlyPayroll(int month, int year, CancellationToken cancellationToken)
+    {
+        var employees = await _context.Users.Where(u => u.Role == "Employee").ToListAsync(cancellationToken);
+        foreach (var emp in employees)
+        {
+            var existing = await _context.PayrollRecords
+                .FirstOrDefaultAsync(p => p.EmployeeId == emp.Id && p.Month == month && p.Year == year, cancellationToken);
+            
+            if (existing != null) continue;
+
+            // Tính số lượng vi phạm trong tháng
+            var violations = await _context.ViolationRecords
+                .Where(v => v.EmployeeCode == emp.EmployeeCode && v.DetectedAtUtc.Month == month && v.DetectedAtUtc.Year == year)
+                .ToListAsync(cancellationToken);
+            
+            decimal deduction = violations.Count * 50000; // Mỗi vi phạm trừ 50k
+            decimal kpiBonus = 1000000; // Mặc định thưởng 1M, Manager có thể sửa sau
+
+            var payroll = new PayrollRecord
+            {
+                Id = Guid.NewGuid(),
+                EmployeeId = emp.Id,
+                Month = month,
+                Year = year,
+                BaseSalary = emp.BaseSalary,
+                KpiBonus = kpiBonus,
+                ViolationDeduction = deduction,
+                NetSalary = emp.BaseSalary + kpiBonus - deduction,
+                Status = "Chưa thanh toán",
+                CreatedAt = DateTime.Now
+            };
+            _context.PayrollRecords.Add(payroll);
+        }
+        await _context.SaveChangesAsync(cancellationToken);
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdatePayrollStatus(Guid id, string status, CancellationToken cancellationToken)
+    {
+        var payroll = await _context.PayrollRecords.FindAsync(new object[] { id }, cancellationToken);
+        if (payroll != null)
+        {
+            payroll.Status = status;
+            if (status == "Đã thanh toán") payroll.PaidAt = DateTime.Now;
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
     }
 
     private async Task SignInUserAsync(User user)

@@ -78,6 +78,35 @@
                         <input type="text" data-profile-input="phone" value="0123 456 789" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
                     </div>
                 </div>
+
+                <div class="mt-8 mb-6 border-b border-slate-100 pb-4 flex justify-between items-end">
+                    <div>
+                        <h3 class="saas-heading text-lg">Thông tin bảo mật (Nhạy cảm)</h3>
+                        <p class="text-xs text-slate-500 mt-1">Yêu cầu xác thực bảo mật trước khi thay đổi.</p>
+                    </div>
+                    <i class="fa-solid fa-lock text-slate-300 text-xl"></i>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Số CCCD / Hộ chiếu</label>
+                        <div class="relative">
+                            <input type="text" data-profile-input="cccd" value="079*****123" disabled class="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600 font-mono tracking-wider outline-none transition" />
+                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition" title="Mở khóa chỉnh sửa">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Tài khoản ngân hàng</label>
+                        <div class="relative">
+                            <input type="text" data-profile-input="bank" value="190*****456 (Techcombank)" disabled class="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-2.5 text-sm text-slate-600 font-mono tracking-wider outline-none transition" />
+                            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 transition" title="Mở khóa chỉnh sửa">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
                     <p class="text-xs text-slate-500" data-profile-message>Thông tin đang ở trạng thái mặc định.</p>

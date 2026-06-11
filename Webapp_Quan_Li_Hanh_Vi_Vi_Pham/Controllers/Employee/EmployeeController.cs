@@ -42,6 +42,53 @@ public class EmployeeController : Controller
         return Json(new { success = true, data = violations });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetMyTasks(CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Không xác định được danh tính." });
+        }
+
+        var tasks = await _context.EmployeeTasks
+            .Where(t => t.EmployeeId == userId)
+            .OrderByDescending(t => t.DueDate)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = tasks });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkTaskDone(Guid id, CancellationToken cancellationToken)
+    {
+        var task = await _context.EmployeeTasks.FindAsync(new object[] { id }, cancellationToken);
+        if (task != null)
+        {
+            task.Status = "Done";
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMyPayrolls(int year, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Không xác định được danh tính." });
+        }
+
+        var payrolls = await _context.PayrollRecords
+            .Where(p => p.EmployeeId == userId && p.Year == year)
+            .OrderByDescending(p => p.Month)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = payrolls });
+    }
+
     public IActionResult Attendance()
     {
         return RedirectToAction(nameof(Index), new { tab = "attendance" });

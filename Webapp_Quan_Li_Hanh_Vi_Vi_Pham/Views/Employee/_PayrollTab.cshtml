@@ -6,28 +6,28 @@
                 <span class="saas-label">Lương cơ bản</span>
                 <i class="fa-solid fa-money-bill-wave text-blue-500"></i>
             </div>
-            <p class="font-outfit text-xl font-bold text-slate-900 payroll-secure-data blur-md select-none transition-all duration-300">15,000,000 ₫</p>
+            <p id="empBaseSalaryTop" class="font-outfit text-xl font-bold text-slate-900 payroll-secure-data blur-md select-none transition-all duration-300">-- ₫</p>
         </div>
         <div class="saas-card p-4">
             <div class="flex items-center justify-between text-slate-400 mb-2">
                 <span class="saas-label">Phụ cấp & Thưởng</span>
                 <i class="fa-solid fa-hand-holding-dollar text-emerald-500"></i>
             </div>
-            <p class="font-outfit text-xl font-bold text-slate-900 payroll-secure-data blur-md select-none transition-all duration-300">3,650,000 ₫</p>
+            <p id="empKpiBonusTop" class="font-outfit text-xl font-bold text-slate-900 payroll-secure-data blur-md select-none transition-all duration-300">-- ₫</p>
         </div>
         <div class="saas-card p-4">
             <div class="flex items-center justify-between text-slate-400 mb-2">
                 <span class="saas-label">Khấu trừ</span>
                 <i class="fa-solid fa-arrow-trend-down text-red-500"></i>
             </div>
-            <p class="font-outfit text-xl font-bold text-red-600 payroll-secure-data blur-md select-none transition-all duration-300">- 2,425,000 ₫</p>
+            <p id="empDeductionTop" class="font-outfit text-xl font-bold text-red-600 payroll-secure-data blur-md select-none transition-all duration-300">-- ₫</p>
         </div>
         <div class="saas-card p-4 bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
             <div class="flex items-center justify-between text-emerald-600 mb-2">
                 <span class="saas-label text-emerald-600">Tổng thực nhận</span>
                 <i class="fa-solid fa-wallet text-emerald-600"></i>
             </div>
-            <p class="font-outfit text-2xl font-black text-emerald-700 payroll-secure-data blur-md select-none transition-all duration-300">16,225,000 ₫</p>
+            <p id="empNetSalaryTop" class="font-outfit text-2xl font-black text-emerald-700 payroll-secure-data blur-md select-none transition-all duration-300">-- ₫</p>
         </div>
     </div>
 
@@ -59,15 +59,11 @@
                         <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                             <div class="flex justify-between items-center">
                                 <span class="text-sm font-medium text-slate-700">Lương cơ bản</span>
-                                <span class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-slate-900 transition-all duration-300">15,000,000 ₫</span>
+                                <span id="empBaseSalary" class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-slate-900 transition-all duration-300">-- ₫</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-slate-700">Lương làm thêm giờ (OT)</span>
-                                <span class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-slate-900 transition-all duration-300">2,450,000 ₫</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-slate-700">Phụ cấp (Ăn trưa, Xăng xe)</span>
-                                <span class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-slate-900 transition-all duration-300">1,200,000 ₫</span>
+                                <span class="text-sm font-medium text-slate-700">Thưởng KPI</span>
+                                <span id="empKpiBonus" class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-slate-900 transition-all duration-300">-- ₫</span>
                             </div>
                         </div>
                     </div>
@@ -77,12 +73,8 @@
                         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3"><i class="fa-solid fa-arrow-trend-down text-red-500 mr-2"></i>Các khoản khấu trừ</h4>
                         <div class="rounded-xl border border-red-100 bg-red-50/50 p-4 space-y-3">
                             <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-slate-700">Thuế TNCN</span>
-                                <span class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-red-600 transition-all duration-300">- 850,000 ₫</span>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm font-medium text-slate-700">Bảo hiểm (BHXH, BHYT, BHTN)</span>
-                                <span class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-red-600 transition-all duration-300">- 1,575,000 ₫</span>
+                                <span class="text-sm font-medium text-slate-700">Phạt Vi phạm quy định</span>
+                                <span id="empDeduction" class="payroll-secure-data blur-md select-none font-mono text-sm font-bold text-red-600 transition-all duration-300">-- ₫</span>
                             </div>
                         </div>
                     </div>
@@ -93,43 +85,10 @@
         <!-- Lịch sử nhận lương -->
         <div class="xl:col-span-4 flex flex-col gap-6">
             <div class="saas-card p-6 flex-1 flex flex-col">
-                <h3 class="saas-heading text-lg mb-4">Lịch sử thu nhập</h3>
-                <div class="flex-1 space-y-3 overflow-y-auto">
-                    <!-- Item 1 -->
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 flex items-center justify-between group hover:border-emerald-200 transition cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-emerald-500 font-bold font-outfit shadow-sm">04</div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Tháng 04/2026</p>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Thanh toán ngày 05/05/2026</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs group-hover:text-emerald-500 transition"></i>
-                    </div>
-
-                    <!-- Item 2 -->
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 flex items-center justify-between group hover:border-emerald-200 transition cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-emerald-500 font-bold font-outfit shadow-sm">03</div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Tháng 03/2026</p>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Thanh toán ngày 05/04/2026</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs group-hover:text-emerald-500 transition"></i>
-                    </div>
-
-                    <!-- Item 3 -->
-                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 flex items-center justify-between group hover:border-emerald-200 transition cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-emerald-500 font-bold font-outfit shadow-sm">02</div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-900">Tháng 02/2026</p>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Thanh toán ngày 05/03/2026</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-slate-400 text-xs group-hover:text-emerald-500 transition"></i>
-                    </div>
+                <h3 class="saas-heading text-lg mb-4">Lịch sử thu nhập năm nay</h3>
+                <div id="payrollHistoryList" class="flex-1 space-y-3 overflow-y-auto">
+                    <!-- Sẽ được điền bằng JS -->
+                    <div class="p-4 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
                 </div>
             </div>
         </div>

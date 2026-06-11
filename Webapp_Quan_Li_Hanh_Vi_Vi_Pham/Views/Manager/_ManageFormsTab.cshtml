@@ -1,0 +1,32 @@
+<div data-tab-panel="forms" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="font-outfit text-2xl font-bold text-slate-900">Quản lý Biểu mẫu</h2>
+            <p class="text-sm text-slate-500 mt-1">Kho tài liệu và biểu mẫu của hệ thống.</p>
+        </div>
+        <a href="/Manager/CreateForm" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fa-solid fa-file-circle-plus mr-2"></i>Tạo biểu mẫu
+        </a>
+    </div>
+
+    <div class="saas-card bg-white">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-folder-open text-slate-400 mr-2"></i>Danh sách Biểu mẫu</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500 font-semibold">
+                        <th class="p-4 py-3">Tiêu đề</th>
+                        <th class="p-4 py-3">Mô tả</th>
+                        <th class="p-4 py-3">Cập nhật lần cuối</th>
+                        <th class="p-4 py-3 text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="formTbody">
+                    <!-- Data populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

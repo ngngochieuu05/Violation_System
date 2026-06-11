@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
@@ -11,9 +12,11 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 {
     [DbContext(typeof(ViolationDbContext))]
-    partial class ViolationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611165309_AddScheduleAndPayroll")]
+    partial class AddScheduleAndPayroll
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

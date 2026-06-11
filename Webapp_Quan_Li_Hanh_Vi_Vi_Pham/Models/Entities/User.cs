@@ -16,5 +16,6 @@ public class User
     public string Phone { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public string EmployeeCode { get; set; } = string.Empty;
+    public decimal BaseSalary { get; set; } = 15000000; // Mức lương cơ bản mặc định
     public DateTime CreatedAtUtc { get; set; }
 }
