@@ -1,7 +1,9 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
 
@@ -12,11 +14,13 @@ public class EmployeeController : Controller
 {
     private readonly ViolationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly IHubContext<InternalChatHub> _chatHub;
 
-    public EmployeeController(ViolationDbContext context, IWebHostEnvironment environment)
+    public EmployeeController(ViolationDbContext context, IWebHostEnvironment environment, IHubContext<InternalChatHub> chatHub)
     {
         _context = context;
         _environment = environment;
+        _chatHub = chatHub;
     }
 
     public IActionResult Index() => View();
@@ -566,6 +570,7 @@ public class EmployeeController : Controller
 
         _context.EmployeeMessages.Add(message);
         await _context.SaveChangesAsync(cancellationToken);
+        await NotifyConversationChangedAsync(user, message.Channel);
         return Json(new { success = true });
     }
 
@@ -605,6 +610,7 @@ public class EmployeeController : Controller
         message.EditedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+        await NotifyConversationChangedAsync(user, message.Channel);
         return Json(new { success = true, message = "Da cap nhat tin nhan." });
     }
 
@@ -640,6 +646,7 @@ public class EmployeeController : Controller
         message.Content = "Tin nhan da duoc thu hoi.";
 
         await _context.SaveChangesAsync(cancellationToken);
+        await NotifyConversationChangedAsync(user, message.Channel);
         return Json(new { success = true, message = "Da thu hoi tin nhan." });
     }
     [HttpPost]
@@ -841,6 +848,23 @@ public class EmployeeController : Controller
         return string.IsNullOrWhiteSpace(username)
             ? null
             : await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+    }
+
+    private async Task NotifyConversationChangedAsync(User employee, string managerUsername)
+    {
+        var groups = new[]
+        {
+            InternalChatHub.BuildUsernameGroup(employee.Username),
+            InternalChatHub.BuildUserIdGroup(employee.Id.ToString()),
+            InternalChatHub.BuildUsernameGroup(managerUsername)
+        };
+
+        await _chatHub.Clients.Groups(groups).SendAsync("MessagesChanged", new
+        {
+            employeeUserId = employee.Id,
+            employeeUsername = employee.Username,
+            channel = managerUsername
+        });
     }
 
     private async Task<string> SaveAttendanceImageAsync(Guid userId, string? imageDataUrl, string prefix, CancellationToken cancellationToken)

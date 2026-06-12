@@ -158,7 +158,7 @@ public class AccountController : Controller
 
         if (user.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
-            redirectUrl = "/Admin";
+            redirectUrl = Url.Action("Index", "Admin", new { area = "Admin" }) ?? "/Admin";
         }
         else if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase))
         {
@@ -411,7 +411,7 @@ public class AccountController : Controller
         {
             if (activeRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
-                return Redirect("/Admin");
+                return RedirectToAction("Index", "Admin", new { area = "Admin" });
             }
 
             if (activeRole.Equals("Manager", StringComparison.OrdinalIgnoreCase))

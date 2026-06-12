@@ -592,15 +592,15 @@ public class UserService : IUserService
     {
         if (activeDeepfaceModel == null)
         {
-            return 0.55;
+            return 0.75;
         }
 
         if (activeDeepfaceModel.ModelPath.Equals("VGG-Face", StringComparison.OrdinalIgnoreCase))
         {
-            return Math.Max((double)activeDeepfaceModel.ConfThreshold, 0.55d);
+            return Math.Max((double)activeDeepfaceModel.ConfThreshold, 0.75d);
         }
 
-        return (double)activeDeepfaceModel.ConfThreshold;
+        return Math.Max((double)activeDeepfaceModel.ConfThreshold, 0.75d);
     }
 
     private async Task FinalizeInitialSecuritySetupIfReadyAsync(User user, CancellationToken cancellationToken)

@@ -1,7 +1,7 @@
 @model Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ModelSetting
 @{
     ViewData["Title"] = "Cấu hình AI & Quản lý Key";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "_AdminLayout";
     var managers = ViewBag.Managers as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>();
     var aiModels = ViewBag.AiModels as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel>();
 }

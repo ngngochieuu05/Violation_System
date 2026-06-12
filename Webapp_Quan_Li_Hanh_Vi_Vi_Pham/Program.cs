@@ -3,8 +3,10 @@ using System.Net.NetworkInformation;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
@@ -122,6 +124,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.Configure<YoloModelOptions>(
     builder.Configuration.GetSection(YoloModelOptions.SectionName));
 builder.Services.Configure<ViolationMonitoringOptions>(
@@ -223,6 +226,8 @@ app.MapControllerRoute(
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapHub<InternalChatHub>("/hubs/internal-chat");
 
 if (args.Contains("--test-biometrics"))
 {

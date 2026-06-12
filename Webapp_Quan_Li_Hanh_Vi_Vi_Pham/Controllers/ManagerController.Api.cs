@@ -186,13 +186,13 @@ public partial class ManagerController
     public async Task<IActionResult> EditMessage([FromBody] ManagerEditMessageRequest req, CancellationToken cancellationToken)
     {
         var manager = await GetCurrentUserAsync(cancellationToken);
-        if (manager == null) return Json(new { success = false, message = "KhÃ´ng xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c tÃ i khoáº£n quáº£n lÃ½." });
+        if (manager == null) return Json(new { success = false, message = "Không xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c tÃ i khoáº£n quáº£n lÃ½." });
 
         if (req.Id <= 0 || string.IsNullOrWhiteSpace(req.Content))
             return Json(new { success = false, message = "Dá»¯ liá»‡u chá»‰nh sá»­a khÃ´ng há»£p lá»‡." });
 
         var msg = await _context.EmployeeMessages.FindAsync(new object[] { req.Id }, cancellationToken);
-        if (msg == null) return Json(new { success = false, message = "KhÃ´ng tÃ¬m tháº¥y tin nháº¯n." });
+        if (msg == null) return Json(new { success = false, message = "Không tÃ¬m tháº¥y tin nháº¯n." });
 
         if (msg.SenderRole != "Manager" || msg.SenderName != manager.FullName)
             return Json(new { success = false, message = "Báº¡n khÃ´ng cÃ³ quyá»n chá»‰nh sá»­a tin nháº¯n nÃ y." });
@@ -204,7 +204,7 @@ public partial class ManagerController
         msg.EditedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
-        return Json(new { success = true, message = "ÄÃ£ cáº­p nháº­t tin nháº¯n." });
+        return Json(new { success = true, message = "ÄÃ£ cập nhật tin nháº¯n." });
     }
 
     [HttpPost]

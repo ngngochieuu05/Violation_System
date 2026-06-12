@@ -1424,6 +1424,13 @@ const loadMessages = async () => {
     });
 
 
+    document.querySelector("[data-chat-input]")?.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            document.querySelector("[data-chat-send]")?.click();
+        }
+    });
+
     document.querySelector("[data-chat-send]")?.addEventListener("click", async () => {
         const input = document.querySelector("[data-chat-input]");
         const text = input?.value.trim();
@@ -1855,6 +1862,86 @@ const loadMessages = async () => {
     attendanceDetailModal?.addEventListener("click", (event) => {
         if (event.target === attendanceDetailModal) {
             closeAttendanceDetail();
+        }
+    });
+
+    // --- Add Task Modal Logic ---
+    const addTaskTrigger = document.querySelector("[data-task-add-trigger]");
+    const addTaskModal = document.querySelector("[data-task-add-modal]");
+    const addTaskCloseBtn = document.querySelector("[data-task-add-close]");
+    const submitNewTaskBtn = document.getElementById("submitNewTaskBtn");
+
+    if (addTaskModal) {
+        document.body.appendChild(addTaskModal);
+    }
+
+    addTaskTrigger?.addEventListener("click", () => {
+        if (!addTaskModal) return;
+        const titleEl = document.getElementById("newTaskTitle");
+        const descEl = document.getElementById("newTaskDesc");
+        const dateEl = document.getElementById("newTaskDate");
+        if (titleEl) titleEl.value = "";
+        if (descEl) descEl.value = "";
+        if (dateEl) dateEl.value = toDateKey();
+        
+        addTaskModal.classList.remove("hidden");
+        addTaskModal.style.display = "flex";
+        setTimeout(() => {
+            const content = addTaskModal.querySelector(".saas-card");
+            if (content) {
+                content.style.transform = "scale(1)";
+                content.style.opacity = "1";
+            }
+            if (titleEl) titleEl.focus();
+        }, 10);
+    });
+
+    const closeAddTaskModal = () => {
+        if (!addTaskModal) return;
+        const content = addTaskModal.querySelector(".saas-card");
+        if (content) {
+            content.style.transform = "scale(0.95)";
+            content.style.opacity = "0";
+        }
+        setTimeout(() => {
+            addTaskModal.style.display = "none";
+            addTaskModal.classList.add("hidden");
+        }, 300);
+    };
+
+    addTaskCloseBtn?.addEventListener("click", closeAddTaskModal);
+
+    submitNewTaskBtn?.addEventListener("click", async () => {
+        const title = document.getElementById("newTaskTitle")?.value;
+        const desc = document.getElementById("newTaskDesc")?.value;
+        const date = document.getElementById("newTaskDate")?.value;
+
+        if (!title) {
+            alert("Vui lòng nhập tiêu đề công việc.");
+            return;
+        }
+
+        const payload = {
+            Title: title,
+            Description: desc,
+            DueDate: date ? new Date(date).toISOString() : new Date().toISOString()
+        };
+
+        try {
+            const res = await fetch("/Employee/AddTask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (result.success) {
+                closeAddTaskModal();
+                if (typeof loadMyTasks === "function") loadMyTasks();
+            } else {
+                alert(result.message || "Không thể thêm công việc");
+            }
+        } catch (e) {
+            console.error("Error adding task:", e);
         }
     });
 
