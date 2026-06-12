@@ -22,10 +22,12 @@
             }
     </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden"
+      data-ai-assistant-role="Manager"
+      data-ai-assistant-endpoint="/api/ai-assistant/chat">
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div class="h-16 flex items-center px-6 border-b border-slate-100">
-            <i class="fa-solid fa-shield-halved text-2xl text-red-600 mr-3"></i>
+            <img src="~/images/logo/logo.png" alt="ComplianceHub Logo" class="mr-3 h-10 w-10 rounded-lg object-contain" />
             <span class="font-bold text-lg text-slate-800">ComplianceHub</span>
         </div>
         <nav class="flex-1 overflow-y-auto py-4">
@@ -86,5 +88,6 @@
             </button>
         </aside>
     </div>
+    <script src="~/js/internal-ai-chat.js" asp-append-version="true"></script>
 </body>
 </html>

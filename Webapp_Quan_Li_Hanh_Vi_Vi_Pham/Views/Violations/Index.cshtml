@@ -115,9 +115,13 @@
                                             {
                                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-100">Cho duyet</span>
                                             }
+                                            else if (item.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-800 border border-red-100">Tu choi</span>
+                                            }
                                             else
                                             {
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800 border border-green-100">Da xem</span>
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800 border border-green-100">Da duyet</span>
                                             }
                                         </td>
                                     </tr>
@@ -131,6 +135,24 @@
 
         <!-- Right 1 column: YOLO Live detection log -->
         <div class="lg:col-span-1 space-y-6">
+            <!-- Video Box (Camera View) -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-900">
+                    <h3 class="font-outfit font-bold text-white flex items-center space-x-2 text-sm">
+                        <i class="fa-solid fa-video text-red-500 animate-pulse"></i>
+                        <span>Live Camera - YOLO</span>
+                    </h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">REC</span>
+                </div>
+                <div class="bg-black relative aspect-video flex items-center justify-center overflow-hidden">
+                    <img id="yoloCameraStream" src="http://localhost:5000/video_feed" class="w-full h-full object-cover" onerror="this.style.display='none'; document.getElementById('cameraError').style.display='flex';" />
+                    <div id="cameraError" class="absolute inset-0 flex-col items-center justify-center text-slate-500 space-y-2 hidden" style="display: none;">
+                        <i class="fa-solid fa-video-slash text-3xl mb-2"></i>
+                        <p class="text-xs">Camera Offline hoặc chưa bật server Python</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
                 <div class="p-6 border-b border-slate-100 flex items-center justify-between">
                     <h3 class="font-outfit font-bold text-slate-900 flex items-center space-x-2">

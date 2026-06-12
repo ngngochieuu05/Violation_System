@@ -119,39 +119,113 @@
             const res = await fetch('/Manager/GetAllViolations');
             const data = await res.json();
             if (data.success) {
+                if (data.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chua co vi pham nao.</td></tr>`;
+                    return;
+                }
+
                 tbody.innerHTML = data.data.map(v => `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-4 py-3 text-slate-900 font-semibold">${v.trackingId || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-900 font-medium">${v.employeeCode}</td>
                         <td class="p-4 py-3 text-slate-700">${v.violationType}</td>
                         <td class="p-4 py-3 text-slate-500">${v.cameraLocation}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</td>
                         <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700">${v.severity}</span></td>
+                        <td class="p-4 py-3">
+                            <div class="flex flex-col gap-1">
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
+                                ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' • ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
+                            </div>
+                        </td>
+                        <td class="p-4 py-3 text-right">
+                            ${v.status === 'Pending' ? `
+                            <div class="flex justify-end gap-2">
+                                <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyet</button>
+                                <button onclick="window.reviewViolation('${v.id}', 'Rejected')" class="rounded bg-red-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-600">Tu choi</button>
+                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Da xu ly'}</span>`}
+                        </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
     };
 
-    const loadRequests = async () => {
+    window.reviewViolation = async (id, status) => {
+        const note = status === 'Rejected'
+            ? (prompt('Nhap ghi chu tu choi vi pham:') || 'Manager tu choi tu dashboard')
+            : 'Manager duyet tu dashboard';
+
+        if (!confirm(`Xac nhan cap nhat vi pham sang trang thai ${status}?`)) return;
+
+        try {
+            const res = await fetch(`/Manager/ReviewViolation?id=${id}&status=${encodeURIComponent(status)}&note=${encodeURIComponent(note)}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadViolations();
+                loadHomeStats();
+            } else {
+                alert(data.message || 'Co loi xay ra');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Khong the cap nhat vi pham');
+        }
+    };
+
+        const loadRequests = async () => {
         const tbody = document.getElementById("requestTbody");
         if (!tbody) return;
         try {
             const res = await fetch('/Manager/GetAllRequests');
             const data = await res.json();
             if (data.success) {
-                tbody.innerHTML = data.data.map(r => `
+                if (data.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Không có đơn từ nào</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.data.map(r => {
+                    let tone = 'bg-slate-100 text-slate-700';
+                    if (r.status === 'Đã duyệt' || r.status === 'Approved') tone = 'bg-green-100 text-green-700';
+                    else if (r.status === 'Từ chối' || r.status === 'Rejected') tone = 'bg-red-100 text-red-700';
+                    else tone = 'bg-amber-100 text-amber-700';
+                    
+                    return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeId}</td>
-                        <td class="p-4 py-3 text-slate-700">${r.requestType}</td>
+                        <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeName || 'N/A'}</td>
+                        <td class="p-4 py-3 text-slate-700">
+                            <div>${r.requestType}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/
+/g, '<br>')}</div>
+                        </td>
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${r.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${r.status}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>
+                        <td class="p-4 py-3 text-right">
+                            ${r.status === 'Chờ duyệt' || r.status === 'Pending' ? `
+                            <button onclick="updateRequestStatus(${r.id}, 'Đã duyệt')" class="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 mr-1">Duyệt</button>
+                            <button onclick="updateRequestStatus(${r.id}, 'Từ chối')" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Từ chối</button>
+                            ` : ''}
+                        </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
         } catch(err) { console.error(err); }
     };
+    
+    window.updateRequestStatus = async (id, status) => {
+        if (!confirm('Xác nhận ' + status + ' đơn này?')) return;
+        try {
+            const res = await fetch(`/Manager/UpdateRequestStatus?id=${id}&status=${encodeURIComponent(status)}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadRequests();
+            } else {
+                alert('Có lỗi xảy ra');
+            }
+        } catch(e) { console.error(e); }
+    };
 
-    const loadMessages = async () => {
+        const loadMessages = async () => {
         const tbody = document.getElementById("messageTbody");
         if (!tbody) return;
         try {
@@ -159,19 +233,32 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">Chưa có tin nhắn nào.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Chưa có tin nhắn nào.</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(m => `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-4 py-3 text-slate-900 font-medium">${m.senderId || 'Hệ thống'}</td>
-                        <td class="p-4 py-3 text-slate-700">${m.title || 'Không có tiêu đề'}</td>
-                        <td class="p-4 py-3 text-slate-500">${m.content}</td>
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 ${m.isRead ? 'opacity-70' : 'font-semibold'}">
+                        <td class="p-4 py-3 text-slate-900">${m.employeeName || 'Hệ thống'}</td>
+                        <td class="p-4 py-3 text-slate-800">${m.title || 'Không có tiêu đề'}</td>
+                        <td class="p-4 py-3 text-slate-600">${m.content}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(m.sentAt).toLocaleString('vi-VN')}</td>
+                        <td class="p-4 py-3 text-right">
+                            ${!m.isRead ? `<button onclick="markMessageRead(${m.id})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Đánh dấu đã đọc</button>` : `<span class="text-xs text-slate-400">Đã đọc</span>`}
+                        </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
+    };
+    
+    window.markMessageRead = async (id) => {
+        try {
+            const res = await fetch(`/Manager/UpdateMessageStatus?id=${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadMessages();
+            }
+        } catch(e) { console.error(e); }
     };
 
     const loadForms = async () => {
@@ -430,3 +517,27 @@
     });
 
 })();
+
+
+window.handleTestVideoSelect = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const res = await fetch('/Manager/UploadTestVideo', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert('Lỗi: ' + data.message);
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Lỗi khi tải lên video');
+    }
+};
