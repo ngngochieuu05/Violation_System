@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.37301.10 d17.14
+# Visual Studio Version 18
+VisualStudioVersion = 18.8.11904.113 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Webapp_Quan_Li_Hanh_Vi_Vi_Pham", "Webapp_Quan_Li_Hanh_Vi_Vi_Pham\Webapp_Quan_Li_Hanh_Vi_Vi_Pham.csproj", "{9958A7DB-1F7B-4E2C-92F8-AF5E4733D88F}"
 EndProject
