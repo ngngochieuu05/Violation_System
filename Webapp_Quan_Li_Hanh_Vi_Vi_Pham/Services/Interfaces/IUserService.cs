@@ -15,4 +15,5 @@ public interface IUserService
     Task<bool> VerifyBiometricsAsync(string username, string faceImageBase64, string verificationContext = "generic", CancellationToken cancellationToken = default);
     Task<bool> HasBiometricRegistrationAsync(string username, CancellationToken cancellationToken = default);
     Task<bool> ChangePasswordAsync(Guid userId, string oldPassword, string newPassword, CancellationToken cancellationToken = default);
+    Task<(bool RequiresInitialSecuritySetup, bool MustChangePassword, bool HasBiometricRegistration)> GetSecuritySetupStatusAsync(Guid userId, CancellationToken cancellationToken = default);
 }

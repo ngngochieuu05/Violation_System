@@ -6,9 +6,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Areas.Admin.Models;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Monitoring;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Areas.Admin.Controllers;
 
@@ -19,11 +23,25 @@ public class AdminController : Controller
 {
     private readonly IModelSettingService _modelSettingService;
     private readonly ViolationDbContext _context;
+    private readonly ITelegramAlertService _telegramAlertService;
+    private readonly IViolationMonitoringOrchestrator _monitoringOrchestrator;
+    private readonly ViolationMonitoringOptions _monitoringOptions;
+    private readonly TelegramBotOptions _telegramOptions;
 
-    public AdminController(IModelSettingService modelSettingService, ViolationDbContext context)
+    public AdminController(
+        IModelSettingService modelSettingService,
+        ViolationDbContext context,
+        ITelegramAlertService telegramAlertService,
+        IViolationMonitoringOrchestrator monitoringOrchestrator,
+        IOptions<ViolationMonitoringOptions> monitoringOptions,
+        IOptions<TelegramBotOptions> telegramOptions)
     {
         _modelSettingService = modelSettingService;
         _context = context;
+        _telegramAlertService = telegramAlertService;
+        _monitoringOrchestrator = monitoringOrchestrator;
+        _monitoringOptions = monitoringOptions.Value;
+        _telegramOptions = telegramOptions.Value;
     }
 
     private async Task WriteLogAsync(string action, string details, string status = "Thành công")
@@ -140,6 +158,40 @@ public class AdminController : Controller
     public IActionResult Settings()
     {
         return View("Settings");
+    }
+
+    [HttpGet("Monitoring")]
+    public async Task<IActionResult> Monitoring(CancellationToken cancellationToken)
+    {
+        var updates = await _telegramAlertService.GetRecentUpdatesAsync(cancellationToken);
+        var knownChatIds = _telegramAlertService.GetKnownChatIds();
+        var recentViolations = await _context.ViolationRecords
+            .OrderByDescending(v => v.DetectedAtUtc)
+            .Take(10)
+            .ToListAsync(cancellationToken);
+
+        var vm = new MonitoringCenterViewModel
+        {
+            PollingIntervalSeconds = _monitoringOptions.PollingIntervalSeconds,
+            SmokeDetectionThresholdCount = _monitoringOptions.SmokeDetectionThresholdCount,
+            EmptyChairThresholdMinutes = _monitoringOptions.EmptyChairThresholdMinutes,
+            CameraLocation = _monitoringOptions.CameraLocation,
+            TelegramEnabled = _telegramOptions.Enabled,
+            ConfiguredChatIds = string.Join(", ", _telegramOptions.ChatIds),
+            KnownChatIds = string.Join(", ", knownChatIds),
+            RecentTelegramUpdates = updates,
+            RecentViolations = recentViolations,
+            LastAlertResult = TempData.ContainsKey("MonitoringAlertJson")
+                ? System.Text.Json.JsonSerializer.Deserialize<ViolationAlertResult>(TempData["MonitoringAlertJson"]?.ToString() ?? string.Empty)
+                : null,
+            LastTelegramSendResult = TempData.ContainsKey("TelegramSendJson")
+                ? System.Text.Json.JsonSerializer.Deserialize<TelegramSendResult>(TempData["TelegramSendJson"]?.ToString() ?? string.Empty)
+                : null
+        };
+
+        ViewData["ActivePage"] = "Monitoring";
+        ViewData["Title"] = "Monitoring Center";
+        return View("Monitoring", vm);
     }
 
     [HttpGet("ProfileSettings")]
@@ -421,5 +473,43 @@ public class AdminController : Controller
 
         TempData["SuccessMessage"] = $"Đã xóa mô hình {model.Name}!";
         return Redirect(GetRedirectUrl());
+    }
+    [HttpPost("Monitoring/TestSmoke")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestSmoke(CancellationToken cancellationToken)
+    {
+        var result = await _monitoringOrchestrator.TriggerSmokeTestAsync(cancellationToken);
+        TempData["MonitoringAlertJson"] = System.Text.Json.JsonSerializer.Serialize(result);
+        await WriteLogAsync("Test Monitoring", "Đã chạy testcase hút thuốc thủ công", "Cảnh báo");
+        TempData["SuccessMessage"] = "Đã kích hoạt testcase hút thuốc.";
+        return RedirectToAction("Monitoring");
+    }
+
+    [HttpPost("Monitoring/TestLeaving")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestLeaving(CancellationToken cancellationToken)
+    {
+        var result = await _monitoringOrchestrator.TriggerLeavingPositionTestAsync(cancellationToken);
+        TempData["MonitoringAlertJson"] = System.Text.Json.JsonSerializer.Serialize(result);
+        await WriteLogAsync("Test Monitoring", "Đã chạy testcase rời vị trí thủ công", "Cảnh báo");
+        TempData["SuccessMessage"] = "Đã kích hoạt testcase rời vị trí.";
+        return RedirectToAction("Monitoring");
+    }
+
+    [HttpPost("Monitoring/SendTelegramTest")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendTelegramTest(string chatId, string message, CancellationToken cancellationToken)
+    {
+        var text = string.IsNullOrWhiteSpace(message)
+            ? $"[TEST TELEGRAM] Monitoring Center gửi thử lúc {DateTime.Now:yyyy-MM-dd HH:mm:ss}."
+            : message;
+
+        var result = await _telegramAlertService.SendTestMessageAsync(text, chatId, cancellationToken);
+        TempData["TelegramSendJson"] = System.Text.Json.JsonSerializer.Serialize(result);
+        await WriteLogAsync("Test Telegram", $"Gửi tin nhắn thử tới {result.ChatId}", result.Success ? "Thành công" : "Lỗi");
+        TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.Success
+            ? $"Đã gửi test Telegram tới chat {result.ChatId}."
+            : $"Gửi test Telegram thất bại: {result.ResponseSummary}";
+        return RedirectToAction("Monitoring");
     }
 }
