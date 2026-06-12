@@ -71,11 +71,11 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         return PublishSingleManualAlertAsync(
             new PendingAlert(
                 $"SMK-TEST-{DateTime.UtcNow:HHmmss}",
-                "Hut thuoc tai khu vuc lam viec",
+                "Hút thuốc tại khu vực làm việc",
                 "High",
                 DateTime.UtcNow,
                 "/evidence/test-smoke.jpg",
-                $"[TESTCASE HUT THUOC] Track test mo phong vuot nguong {_options.SmokeDetectionThresholdCount} lan tai {_options.CameraLocation}."),
+                $"[TESTCASE HÚT THUỐC] Track test mô phỏng vượt ngưỡng {_options.SmokeDetectionThresholdCount} lần tại {_options.CameraLocation}."),
             cancellationToken);
     }
 
@@ -84,11 +84,11 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         return PublishSingleManualAlertAsync(
             new PendingAlert(
                 $"LEAVE-TEST-{DateTime.UtcNow:HHmmss}",
-                "Roi vi tri lam viec",
+                "Rời vị trí làm việc",
                 "Medium",
                 DateTime.UtcNow,
                 "/evidence/test-leaving.jpg",
-                $"[TESTCASE ROI VI TRI] Ghe trong/non-human duoc mo phong duy tri qua {_options.EmptyChairThresholdMinutes} phut tai {_options.CameraLocation}."),
+                $"[TESTCASE RỜI VỊ TRÍ] Ghế trống/non-human được mô phỏng duy trì quá {_options.EmptyChairThresholdMinutes} phút tại {_options.CameraLocation}."),
             cancellationToken);
     }
 
@@ -119,7 +119,7 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 Id = Guid.NewGuid(),
                 TrackingId = alert.TrackId,
                 EmployeeCode = alert.TrackId,
-                EmployeeName = "He thong giam sat",
+                EmployeeName = "Hệ thống giám sát",
                 ViolationType = alert.ViolationType,
                 Severity = alert.Severity,
                 DetectedAtUtc = alert.DetectedAtUtc,
@@ -137,7 +137,7 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 Action = alert.ViolationType,
                 Details = alert.Message,
                 IpAddress = "127.0.0.1",
-                Status = "Canh bao"
+                Status = "Cảnh báo"
             });
 
             results.Add(new ViolationAlertResult
@@ -255,11 +255,11 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
     {
         return new PendingAlert(
             track.TrackId,
-            "Hut thuoc tai khu vuc lam viec",
+            "Hút thuốc tại khu vực làm việc",
             "High",
             nowUtc,
             "/evidence/monitoring-smoke.jpg",
-            $"[CANH BAO HUT THUOC] Track {track.TrackId} bi phat hien khoi thuoc {track.SeenCount} lan tai {_options.CameraLocation} luc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
+            $"[CẢNH BÁO HÚT THUỐC] Track {track.TrackId} bị phát hiện khói thuốc {track.SeenCount} lần tại {_options.CameraLocation} lúc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
     }
 
     private PendingAlert BuildLeavingAlert(TrackedDetection track, DateTime nowUtc)
@@ -267,11 +267,11 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         var minutes = Math.Floor((nowUtc - track.FirstSeenUtc).TotalMinutes);
         return new PendingAlert(
             track.TrackId,
-            "Roi vi tri lam viec",
+            "Rời vị trí làm việc",
             "Medium",
             nowUtc,
             "/evidence/monitoring-leave.jpg",
-            $"[CANH BAO ROI VI TRI] Track {track.TrackId} chi phat hien ghe trong/non-human trong {minutes} phut tai {_options.CameraLocation} luc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
+            $"[CẢNH BÁO RỜI VỊ TRÍ] Track {track.TrackId} chỉ phát hiện ghế trống/non-human trong {minutes} phút tại {_options.CameraLocation} lúc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
     }
 
     private sealed class TrackedDetection

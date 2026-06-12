@@ -347,10 +347,10 @@ public class TelegramAlertService : ITelegramAlertService
             Id = Guid.NewGuid(),
             Timestamp = DateTime.UtcNow,
             Username = reviewer,
-            Action = "Review violation",
-            Details = $"Telegram cap nhat {trackingId} sang trang thai {status}. Ghi chu: {reviewNote}",
+            Action = "Duyệt vi phạm",
+            Details = $"Telegram cập nhật {trackingId} sang trạng thái {status}. Ghi chú: {reviewNote}",
             IpAddress = "Telegram",
-            Status = "Thanh cong"
+            Status = "Thành công"
         });
         await dbContext.SaveChangesAsync(cancellationToken);
 
