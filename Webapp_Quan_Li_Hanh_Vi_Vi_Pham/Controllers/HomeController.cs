@@ -22,7 +22,7 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers
             {
                 if (User.IsInRole("Admin"))
                 {
-                    return RedirectToAction("Index", "Violations");
+                    return RedirectToAction("Index", "Admin", new { area = "Admin" });
                 }
                 if (User.IsInRole("Manager"))
                 {

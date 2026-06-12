@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
@@ -68,6 +69,7 @@ public class AdminController : Controller
         }
     }
 
+    [HttpGet("/Admin")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var activeSetting = await _modelSettingService.GetActiveSettingAsync(cancellationToken);
@@ -102,7 +104,124 @@ public class AdminController : Controller
 
         ViewBag.Managers = managers;
         ViewBag.AiModels = aiModels;
+        ViewData["ActivePage"] = "Dashboard";
         return View(activeSetting);
+    }
+
+    [HttpGet("/Admin/Models")]
+    public async Task<IActionResult> Models(CancellationToken cancellationToken)
+    {
+        var models = await _context.AiModels
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+        return View(models);
+    }
+
+    [HttpGet("/Admin/Personnel")]
+    public async Task<IActionResult> Personnel(CancellationToken cancellationToken)
+    {
+        var managers = await _context.Users
+            .Where(u => u.Role == "Manager")
+            .OrderByDescending(u => u.CreatedAtUtc)
+            .ToListAsync(cancellationToken);
+
+        ViewBag.ViolationCounts = await _context.ViolationRecords
+            .Where(v => !string.IsNullOrWhiteSpace(v.EmployeeCode))
+            .GroupBy(v => v.EmployeeCode)
+            .ToDictionaryAsync(g => g.Key, g => g.Count(), cancellationToken);
+
+        return View(managers);
+    }
+
+    [HttpGet("/Admin/AuditLogs")]
+    public async Task<IActionResult> AuditLogs(CancellationToken cancellationToken)
+    {
+        var logs = await _context.AuditLogs
+            .OrderByDescending(l => l.Timestamp)
+            .ToListAsync(cancellationToken);
+        return View(logs);
+    }
+
+    [HttpGet("/Admin/Monitoring")]
+    public async Task<IActionResult> Monitoring(CancellationToken cancellationToken)
+    {
+        return View(await BuildMonitoringViewModelAsync(cancellationToken));
+    }
+
+    [HttpGet("/Admin/Settings")]
+    public IActionResult Settings()
+    {
+        return View();
+    }
+
+    [HttpGet("/Admin/ProfileSettings")]
+    public IActionResult ProfileSettings()
+    {
+        return View();
+    }
+
+    [HttpGet("/Admin/GeneralSettings")]
+    public IActionResult GeneralSettings()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestSmoke(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _monitoringOrchestrator.TriggerSmokeTestAsync(cancellationToken);
+            TempData["SuccessMessage"] = $"Da chay smoke testcase. Track: {result.TrackId}, Severity: {result.Severity}.";
+            TempData["LastAlertResult"] = JsonSerializer.Serialize(result);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Smoke testcase that bai: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Monitoring));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestLeaving(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _monitoringOrchestrator.TriggerLeavingPositionTestAsync(cancellationToken);
+            TempData["SuccessMessage"] = $"Da chay leaving testcase. Track: {result.TrackId}, Severity: {result.Severity}.";
+            TempData["LastAlertResult"] = JsonSerializer.Serialize(result);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Leaving testcase that bai: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Monitoring));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendTelegramTest(string? chatId, string? message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var payload = string.IsNullOrWhiteSpace(message)
+                ? "[TEST TELEGRAM] Gui tu Monitoring Center"
+                : message;
+
+            var result = await _telegramAlertService.SendTestMessageAsync(payload, chatId, cancellationToken);
+            TempData[result.Success ? "SuccessMessage" : "ErrorMessage"] = result.ResponseSummary;
+            TempData["LastTelegramSendResult"] = JsonSerializer.Serialize(result);
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = $"Gui Telegram test that bai: {ex.Message}";
+        }
+
+        return RedirectToAction(nameof(Monitoring));
     }
 
     [HttpPost("AddPersonnel")]
@@ -398,5 +517,42 @@ public class AdminController : Controller
 
         TempData["SuccessMessage"] = $"Đã xóa mô hình {model.Name} thành công!";
         return RedirectToAction("Index");
+    }
+
+    private async Task<MonitoringCenterViewModel> BuildMonitoringViewModelAsync(CancellationToken cancellationToken)
+    {
+        var updates = await _telegramAlertService.GetRecentUpdatesAsync(cancellationToken);
+        var recentViolations = await _context.ViolationRecords
+            .OrderByDescending(v => v.DetectedAtUtc)
+            .Take(10)
+            .ToListAsync(cancellationToken);
+
+        ViolationAlertResult? lastAlertResult = null;
+        TelegramSendResult? lastTelegramSendResult = null;
+
+        if (TempData.TryGetValue("LastAlertResult", out var alertObj) && alertObj is string alertJson && !string.IsNullOrWhiteSpace(alertJson))
+        {
+            lastAlertResult = JsonSerializer.Deserialize<ViolationAlertResult>(alertJson);
+        }
+
+        if (TempData.TryGetValue("LastTelegramSendResult", out var telegramObj) && telegramObj is string telegramJson && !string.IsNullOrWhiteSpace(telegramJson))
+        {
+            lastTelegramSendResult = JsonSerializer.Deserialize<TelegramSendResult>(telegramJson);
+        }
+
+        return new MonitoringCenterViewModel
+        {
+            PollingIntervalSeconds = _monitoringOptions.PollingIntervalSeconds,
+            SmokeDetectionThresholdCount = _monitoringOptions.SmokeDetectionThresholdCount,
+            EmptyChairThresholdMinutes = _monitoringOptions.EmptyChairThresholdMinutes,
+            CameraLocation = _monitoringOptions.CameraLocation,
+            TelegramEnabled = _telegramOptions.Enabled,
+            ConfiguredChatIds = string.Join(", ", _telegramOptions.ChatIds ?? []),
+            KnownChatIds = string.Join(", ", _telegramAlertService.GetKnownChatIds()),
+            RecentTelegramUpdates = updates,
+            RecentViolations = recentViolations,
+            LastAlertResult = lastAlertResult,
+            LastTelegramSendResult = lastTelegramSendResult
+        };
     }
 }

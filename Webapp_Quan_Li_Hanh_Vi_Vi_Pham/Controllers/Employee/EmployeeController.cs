@@ -706,7 +706,9 @@ public class EmployeeController : Controller
         }
 
         var messages = await _context.EmployeeMessages
-            .Where(m => m.EmployeeUserId == user.Id)
+            .Where(m => m.EmployeeUserId == user.Id 
+                     || m.Channel == user.Id.ToString() 
+                     || m.Channel == user.Username)
             .OrderBy(m => m.SentAt)
             .ToListAsync(cancellationToken);
 
@@ -942,71 +944,5 @@ public class EmployeeController : Controller
         public string Pin { get; set; } = string.Empty;
     }
 
-    [HttpPost]
-    public async Task<IActionResult> SendRequest([FromBody] Models.Manager.ApprovalRequest dto, CancellationToken cancellationToken)
-    {
-        var username = User.Identity?.Name ?? "Unknown";
-        var fullName = User.FindFirst("FullName")?.Value ?? username;
-        
-        var request = new Models.Manager.ApprovalRequest
-        {
-            EmployeeName = fullName,
-            RequestType = dto.RequestType,
-            Content = dto.Content,
-            SubmittedAt = DateTime.UtcNow,
-            Status = "Chờ duyệt"
-        };
-        _context.ApprovalRequests.Add(request);
-        await _context.SaveChangesAsync(cancellationToken);
-        
-        return Json(new { success = true });
-    }
 
-    [HttpGet]
-    public async Task<IActionResult> GetMyRequests(CancellationToken cancellationToken)
-    {
-        var username = User.Identity?.Name ?? "Unknown";
-        var fullName = User.FindFirst("FullName")?.Value ?? username;
-        
-        var requests = await _context.ApprovalRequests
-            .Where(r => r.EmployeeName == fullName)
-            .OrderByDescending(r => r.SubmittedAt)
-            .ToListAsync(cancellationToken);
-            
-        return Json(new { success = true, data = requests });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> SendMessage([FromBody] Models.Manager.EmployeeMessage dto, CancellationToken cancellationToken)
-    {
-        var username = User.Identity?.Name ?? "Unknown";
-        var fullName = User.FindFirst("FullName")?.Value ?? username;
-        
-        var msg = new Models.Manager.EmployeeMessage
-        {
-            EmployeeName = fullName,
-            Title = dto.Title ?? "Tin nhắn mới",
-            Content = dto.Content,
-            SentAt = DateTime.UtcNow,
-            IsRead = false
-        };
-        _context.EmployeeMessages.Add(msg);
-        await _context.SaveChangesAsync(cancellationToken);
-        
-        return Json(new { success = true });
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> GetMyMessages(CancellationToken cancellationToken)
-    {
-        var username = User.Identity?.Name ?? "Unknown";
-        var fullName = User.FindFirst("FullName")?.Value ?? username;
-        
-        var msgs = await _context.EmployeeMessages
-            .Where(m => m.EmployeeName == fullName)
-            .OrderByDescending(m => m.SentAt)
-            .ToListAsync(cancellationToken);
-            
-        return Json(new { success = true, data = msgs });
-    }
 }

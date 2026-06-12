@@ -16,7 +16,7 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
 [Authorize(Roles = "Manager")]
-public class ManagerController : Controller
+public partial class ManagerController : Controller
 {
     private readonly IUserService _userService;
     private readonly IViolationService _violationService;
@@ -238,8 +238,13 @@ public class ManagerController : Controller
     [HttpGet]
     public async Task<IActionResult> GetAllMessages(CancellationToken cancellationToken)
     {
+        var managerUsername = User.Identity?.Name;
+        var managerFullName = User.FindFirst("FullName")?.Value ?? managerUsername;
         var msgs = await _context.EmployeeMessages
-            .OrderByDescending(m => m.SentAt)
+            .Where(m =>
+                (m.SenderRole == "Manager" && m.SenderName == managerFullName) ||
+                (m.SenderRole != "Manager" && m.Channel == managerUsername))
+            .OrderBy(m => m.SentAt)
             .Take(100)
             .ToListAsync(cancellationToken);
         return Json(new { success = true, data = msgs });
