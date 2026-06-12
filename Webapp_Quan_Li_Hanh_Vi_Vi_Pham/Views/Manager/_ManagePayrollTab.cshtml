@@ -1,0 +1,54 @@
+<div data-tab-panel="payroll" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="font-outfit text-2xl font-bold text-slate-900">Quản lý Lương thưởng (Payroll)</h2>
+            <p class="text-sm text-slate-500 mt-1">Tính toán, duyệt lương và trả lương hàng tháng cho nhân viên.</p>
+        </div>
+        <div class="flex gap-2">
+            <select id="payrollMonth" class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-300">
+                <option value="1">Tháng 1</option>
+                <option value="2">Tháng 2</option>
+                <option value="3">Tháng 3</option>
+                <option value="4">Tháng 4</option>
+                <option value="5">Tháng 5</option>
+                <option value="6" selected>Tháng 6</option>
+                <option value="7">Tháng 7</option>
+                <option value="8">Tháng 8</option>
+                <option value="9">Tháng 9</option>
+                <option value="10">Tháng 10</option>
+                <option value="11">Tháng 11</option>
+                <option value="12">Tháng 12</option>
+            </select>
+            <select id="payrollYear" class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-300">
+                <option value="2026" selected>2026</option>
+            </select>
+            <button onclick="calculatePayroll()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                Tính lương tháng này
+            </button>
+        </div>
+    </div>
+
+    <div class="saas-card bg-white">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-money-check-dollar text-slate-400 mr-2"></i>Bảng lương nhân viên</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-slate-600">
+                <thead class="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                        <th class="p-4 py-3 font-bold">Nhân viên</th>
+                        <th class="p-4 py-3 font-bold text-right">Lương cơ bản</th>
+                        <th class="p-4 py-3 font-bold text-right">Thưởng KPI</th>
+                        <th class="p-4 py-3 font-bold text-right">Trừ vi phạm</th>
+                        <th class="p-4 py-3 font-bold text-right">Thực nhận</th>
+                        <th class="p-4 py-3 font-bold text-center">Trạng thái</th>
+                        <th class="p-4 py-3 font-bold text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="managerPayrollTbody">
+                    <tr><td colspan="7" class="p-8 text-center text-slate-400">Chọn tháng và bấm "Tính lương tháng này" để bắt đầu</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

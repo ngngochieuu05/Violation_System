@@ -1,0 +1,70 @@
+<section data-tab-panel="violations" class="employee-tab-panel hidden">
+    <!-- Top Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-500 border border-slate-100">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold font-outfit text-slate-900 leading-none" id="violationStatsTotal">0</p>
+                <p class="text-xs font-medium text-slate-500 mt-1">Tổng vi phạm</p>
+            </div>
+        </div>
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 border border-emerald-100">
+                <i class="fa-solid fa-check-to-slot text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold font-outfit text-slate-900 leading-none" id="violationStatsProcessed">0</p>
+                <p class="text-xs font-medium text-slate-500 mt-1">Đã xử lý</p>
+            </div>
+        </div>
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100">
+                <i class="fa-solid fa-hourglass-half text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold font-outfit text-slate-900 leading-none" id="violationStatsPending">0</p>
+                <p class="text-xs font-medium text-slate-500 mt-1">Chưa xử lý</p>
+            </div>
+        </div>
+        <div class="saas-card p-4 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-500 border border-red-100">
+                <i class="fa-solid fa-arrow-trend-down text-xl"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold font-outfit text-red-600 leading-none" id="violationStatsPoints">0</p>
+                <p class="text-xs font-medium text-slate-500 mt-1">Điểm trừ</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="saas-card p-6 min-h-[400px] flex flex-col relative overflow-hidden">
+        <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-red-50 blur-3xl opacity-60 pointer-events-none"></div>
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 relative z-10 gap-4">
+            <div>
+                <h3 class="saas-heading text-lg text-slate-900">Danh sách Vi phạm</h3>
+                <p class="mt-1 text-sm text-slate-500">
+                    Hệ thống ghi nhận và phân loại lỗi vi phạm nội quy.
+                </p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-50 rounded-lg p-1 border border-slate-100">
+                <button class="px-4 py-1.5 text-xs font-semibold rounded-md bg-white shadow-sm text-slate-800">Tất cả</button>
+                <button class="px-4 py-1.5 text-xs font-semibold rounded-md text-slate-500 hover:text-slate-800 transition">Nghiêm trọng</button>
+            </div>
+        </div>
+
+        <div class="relative z-10 flex-1 flex flex-col">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="fullViolationList">
+                <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                    <div class="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-shield-check text-4xl text-emerald-500"></i>
+                    </div>
+                    <h4 class="font-outfit text-lg font-bold text-slate-800">Tuyệt vời!</h4>
+                    <p class="text-sm text-slate-500 mt-1 max-w-sm">Bạn chưa có vi phạm nào được ghi nhận trong hệ thống. Hãy tiếp tục duy trì nhé.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

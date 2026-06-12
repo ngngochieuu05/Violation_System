@@ -1,0 +1,37 @@
+﻿@model IEnumerable<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager.WorkSession>
+@{
+    ViewData["Title"] = "QL Phiên làm việc"; Layout = "_ManagerLayout";
+}
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div><h1 class="text-2xl font-bold text-slate-900">Quản lý phiên làm việc</h1></div>
+    </div>
+    <div class="system-card overflow-hidden">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr><th class="px-6 py-3">ID</th><th class="px-6 py-3">Nhân sự</th><th class="px-6 py-3">Ngày</th><th class="px-6 py-3">Trạng thái</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="px-6 py-4 font-medium">@item.EmployeeId</td>
+                            <td class="px-6 py-4">@item.EmployeeName</td>
+                            <td class="px-6 py-4">@item.Date.ToString("dd/MM/yyyy")</td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-1 @(item.Status == "Đúng giờ" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700") rounded-[4px] text-xs font-semibold">@item.Status</span>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" class="px-6 py-8 text-center text-slate-500">Chưa có dữ liệu phiên làm việc.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

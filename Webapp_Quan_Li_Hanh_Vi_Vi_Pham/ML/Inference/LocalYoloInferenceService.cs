@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
@@ -10,28 +11,42 @@ public class LocalYoloInferenceService : IYoloInferenceService
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<LocalYoloInferenceService> _logger;
     private readonly YoloModelOptions _options;
+    private readonly ViolationDbContext _context;
 
     public LocalYoloInferenceService(
         IWebHostEnvironment environment,
         IOptions<YoloModelOptions> options,
-        ILogger<LocalYoloInferenceService> logger)
+        ILogger<LocalYoloInferenceService> logger,
+        ViolationDbContext context)
     {
         _environment = environment;
         _logger = logger;
         _options = options.Value;
+        _context = context;
     }
 
     public async Task<IReadOnlyCollection<DetectionResult>> GetLatestDetectionsAsync(
         CancellationToken cancellationToken = default)
     {
+        var activeModel = await _context.AiModels.FirstOrDefaultAsync(m => m.Type.StartsWith("Yolo") && m.IsActive, cancellationToken);
+        
         var scriptPath = ResolvePath(_options.InferenceScriptPath);
-        var modelPath = ResolvePath(_options.ModelPath);
+        var modelPath = activeModel != null ? activeModel.ModelPath : ResolvePath(_options.ModelPath);
         var sampleSourcePath = ResolvePath(_options.SampleSourcePath);
+        var conf = activeModel != null ? activeModel.ConfThreshold : 0.25m;
+        var iou = activeModel != null ? activeModel.IouThreshold : 0.45m;
+
+        // If the path isn't rooted, resolve it relative to ContentRootPath
+        if (!Path.IsPathRooted(modelPath))
+        {
+            modelPath = ResolvePath(modelPath);
+        }
 
         if (!File.Exists(scriptPath) || !File.Exists(modelPath) || !File.Exists(sampleSourcePath))
         {
             _logger.LogInformation(
-                "YOLO local files are not ready. Returning seeded detections for dashboard bootstrap.");
+                "YOLO local files are not ready (script: {ScriptExists}, model: {ModelExists}, sample: {SampleExists}). Returning seeded detections.",
+                File.Exists(scriptPath), File.Exists(modelPath), File.Exists(sampleSourcePath));
             return GetSeedDetections();
         }
 
@@ -39,7 +54,7 @@ public class LocalYoloInferenceService : IYoloInferenceService
         {
             FileName = _options.PythonExecutable,
             Arguments =
-                $"\"{scriptPath}\" --model \"{modelPath}\" --source \"{sampleSourcePath}\"",
+                $"\"{scriptPath}\" --model \"{modelPath}\" --source \"{sampleSourcePath}\" --conf {conf} --iou {iou}",
             WorkingDirectory = _environment.ContentRootPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,

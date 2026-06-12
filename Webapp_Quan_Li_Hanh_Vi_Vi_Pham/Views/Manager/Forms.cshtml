@@ -1,0 +1,32 @@
+﻿@model IEnumerable<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager.FormTemplate>
+@{
+    ViewData["Title"] = "QL Biểu mẫu"; Layout = "_ManagerLayout";
+}
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div><h1 class="text-2xl font-bold text-slate-900">Quản lý biểu mẫu</h1></div>
+        <a href="@Url.Action("CreateForm", "Manager")" class="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-[8px] text-sm font-semibold transition shadow-[0_4px_12px_rgba(220,38,38,0.15)]">
+            <i class="fa-solid fa-plus"></i> Thêm biểu mẫu
+        </a>
+    </div>
+    <div class="grid grid-cols-3 gap-6">
+        @if (Model != null && Model.Any())
+        {
+            foreach (var form in Model)
+            {
+                <div class="system-card p-5 hover:border-blue-300 transition cursor-pointer">
+                    <i class="fa-solid fa-file-lines text-3xl text-[#2196F3] mb-4"></i>
+                    <h3 class="font-bold text-slate-900 text-base">@form.Title</h3>
+                    <p class="text-sm text-slate-600 mt-1">@form.Description</p>
+                    <p class="text-xs text-slate-400 mt-2 mb-4">Cập nhật: @form.LastUpdated.ToString("dd/MM/yyyy")</p>
+                </div>
+            }
+        }
+        else
+        {
+
+            <div class="col-span-3 system-card p-8 text-center text-slate-500 border-dashed">Kho biểu mẫu đang trống.</div>
+        }
+    </div>
+</div>

@@ -1,0 +1,66 @@
+<div data-tab-panel="schedule" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="font-outfit text-2xl font-bold text-slate-900">Quản lý Lịch làm việc & Nhiệm vụ</h2>
+            <p class="text-sm text-slate-500 mt-1">Giao việc và theo dõi tiến độ công việc của nhân viên.</p>
+        </div>
+        <button onclick="openAssignTaskModal()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i>Giao nhiệm vụ mới
+        </button>
+    </div>
+
+    <div class="saas-card bg-white">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-list-check text-slate-400 mr-2"></i>Danh sách nhiệm vụ đã giao</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-slate-600">
+                <thead class="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                        <th class="p-4 py-3 font-bold">Nhân viên</th>
+                        <th class="p-4 py-3 font-bold">Tên nhiệm vụ</th>
+                        <th class="p-4 py-3 font-bold">Mô tả</th>
+                        <th class="p-4 py-3 font-bold">Hạn chót</th>
+                        <th class="p-4 py-3 font-bold">Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody id="managerTaskListTbody">
+                    <tr><td colspan="5" class="p-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Giao Task -->
+<div id="assignTaskModal" class="hidden items-center justify-center transition-opacity" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1500; background-color: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px);">
+    <div class="w-full max-w-lg overflow-hidden saas-card shadow-2xl p-6 relative bg-white rounded-2xl">
+        <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+            <h3 class="font-outfit text-xl font-bold text-slate-900">Giao nhiệm vụ</h3>
+            <button onclick="closeAssignTaskModal()" class="text-slate-400 hover:text-red-500 transition-colors h-8 w-8 flex items-center justify-center rounded-full hover:bg-red-50">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Chọn nhân viên</label>
+                <select id="taskEmployeeId" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"></select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Tên nhiệm vụ</label>
+                <input type="text" id="taskTitle" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Mô tả chi tiết</label>
+                <textarea id="taskDescription" rows="3" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Hạn chót (Due Date)</label>
+                <input type="datetime-local" id="taskDueDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400" />
+            </div>
+            <button onclick="submitAssignTask()" class="w-full bg-red-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-red-700 rounded-xl mt-2">
+                Lưu nhiệm vụ
+            </button>
+        </div>
+    </div>
+</div>

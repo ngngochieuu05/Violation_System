@@ -1,0 +1,185 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Workspace Dashboard";
+    ViewData["ActivePage"] = "GeneralSettings";
+    var username = User.Identity?.Name ?? "admin";
+}
+
+<div class="max-w-5xl mx-auto space-y-8 pb-12 text-zinc-900">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Cột Trái: Cấu hình giao diện -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition duration-250">
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">Thiết lập chung</p>
+                    <h3 class="font-outfit font-bold text-lg text-slate-900">Tùy chọn giao diện người dùng</h3>
+                </div>
+
+                <div class="space-y-4">
+                    <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 cursor-pointer hover:bg-slate-100 transition">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Nhận thông báo nội bộ</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Lưu cục bộ trong trình duyệt</p>
+                        </div>
+                        <input type="checkbox" id="admin-setting-notifications" class="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500 transition" checked />
+                    </label>
+                    <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 cursor-pointer hover:bg-slate-100 transition">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Chế độ hiển thị gọn</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Ẩn bớt khoảng cách trong các card</p>
+                        </div>
+                        <input type="checkbox" id="admin-setting-compact" class="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500 transition" />
+                    </label>
+                    <label class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 cursor-pointer hover:bg-slate-100 transition">
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">Giảm hiệu ứng chuyển động</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Phù hợp khi muốn giao diện ổn định hơn</p>
+                        </div>
+                        <input type="checkbox" id="admin-setting-reducedMotion" class="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500 transition" />
+                    </label>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Ngôn ngữ hiển thị</label>
+                            <select id="admin-setting-language" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-red-100 transition">
+                                <option value="vi-VN">Tiếng Việt</option>
+                                <option value="en-US">English</option>
+                            </select>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Chủ đề giao diện</label>
+                            <select id="admin-setting-theme" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-red-100 transition">
+                                <option value="light">Sáng mặc định</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-xs text-slate-500" id="admin-setting-message">Đã cập nhật setting trong trình duyệt hiện tại.</p>
+                    <button type="button" id="admin-setting-reset" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-red-600 hover:border-red-100 transition shadow-sm active:scale-95">
+                        Khôi phục mặc định
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột Phải: Phiên làm việc -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition duration-250">
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <p class="text-[11px] uppercase tracking-wider font-bold text-slate-400 mb-1">Tài khoản</p>
+                    <h3 class="font-outfit font-bold text-lg text-slate-900">Phiên làm việc</h3>
+                </div>
+                
+                <div class="space-y-3">
+                    <a href="/Admin/ProfileSettings" class="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition group active:scale-95 no-underline">
+                        <span class="text-sm font-bold">Mở trang hồ sơ</span>
+                        <i class="fa-solid fa-angle-right text-slate-400 group-hover:text-slate-600 transition"></i>
+                    </a>
+                    
+                    <a href="/Account/Logout" class="w-full flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition group active:scale-95 no-underline">
+                        <span class="text-sm font-bold">Đăng xuất an toàn</span>
+                        <i class="fa-solid fa-right-from-bracket group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Custom Toast -->
+<div id="custom-toast" class="fixed bottom-5 right-5 z-[2000] hidden bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all transform translate-y-2">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-lg" id="toast-icon"></i>
+    <span id="toast-text">Thông báo</span>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userScope = '@username';
+            const storageKey = 'admin.settings.' + userScope;
+
+            // Custom Toast Helper
+            const showToast = (message) => {
+                const toast = document.getElementById('custom-toast');
+                const text = document.getElementById('toast-text');
+                toast.classList.remove('hidden');
+                text.textContent = message;
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 2000);
+            };
+
+            const defaultSettings = {
+                notifications: true,
+                compact: false,
+                reducedMotion: false,
+                language: 'vi-VN',
+                theme: 'light'
+            };
+
+            const loadSettings = () => {
+                const raw = localStorage.getItem(storageKey);
+                if (raw) {
+                    try {
+                        return JSON.parse(raw);
+                    } catch(e) {}
+                }
+                return defaultSettings;
+            };
+
+            const applySettingsToUI = (settings) => {
+                document.getElementById('admin-setting-notifications').checked = settings.notifications;
+                document.getElementById('admin-setting-compact').checked = settings.compact;
+                document.getElementById('admin-setting-reducedMotion').checked = settings.reducedMotion;
+                document.getElementById('admin-setting-language').value = settings.language;
+                document.getElementById('admin-setting-theme').value = settings.theme;
+            };
+
+            const saveSettings = () => {
+                const settings = {
+                    notifications: document.getElementById('admin-setting-notifications').checked,
+                    compact: document.getElementById('admin-setting-compact').checked,
+                    reducedMotion: document.getElementById('admin-setting-reducedMotion').checked,
+                    language: document.getElementById('admin-setting-language').value,
+                    theme: document.getElementById('admin-setting-theme').value
+                };
+                localStorage.setItem(storageKey, JSON.stringify(settings));
+                showToast("Đã lưu thiết lập giao diện!");
+            };
+
+            // Initial load
+            const currentSettings = loadSettings();
+            applySettingsToUI(currentSettings);
+
+            // Bind change events
+            ['admin-setting-notifications', 'admin-setting-compact', 'admin-setting-reducedMotion'].forEach(id => {
+                document.getElementById(id).addEventListener('change', saveSettings);
+            });
+            ['admin-setting-language', 'admin-setting-theme'].forEach(id => {
+                document.getElementById(id).addEventListener('change', saveSettings);
+            });
+
+            // Reset settings
+            document.getElementById('admin-setting-reset').addEventListener('click', function() {
+                localStorage.setItem(storageKey, JSON.stringify(defaultSettings));
+                applySettingsToUI(defaultSettings);
+                showToast("Đã khôi phục cài đặt mặc định!");
+            });
+
+            // Sync user avatar from Profile in background
+            const avatarKey = 'admin.avatar.' + userScope;
+            const savedAvatar = localStorage.getItem(avatarKey);
+            if (savedAvatar) {
+                const hAvatars = document.querySelectorAll('.employee-avatar-placeholder img');
+                hAvatars.forEach(img => {
+                    img.src = savedAvatar;
+                    img.classList.remove('hidden');
+                    const fb = img.parentElement.querySelector('.fa-user');
+                    if (fb) fb.classList.add('hidden');
+                });
+            }
+        });
+    </script>
+}

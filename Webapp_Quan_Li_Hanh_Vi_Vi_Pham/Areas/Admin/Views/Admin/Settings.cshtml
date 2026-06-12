@@ -1,0 +1,133 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Cài đặt Hệ thống";
+    ViewData["ActivePage"] = "SettingsSystem";
+}
+                    <div>
+                        <h1 class="text-3xl font-bold text-zinc-900 mb-2">Cài đặt Hệ thống</h1>
+                        <p class="text-zinc-500">Cấu hình các thông số toàn cục của ứng dụng (Mock UI)</p>
+                    </div>
+
+                    <div class="w-full text-zinc-900">
+                        <div class="grid w-full grid-cols-4 bg-zinc-100 rounded-lg p-1 text-sm font-medium mb-6">
+                            <button onclick="openTab(event, 'general')" class="tab-link active-tab w-full rounded-md py-1.5 transition-all text-zinc-900 bg-white shadow-sm">Cài đặt chung</button>
+                            <button onclick="openTab(event, 'notifications')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Thông báo</button>
+                            <button onclick="openTab(event, 'webhook')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Webhook</button>
+                            <button onclick="openTab(event, 'security')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Bảo mật</button>
+                        </div>
+
+                        <div id="general" class="tab-content block">
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
+                                <div class="p-6 border-b border-zinc-100">
+                                    <h3 class="text-lg font-bold text-zinc-900">Cài đặt Cơ sở dữ liệu</h3>
+                                    <p class="text-sm text-zinc-500">Cấu hình kết nối cơ sở dữ liệu chính</p>
+                                </div>
+                                <div class="p-6 space-y-6">
+                                    <div class="grid grid-cols-2 gap-6">
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Tên Database</label><input type="text" value="compliance_hub_db" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Host</label><input type="text" value="localhost" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Port</label><input type="text" value="5432" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Người dùng</label><input type="text" value="admin" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                    </div>
+                                    <div class="border-t border-zinc-100 pt-6">
+                                        <h3 class="text-sm font-semibold text-zinc-900 mb-4">Dọn dẹp dữ liệu</h3>
+                                        <div class="bg-amber-50 border border-amber-100 text-amber-800 rounded-lg p-4 mb-4 text-sm font-medium">
+                                            Tự động xóa dữ liệu cũ hơn số ngày được chỉ định
+                                        </div>
+                                        <div class="flex items-end justify-between gap-4 mt-2">
+                                            <div>
+                                                <label class="block text-xs font-semibold text-zinc-500 mb-2 uppercase">Số ngày giữ dữ liệu</label>
+                                                <div class="flex items-center gap-2">
+                                                    <input type="number" value="90" min="1" class="w-24 px-3 py-2.5 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-red-600 outline-none text-sm bg-zinc-50 focus:bg-white" />
+                                                    <span class="text-sm text-zinc-500">ngày</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" onclick="alert('Bắt đầu dọn dẹp dữ liệu...')" class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition shadow-sm active:scale-95">
+                                                Dọn dẹp ngay
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-3 rounded-b-xl">
+                                    <button type="button" onclick="alert('Đã hủy cấu hình')" class="px-5 py-2.5 border border-zinc-200 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-100 transition active:scale-95 bg-white shadow-sm">Hủy</button>
+                                    <button type="button" onclick="alert('Cấu hình đã được lưu!')" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition flex items-center gap-2 shadow-sm active:scale-95">
+                                        <i class="fa-solid fa-floppy-disk"></i> Lưu cài đặt
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="notifications" class="tab-content hidden">
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
+                                <div class="p-6 border-b border-zinc-100">
+                                    <h3 class="text-lg font-bold text-zinc-900">Cài đặt Email SMTP</h3>
+                                    <p class="text-sm text-zinc-500">Cấu hình gửi email cảnh báo vi phạm</p>
+                                </div>
+                                <div class="p-6 space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">SMTP Server</label><input type="text" placeholder="smtp.gmail.com" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">SMTP Port</label><input type="text" placeholder="587" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Email Người gửi</label><input type="email" placeholder="noreply@company.com" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        <div><label class="block text-sm font-medium text-zinc-900 mb-2">Mật khẩu</label><input type="password" placeholder="••••••••" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="webhook" class="tab-content hidden space-y-6">
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
+                                <div class="p-6 border-b border-zinc-100">
+                                    <h3 class="text-lg font-bold text-zinc-900">Telegram Webhook</h3>
+                                </div>
+                                <div class="p-6 space-y-4">
+                                    <div><label class="block text-sm font-medium text-zinc-900 mb-2">Bot Token</label><input type="password" placeholder="123456:ABC-DEF1234ghIkl" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                    <div><label class="block text-sm font-medium text-zinc-900 mb-2">Chat ID</label><input type="text" placeholder="-1001234567890" class="w-full px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="security" class="tab-content hidden">
+                            <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
+                                <div class="p-6 border-b border-zinc-100">
+                                    <h3 class="text-lg font-bold text-zinc-900">Cài đặt Bảo mật</h3>
+                                </div>
+                                <div class="p-6 space-y-6">
+                                    <div class="flex items-start justify-between border-b border-zinc-100 pb-6">
+                                        <div>
+                                            <h3 class="text-sm font-semibold text-zinc-900">Xác thực hai yếu tố (2FA)</h3>
+                                            <p class="text-sm text-zinc-500">Bắt buộc tất cả người dùng sử dụng 2FA</p>
+                                        </div>
+                                        <input type="checkbox" checked class="w-4 h-4 cursor-pointer accent-red-600" />
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-zinc-900 mb-3">Khóa tài khoản sau sai mật khẩu</h3>
+                                        <div class="flex items-center gap-4">
+                                            <div><label class="block text-xs text-zinc-500 mb-2">Số lần thử tối đa</label><input type="number" value="5" class="w-24 px-3 py-2 border border-zinc-200 rounded-md focus:ring-2 focus:ring-red-600 outline-none text-sm" /></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </main>
+            </div>
+        </div>
+
+@section Scripts {
+    <script>
+            function openTab(evt, tabId) {
+                var i, tabcontents, tablinks;
+                tabcontents = document.getElementsByClassName("tab-content");
+                for (i = 0; i < tabcontents.length; i++) {
+                    tabcontents[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tab-link");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" bg-white shadow-sm text-zinc-900 active-tab", " text-zinc-500 hover:text-zinc-700");
+                }
+                document.getElementById(tabId).style.display = "block";
+                evt.currentTarget.className = evt.currentTarget.className.replace(" text-zinc-500 hover:text-zinc-700", " bg-white shadow-sm text-zinc-900 active-tab");
+            }
+    </script>
+}

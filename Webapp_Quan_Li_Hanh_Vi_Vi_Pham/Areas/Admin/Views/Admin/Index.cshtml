@@ -1,0 +1,455 @@
+@model Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ModelSetting
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Admin Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
+
+    var managers = ViewBag.Managers as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.User>();
+    var aiModels = ViewBag.AiModels as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.AiModel>();
+}
+
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-lg text-sm font-medium border border-emerald-100">
+                        @TempData["SuccessMessage"]
+                    </div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm font-medium border border-red-100">
+                        @TempData["ErrorMessage"]
+                    </div>
+                }
+
+                <!-- Welcome Section -->
+                <div class="mb-6 flex flex-col gap-6">
+                    <div class="flex flex-col gap-2">
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 border border-slate-200">
+                                <i class="fa-solid fa-user-shield text-[10px]"></i> ADMIN WORKSPACE
+                            </span>
+                        </div>
+                        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-3">
+                            Xin chào, <span class="text-red-600">@User.FindFirst("FullName")?.Value</span>
+                            <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 shadow-sm">
+                                <i class="fa-solid fa-star text-[10px]"></i> 9,999
+                            </span>
+                        </h1>
+                        <p class="text-sm text-slate-500">Chào mừng bạn đến với môi trường quản trị hệ thống.</p>
+                    </div>
+
+                    <!-- Status Cards Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-id-badge"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Vai trò</p>
+                                <p class="text-sm font-extrabold text-slate-800">Admin</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-fingerprint"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trạng thái</p>
+                                <p class="text-sm font-extrabold text-emerald-600 flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span> Online
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày</p>
+                                <p class="text-sm font-extrabold text-slate-800" id="live-date">...</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-zinc-200 rounded-2xl p-5 shadow-sm flex items-center gap-4 transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-lg shadow-sm">
+                                <i class="fa-solid fa-clock"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giờ hiện tại</p>
+                                <p class="text-sm font-extrabold text-slate-800" id="live-clock">...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-sm font-medium text-zinc-500 mb-2">Tổng Nhân viên</h3>
+                        <div class="text-3xl font-bold text-zinc-900">@ViewBag.TotalEmployees</div>
+                        <p class="text-xs text-zinc-500 mt-1">Đang hoạt động</p>
+                    </div>
+                    <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-sm font-medium text-zinc-500 mb-2">Vi phạm Hôm nay</h3>
+                        <div class="text-3xl font-bold text-red-600">@ViewBag.ViolationsToday</div>
+                        <p class="text-xs text-zinc-500 mt-1">Ghi nhận trong ngày</p>
+                    </div>
+                    <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-sm font-medium text-zinc-500 mb-2">Đơn Xin Nghỉ</h3>
+                        <div class="text-3xl font-bold text-zinc-900">@ViewBag.PendingRequests</div>
+                        <p class="text-xs text-zinc-500 mt-1">Chờ duyệt</p>
+                    </div>
+                    <div class="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-sm font-medium text-zinc-500 mb-2">Mức Tuân Thủ</h3>
+                        <div class="text-3xl font-bold text-red-500">@ViewBag.ComplianceRate%</div>
+                        <p class="text-xs text-zinc-500 mt-1">Hôm nay</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+                    <div class="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col">
+                        <div class="p-6 border-b border-zinc-100 flex flex-row items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-semibold text-zinc-900">Quản lý Model AI</h3>
+                                <p class="text-sm text-zinc-500">Tạo và quản lý các mô hình vi phạm</p>
+                            </div>
+                            <button onclick="openAddModal()" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                                Thêm Model
+                            </button>
+                        </div>
+                        <div class="p-6 space-y-4 flex-1">
+                            @if (!aiModels.Any())
+                            {
+                                <p class="text-sm text-zinc-400 text-center py-4">Chưa có Model AI nào.</p>
+                            }
+                            else
+                            {
+                                @foreach (var modelItem in aiModels)
+                                {
+                                    <div class="flex items-center justify-between p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition">
+                                        <div>
+                                            <p class="font-medium text-zinc-900">@modelItem.Name</p>
+                                            <p class="text-sm text-zinc-500">
+                                                @(modelItem.Type.StartsWith("Yolo") ? "Mô hình YOLO" : "Sinh trắc học DeepFace")
+                                                &bull; Conf: @modelItem.ConfThreshold.ToString("0.00")
+                                            </p>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <form asp-action="ToggleAiModel" method="post" class="m-0">
+                                                <input type="hidden" name="id" value="@modelItem.Id" />
+                                                <button type="submit" class="text-[10px] px-2 py-1 rounded-md font-semibold transition @(modelItem.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500")">
+                                                    @(modelItem.IsActive ? "Đang bật" : "Đã tắt")
+                                                </button>
+                                            </form>
+
+                                            <button type="button" onclick="openEditModal('@modelItem.Id', '@modelItem.Name', '@modelItem.Type', '@modelItem.ModelPath', '@modelItem.ConfThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)', '@modelItem.IouThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)')" class="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                                            </button>
+
+                                            @if (!modelItem.IsActive)
+                                            {
+                                                <form asp-action="DeleteAiModel" method="post" onsubmit="return confirm('Bạn có chắc muốn xóa?')" class="m-0">
+                                                    <input type="hidden" name="id" value="@modelItem.Id" />
+                                                    <button type="submit" class="p-1.5 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-md transition">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            <button class="w-full py-2 border border-zinc-200 text-zinc-700 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors mt-auto">
+                                Xem tất cả Model
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col">
+                        <div class="p-6 border-b border-zinc-100 flex flex-row items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-lg font-semibold text-zinc-900">Quản lý Nhân sự / Key</h3>
+                                <p class="text-sm text-zinc-500">Mã kích hoạt cho tài khoản Manager</p>
+                            </div>
+                            <a href="/Admin/Personnel?add=true" class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors shrink-0 no-underline">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                                Thêm Quản Lý
+                            </a>
+                        </div>
+                        <div class="p-6 space-y-4 flex-1">
+                            @if (!managers.Any())
+                            {
+                                <p class="text-sm text-zinc-400 text-center py-4">Chưa có tài khoản quản lý nào.</p>
+                            }
+                            else
+                            {
+                                @foreach (var mgr in managers)
+                                {
+                                    <div class="flex flex-col p-3 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition gap-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                                                    <span class="text-sm font-semibold text-red-600">@(string.IsNullOrEmpty(mgr.FullName) ? "U" : mgr.FullName.Substring(0, 1).ToUpper())</span>
+                                                </div>
+                                                <div class="truncate">
+                                                    <p class="font-medium text-zinc-900 truncate">@mgr.FullName</p>
+                                                    <p class="text-sm text-zinc-500">@@@mgr.Username</p>
+                                                </div>
+                                            </div>
+                                            <span class="text-[10px] px-2 py-1 rounded-full font-medium shrink-0 @(mgr.IsKeyActivated ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")">
+                                                @(mgr.IsKeyActivated ? "Đã kích hoạt" : "Chờ nhập")
+                                            </span>
+                                        </div>
+
+                                        <div class="flex gap-2">
+                                            <form asp-action="UpdateManagerKey" method="post" class="flex-1 flex gap-2 m-0">
+                                                <input type="hidden" name="managerId" value="@mgr.Id" />
+                                                <input type="text" name="newKey" value="@mgr.ManagerKey" required placeholder="Nhập Key..."
+                                                       class="flex-1 bg-white border border-zinc-200 rounded-md text-zinc-800 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-red-500" />
+                                                <input type="submit" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-900 text-white rounded-md text-xs font-semibold transition cursor-pointer" value="Lưu Key" />
+                                            </form>
+                                            @if (mgr.IsKeyActivated)
+                                            {
+                                                <form asp-action="ResetManagerActivation" method="post" onsubmit="return confirm('Reset trạng thái kích hoạt?')" class="m-0">
+                                                    <input type="hidden" name="managerId" value="@mgr.Id" />
+                                                    <button type="submit" class="px-2 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md text-xs font-semibold transition" title="Gỡ thiết bị">
+                                                        Reset
+                                                    </button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            <button class="w-full py-2 border border-zinc-200 text-zinc-700 hover:bg-zinc-50 rounded-md text-sm font-medium transition-colors mt-auto">
+                                Xem tất cả Quản lý
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white border border-zinc-200 rounded-xl shadow-sm">
+                    <div class="p-6 border-b border-zinc-100">
+                        <h3 class="text-lg font-semibold text-zinc-900">Vi phạm Gần đây</h3>
+                        <p class="text-sm text-zinc-500">Danh sách 5 vi phạm mới nhất trong hệ thống</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            @{
+                                var recentViolations = ViewBag.RecentViolations as List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ViolationRecord> ?? new List<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities.ViolationRecord>();
+                            }
+                            @if (!recentViolations.Any())
+                            {
+                                <p class="text-sm text-zinc-400 text-center py-4">Chưa ghi nhận vi phạm nào gần đây.</p>
+                            }
+                            else
+                            {
+                                @foreach (var item in recentViolations)
+                                {
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 border border-zinc-200 rounded-lg gap-2 hover:bg-zinc-50 transition">
+                                        <div class="flex-1">
+                                            <p class="font-medium text-zinc-900">@item.EmployeeName (@item.EmployeeCode) - @item.ViolationType</p>
+                                            <p class="text-sm text-zinc-500">Camera: @item.CameraLocation &bull; Lúc: @item.DetectedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+                                        </div>
+                                        <span class="text-xs px-3 py-1 rounded-full bg-red-50 text-red-600 font-medium self-start sm:self-center shrink-0">
+                                            @item.Status
+                                        </span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="unifiedAddModal" class="fixed inset-0 z-[60] hidden">
+        <div class="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal('unifiedAddModal')"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all relative z-10">
+                <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-red-600 text-white">
+                    <h3 class="text-lg font-bold">Thêm Model AI</h3>
+                    <button type="button" onclick="closeModal('unifiedAddModal')" class="text-red-200 hover:text-white">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form id="form_add_unified" asp-action="AddAiModel" method="post">
+                    <input type="hidden" id="add_modelPath" name="modelPath" />
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Tên mô hình</label>
+                            <input type="text" name="name" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Phân loại Model</label>
+                            <select id="add_type_select" name="type" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
+                                <option value="YoloSmoking">Nhận diện Hút thuốc (YOLO)</option>
+                                <option value="YoloLeaving">Nhận diện Rời vị trí (YOLO)</option>
+                                <option value="Deepface">Nhận diện Sinh trắc học (DeepFace)</option>
+                            </select>
+                        </div>
+                        <div id="add_yolo_path_div">
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Đường dẫn tệp (.pt)</label>
+                            <input type="text" id="add_yolo_input" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                        </div>
+                        <div id="add_df_path_div" class="hidden">
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Kiến trúc (Model Name)</label>
+                            <select id="add_df_select" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
+                                <option value="ArcFace">ArcFace (Đề xuất)</option>
+                                <option value="VGG-Face">VGG-Face</option>
+                                <option value="Facenet">Facenet</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label id="add_conf_label" class="block text-xs font-semibold text-zinc-700 mb-1.5">Ngưỡng Conf (0-1)</label>
+                                <input type="number" step="0.01" min="0" max="1" name="confThreshold" value="0.25" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                            </div>
+                            <div id="add_iou_div">
+                                <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Ngưỡng IoU</label>
+                                <input type="number" step="0.01" min="0" max="1" id="add_iou_input" name="iouThreshold" value="0.45" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-2">
+                        <button type="button" onclick="closeModal('unifiedAddModal')" class="px-4 py-2 text-zinc-600 bg-white border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50">Hủy</button>
+                        <input type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 cursor-pointer" value="Lưu Model" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="unifiedEditModal" class="fixed inset-0 z-[60] hidden">
+        <div class="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity" onclick="closeModal('unifiedEditModal')"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all relative z-10">
+                <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-zinc-900">Hiệu chỉnh Model</h3>
+                    <button type="button" onclick="closeModal('unifiedEditModal')" class="text-zinc-400 hover:text-zinc-700">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <form id="form_edit_unified" asp-action="EditAiModel" method="post">
+                    <input type="hidden" id="edit_id" name="id" />
+                    <input type="hidden" id="edit_modelPath" name="modelPath" />
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Tên mô hình</label>
+                            <input type="text" id="edit_name" name="name" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                        </div>
+                        <div id="edit_yolo_path_div">
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Đường dẫn tệp (.pt)</label>
+                            <input type="text" id="edit_yolo_input" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                        </div>
+                        <div id="edit_df_path_div" class="hidden">
+                            <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Kiến trúc (Model Name)</label>
+                            <select id="edit_df_select" class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500">
+                                <option value="ArcFace">ArcFace</option>
+                                <option value="VGG-Face">VGG-Face</option>
+                                <option value="Facenet">Facenet</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label id="edit_conf_label" class="block text-xs font-semibold text-zinc-700 mb-1.5">Ngưỡng Conf</label>
+                                <input type="number" step="0.01" min="0" max="1" id="edit_conf" name="confThreshold" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                            </div>
+                            <div id="edit_iou_div">
+                                <label class="block text-xs font-semibold text-zinc-700 mb-1.5">Ngưỡng IoU</label>
+                                <input type="number" step="0.01" min="0" max="1" id="edit_iou" name="iouThreshold" required class="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end gap-2">
+                        <button type="button" onclick="closeModal('unifiedEditModal')" class="px-4 py-2 text-zinc-600 bg-white border border-zinc-200 rounded-lg text-sm font-medium hover:bg-zinc-50">Hủy</button>
+                        <input type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 cursor-pointer" value="Cập nhật" />
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+@section Scripts {
+    <script>
+            function updateTime() {
+                const now = new Date();
+                const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+                const dayName = days[now.getDay()];
+                const dateStr = dayName + ', ' + 
+                    String(now.getDate()).padStart(2, '0') + '/' + 
+                    String(now.getMonth() + 1).padStart(2, '0') + '/' + 
+                    now.getFullYear();
+                
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+                    
+                const dateEl = document.getElementById('live-date');
+                const clockEl = document.getElementById('live-clock');
+                if (dateEl) dateEl.textContent = dateStr;
+                if (clockEl) clockEl.textContent = timeStr;
+            }
+            setInterval(updateTime, 1000);
+            updateTime();
+
+            document.getElementById('mobile-menu-btn').addEventListener('click', function () {
+                document.getElementById('admin-sidebar').classList.toggle('-translate-x-full');
+                document.getElementById('sidebar-overlay').classList.toggle('hidden');
+            });
+            document.getElementById('sidebar-overlay').addEventListener('click', function () {
+                document.getElementById('admin-sidebar').classList.add('-translate-x-full');
+                this.classList.add('hidden');
+            });
+
+            function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+            function openAddModal() { document.getElementById('unifiedAddModal').classList.remove('hidden'); }
+
+            document.getElementById('add_type_select').addEventListener('change', function () {
+                const isDF = this.value === 'Deepface';
+                document.getElementById('add_yolo_path_div').classList.toggle('hidden', isDF);
+                document.getElementById('add_df_path_div').classList.toggle('hidden', !isDF);
+                document.getElementById('add_iou_div').classList.toggle('hidden', isDF);
+                document.getElementById('add_conf_label').innerText = isDF ? 'Khoảng cách (Distance)' : 'Ngưỡng Conf (0-1)';
+                document.getElementById('add_iou_input').required = !isDF;
+                if (isDF) document.getElementById('add_iou_input').value = '0.00';
+            });
+
+            document.getElementById('form_add_unified').addEventListener('submit', function () {
+                const isDF = document.getElementById('add_type_select').value === 'Deepface';
+                document.getElementById('add_modelPath').value = isDF ? document.getElementById('add_df_select').value : document.getElementById('add_yolo_input').value;
+            });
+
+            function openEditModal(id, name, type, path, conf, iou) {
+                document.getElementById('edit_id').value = id;
+                document.getElementById('edit_name').value = name;
+                document.getElementById('edit_conf').value = conf;
+                document.getElementById('edit_iou').value = iou;
+
+                const isDF = type === 'Deepface';
+                document.getElementById('edit_yolo_path_div').classList.toggle('hidden', isDF);
+                document.getElementById('edit_df_path_div').classList.toggle('hidden', !isDF);
+                document.getElementById('edit_iou_div').classList.toggle('hidden', isDF);
+                document.getElementById('edit_conf_label').innerText = isDF ? 'Khoảng cách (Distance)' : 'Ngưỡng Conf (0-1)';
+
+                if (isDF) {
+                    document.getElementById('edit_df_select').value = path;
+                    document.getElementById('edit_iou').required = false;
+                } else {
+                    document.getElementById('edit_yolo_input').value = path;
+                    document.getElementById('edit_iou').required = true;
+                }
+
+                document.getElementById('unifiedEditModal').classList.remove('hidden');
+            }
+
+            document.getElementById('form_edit_unified').addEventListener('submit', function () {
+                const isDF = document.getElementById('edit_yolo_path_div').classList.contains('hidden');
+                document.getElementById('edit_modelPath').value = isDF ? document.getElementById('edit_df_select').value : document.getElementById('edit_yolo_input').value;
+            });
+    </script>
+}

@@ -1,0 +1,95 @@
+<section data-tab-panel="schedule" class="employee-tab-panel hidden">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h2 class="saas-heading text-2xl">Lịch làm việc & Nhiệm vụ</h2>
+            <p class="text-sm text-slate-500 mt-1">Quản lý ca làm việc và các nhiệm vụ được giao.</p>
+        </div>
+        <button type="button" data-task-add-mock class="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-red-700 active:scale-95 flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i>Thêm Nhiệm vụ mới
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Calendar Section -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <div class="saas-card p-6 flex-1">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <h3 class="saas-heading text-lg">Tháng 11, 2026</h3>
+                        <div class="flex gap-1">
+                            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex bg-slate-100 rounded-lg p-1">
+                        <button class="px-3 py-1.5 text-xs font-semibold rounded-md bg-white shadow-sm text-slate-800">Tháng này</button>
+                        <button class="px-3 py-1.5 text-xs font-semibold rounded-md text-slate-500 hover:text-slate-800">Tuần này</button>
+                        <button class="px-3 py-1.5 text-xs font-semibold rounded-md text-slate-500 hover:text-slate-800">Hôm nay</button>
+                    </div>
+                </div>
+
+                <!-- Fake Calendar Grid -->
+                <div class="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-xl overflow-hidden">
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T2</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T3</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T4</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T5</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T6</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">T7</div>
+                    <div class="bg-slate-50 p-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">CN</div>
+                    
+                    <!-- Week 1 -->
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">26</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">27</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">28</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">29</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">30</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-400">31</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">1</div>
+                    
+                    <!-- Week 2 -->
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">2</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">3</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">4</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">
+                        5
+                        <div class="mt-1 px-1.5 py-1 rounded bg-blue-50 text-[10px] font-semibold text-blue-600 truncate border border-blue-100">Ca hành chính</div>
+                    </div>
+                    <div class="bg-white p-2 min-h-[100px] bg-red-50 relative">
+                        <span class="text-red-600 font-bold">6</span>
+                        <div class="mt-1 px-1.5 py-1 rounded bg-red-100 text-[10px] font-semibold text-red-700 truncate border border-red-200">Nhiệm vụ hạn chót</div>
+                    </div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">7</div>
+                    <div class="bg-white p-2 min-h-[100px] text-slate-700 font-semibold">8</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task & Schedule List -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <div class="saas-card p-5">
+                <p class="saas-label mb-2">Tiến độ hôm nay</p>
+                <div class="flex items-end gap-2 mb-3">
+                    <span class="font-outfit text-4xl font-bold text-slate-900" data-task-stats-done>0</span>
+                    <span class="pb-1 text-base font-medium text-slate-400">/ <span data-task-stats-total>0</span></span>
+                </div>
+                <div class="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full rounded-full bg-emerald-500 transition-all duration-500" style="width: 0%" data-task-progress-bar></div>
+                </div>
+                <p class="mt-2 text-xs font-medium text-slate-500 text-right" data-task-progress-text>0% hoàn thành</p>
+            </div>
+
+            <div class="saas-card p-5 flex-1 flex flex-col">
+                <h3 class="saas-heading text-base mb-4">Nhiệm vụ của bạn</h3>
+                <div class="flex-1 space-y-3 overflow-y-auto max-h-[500px]" data-task-list>
+                    <!-- Tasks injected via JS -->
+                </div>
+                
+                <h3 class="saas-heading text-base mt-6 mb-4">Đã hoàn thành</h3>
+                <div class="space-y-3" data-task-done-list>
+                    <!-- Done tasks injected here via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

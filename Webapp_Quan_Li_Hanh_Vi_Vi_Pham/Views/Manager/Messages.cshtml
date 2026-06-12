@@ -1,0 +1,60 @@
+﻿@model IEnumerable<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager.EmployeeMessage>
+@{
+    ViewData["Title"] = "Tin nhắn nội bộ";
+    Layout = "_ManagerLayout";
+}
+
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Tin nhắn từ nhân viên</h1>
+            <p class="text-sm text-slate-500 mt-1">Hộp thư tiếp nhận trao đổi và báo cáo nhanh.</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[8px] shadow-[0_4px_10px_rgba(0,0,0,0.03),0_0_2px_rgba(0,0,0,0.06),0_2px_6px_rgba(0,0,0,0.12)] border border-slate-200 overflow-hidden">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                <tr>
+                    <th class="px-6 py-3">Trạng thái</th>
+                    <th class="px-6 py-3">Người gửi</th>
+                    <th class="px-6 py-3">Tiêu đề</th>
+                    <th class="px-6 py-3">Nội dung tóm tắt</th>
+                    <th class="px-6 py-3">Thời gian</th>
+                    <th class="px-6 py-3 text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var msg in Model)
+                    {
+                        <tr class="hover:bg-slate-50/50 transition @(!msg.IsRead ? "bg-blue-50/30" : "")">
+                            <td class="px-6 py-4">
+                                @if (!msg.IsRead)
+                                {
+                                    <span class="w-2.5 h-2.5 bg-[#2196F3] rounded-full inline-block"></span>
+                                }
+                                else
+                                {
+                                    <span class="w-2.5 h-2.5 bg-slate-300 rounded-full inline-block"></span>
+                                }
+                            </td>
+                            <td class="px-6 py-4 font-medium text-slate-900">@msg.EmployeeName</td>
+                            <td class="px-6 py-4 font-semibold text-slate-800">@msg.Title</td>
+                            <td class="px-6 py-4 text-slate-500 truncate max-w-xs">@msg.Content</td>
+                            <td class="px-6 py-4 text-slate-500">@msg.SentAt.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="px-6 py-4 text-right">
+                                <button class="px-3 py-1.5 bg-[#3F51B5] hover:bg-[#303A8C] text-white rounded-[4px] text-xs font-medium shadow-[0_5px_30px_rgba(0,0,0,0.15)] transition">Xem chi tiết</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="px-6 py-8 text-center text-slate-500">Hộp thư hiện đang trống.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

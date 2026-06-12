@@ -7,3 +7,10 @@ ML/samples/*
 ML/scripts/__pycache__/
 ML/runs/*
 !ML/runs/.gitkeep
+
+# Ignore python virtual environment
+.venv/
+
+# Ignore C# build artifacts
+bin/
+obj/
