@@ -1,0 +1,462 @@
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Workspace Dashboard";
+    ViewData["ActivePage"] = "ProfileSettings";
+    var fullName = User.FindFirst("FullName")?.Value ?? "Administrator";
+    var username = User.Identity?.Name ?? "admin";
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Admin";
+}
+
+<div class="max-w-5xl mx-auto space-y-8 pb-12 text-zinc-900">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Cột Trái: Avatar & Overview -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 flex flex-col items-center text-center relative overflow-hidden shadow-sm hover:shadow-md transition duration-250">
+                <div class="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-red-50 to-white"></div>
+                
+                <div class="relative w-32 h-32 mb-4 mt-8 mx-auto">
+                    <div class="w-full h-full rounded-full border-4 border-white shadow-md bg-slate-100 flex items-center justify-center overflow-hidden relative">
+                        <img id="admin-avatar-img" class="hidden absolute inset-0 w-full h-full object-cover z-10" alt="Avatar admin" />
+                        <i id="admin-avatar-fallback" class="fa-solid fa-user text-4xl text-slate-300 z-0"></i>
+                    </div>
+                    <label class="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-red-700 transition border-2 border-white z-20" title="Cập nhật ảnh đại diện">
+                        <input type="file" id="admin-avatar-input" accept="image/*" class="hidden" />
+                        <i class="fa-solid fa-camera text-xs"></i>
+                    </label>
+                </div>
+
+                <h3 class="font-outfit font-bold text-xl" id="display-fullname">@fullName</h3>
+                <p class="text-sm text-slate-500 mt-1">@@@username</p>
+                
+                <span class="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 mt-3 border border-red-100 uppercase tracking-wide">
+                    @role
+                </span>
+
+                <div class="w-full mt-6 space-y-3 text-left">
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500">Mã nhân viên</span>
+                        <span class="text-sm font-bold text-slate-900" id="display-empcode">ADM-2026-001</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <span class="text-xs font-semibold text-slate-500">Phòng ban</span>
+                        <span class="text-sm font-bold text-slate-900" id="display-dept-view">Ban quản trị hệ thống</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 w-full">
+                    <button type="button" id="admin-avatar-remove" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition shadow-sm">
+                        <i class="fa-solid fa-trash-can mr-2"></i>Xóa ảnh đại diện
+                    </button>
+                    <p class="mt-3 text-[10px] text-slate-400" id="admin-avatar-message">Ảnh đại diện hiện đang dùng mặc định.</p>
+                </div>
+            </div>
+
+            <!-- Face Data Section -->
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:shadow-md border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white transition duration-250">
+                <h3 class="font-outfit font-bold text-base mb-2 text-slate-900">Dữ liệu khuôn mặt</h3>
+                <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                    Dữ liệu sinh trắc học dùng để điểm danh AI. Hãy cập nhật nếu bạn thay đổi diện mạo.
+                </p>
+                <button type="button" id="admin-update-face-btn" class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 transition shadow-sm flex items-center justify-center">
+                    <i class="fa-solid fa-face-viewfinder mr-2 text-lg"></i> Cập nhật khuôn mặt
+                </button>
+            </div>
+        </div>
+
+        <!-- Cột Phải: Form Thông tin & Cài đặt -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <!-- Thông tin cá nhân -->
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition duration-250">
+                <h3 class="font-outfit font-bold text-lg border-b border-slate-100 pb-4 mb-6 text-slate-900">Thông tin cá nhân & Liên hệ</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Họ tên</label>
+                        <input type="text" id="admin-input-name" value="@fullName" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Bộ phận</label>
+                        <input type="text" id="admin-input-department" value="Ban quản trị hệ thống" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Email công việc</label>
+                        <input type="email" id="admin-input-email" value="admin@compliancehub.vn" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Số điện thoại</label>
+                        <input type="text" id="admin-input-phone" value="0987 654 321" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <p class="text-xs text-slate-500" id="admin-profile-message">Thông tin đang ở trạng thái mặc định.</p>
+                    <button type="button" id="admin-profile-save-btn" class="rounded-xl bg-red-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-red-700 transition active:scale-95">
+                        Lưu thay đổi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bảo mật tài khoản -->
+            <div class="bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition duration-250">
+                <h3 class="font-outfit font-bold text-lg border-b border-slate-100 pb-4 mb-6 text-slate-900">Bảo mật tài khoản</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Mật khẩu cũ</label>
+                        <input type="password" id="admin-pwd-old" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Mật khẩu mới</label>
+                        <input type="password" id="admin-pwd-new" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Xác nhận mật khẩu mới</label>
+                        <input type="password" id="admin-pwd-confirm" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100 transition" />
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100 flex items-center justify-between">
+                    <p id="admin-pwd-msg" class="text-xs font-semibold text-red-600 hidden"></p>
+                    <button type="button" id="admin-pwd-save-btn" class="ml-auto rounded-xl bg-slate-800 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-900 transition active:scale-95">
+                        Cập nhật mật khẩu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Face Update Modal -->
+<div id="admin-face-modal" class="fixed inset-0 z-[1200] hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-lg overflow-hidden rounded-[24px] bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+            <h3 class="font-outfit text-lg font-bold text-slate-900">Cập nhật dữ liệu khuôn mặt</h3>
+            <button type="button" id="admin-face-close" class="text-slate-400 hover:text-slate-600 transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <!-- Instruction Steps -->
+            <div class="mb-6 flex justify-between gap-2 text-center text-xs font-semibold">
+                <div class="flex-1 rounded-lg bg-red-50 py-2 text-red-600 border border-red-200 transition-colors duration-300" id="admin-step-0">Trực diện</div>
+                <div class="flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300" id="admin-step-1">Quay trái</div>
+                <div class="flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300" id="admin-step-2">Quay phải</div>
+                <div class="flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300" id="admin-step-3">Ngước lên</div>
+            </div>
+
+            <div class="relative aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-inner">
+                <video id="admin-face-video" autoplay muted playsinline class="h-full w-full object-cover transform -scale-x-100"></video>
+                <canvas id="admin-face-canvas" class="hidden"></canvas>
+                <div id="admin-face-scanline" class="absolute left-0 top-0 hidden h-[2px] w-full bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_10px_#dc2626]"></div>
+                <div id="admin-face-overlay" class="pointer-events-none absolute inset-0 border-2 border-dashed border-white/30 rounded-2xl m-4 transition-colors"></div>
+                <div id="admin-face-status" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 p-5 text-center text-white hidden">
+                    <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                        <i class="fa-solid fa-spinner fa-spin text-lg"></i>
+                    </div>
+                    <p class="text-sm font-semibold" id="admin-face-status-text">Đang khởi tạo camera...</p>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center">
+                <p class="mb-4 text-sm font-medium text-amber-600" id="admin-face-instruction">
+                    Nhìn thẳng trực diện vào camera và nhấn chụp.
+                </p>
+                <button type="button" id="admin-face-capture" class="mx-auto flex w-full max-w-xs items-center justify-center rounded-xl bg-red-600 px-5 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-red-700 transition active:scale-95">
+                    <i class="fa-solid fa-camera mr-2"></i>Chụp góc hiện tại
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Simple Custom Toast -->
+<div id="custom-toast" class="fixed bottom-5 right-5 z-[2000] hidden bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-xl flex items-center gap-3 text-sm font-semibold transition-all transform translate-y-2">
+    <i class="fa-solid fa-circle-check text-emerald-400 text-lg" id="toast-icon"></i>
+    <span id="toast-text">Thông báo</span>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userScope = '@username';
+            const storageKeys = {
+                profile: 'admin.profile.' + userScope,
+                avatar: 'admin.avatar.' + userScope
+            };
+
+            // Custom Toast Helper
+            const showToast = (message, isError = false) => {
+                const toast = document.getElementById('custom-toast');
+                const text = document.getElementById('toast-text');
+                const icon = document.getElementById('toast-icon');
+                
+                text.textContent = message;
+                if (isError) {
+                    icon.className = "fa-solid fa-circle-xmark text-red-500 text-lg";
+                } else {
+                    icon.className = "fa-solid fa-circle-check text-emerald-400 text-lg";
+                }
+                
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 3000);
+            };
+
+            // Load Saved Profile Data
+            const savedProfile = localStorage.getItem(storageKeys.profile);
+            if (savedProfile) {
+                try {
+                    const data = JSON.parse(savedProfile);
+                    document.getElementById('admin-input-name').value = data.name || '';
+                    document.getElementById('admin-input-department').value = data.department || '';
+                    document.getElementById('admin-input-email').value = data.email || '';
+                    document.getElementById('admin-input-phone').value = data.phone || '';
+                    
+                    document.getElementById('display-fullname').textContent = data.name || '@fullName';
+                    document.getElementById('display-empcode').textContent = data.employeeId || 'ADM-2026-001';
+                    document.getElementById('display-dept-view').textContent = data.department || 'Ban quản trị hệ thống';
+                    
+                    document.getElementById('admin-profile-message').textContent = "Thông tin cấu hình cá nhân đã được tải.";
+                } catch(e) {}
+            }
+
+            // Load Avatar
+            const savedAvatar = localStorage.getItem(storageKeys.avatar);
+            const avatarImg = document.getElementById('admin-avatar-img');
+            const avatarFallback = document.getElementById('admin-avatar-fallback');
+            const avatarMsg = document.getElementById('admin-avatar-message');
+            
+            // Set header avatar synchronously
+            const setHeaderAvatars = (dataUrl) => {
+                const hAvatars = document.querySelectorAll('.employee-avatar-placeholder img');
+                hAvatars.forEach(img => {
+                    if (dataUrl) {
+                        img.src = dataUrl;
+                        img.classList.remove('hidden');
+                        const fb = img.parentElement.querySelector('.fa-user');
+                        if (fb) fb.classList.add('hidden');
+                    } else {
+                        img.src = '';
+                        img.classList.add('hidden');
+                        const fb = img.parentElement.querySelector('.fa-user');
+                        if (fb) fb.classList.remove('hidden');
+                    }
+                });
+            };
+
+            if (savedAvatar) {
+                avatarImg.src = savedAvatar;
+                avatarImg.classList.remove('hidden');
+                avatarFallback.classList.add('hidden');
+                avatarMsg.textContent = "Đã tải ảnh đại diện tùy chỉnh.";
+                setHeaderAvatars(savedAvatar);
+            }
+
+            // Save Profile Action
+            document.getElementById('admin-profile-save-btn').addEventListener('click', function() {
+                const profileData = {
+                    name: document.getElementById('admin-input-name').value,
+                    department: document.getElementById('admin-input-department').value,
+                    email: document.getElementById('admin-input-email').value,
+                    phone: document.getElementById('admin-input-phone').value,
+                    employeeId: 'ADM-2026-001'
+                };
+                localStorage.setItem(storageKeys.profile, JSON.stringify(profileData));
+                
+                document.getElementById('display-fullname').textContent = profileData.name;
+                document.getElementById('display-dept-view').textContent = profileData.department;
+                document.getElementById('admin-profile-message').textContent = "Thay đổi đã lưu thành công.";
+                
+                showToast("Đã lưu thông tin cá nhân thành công!");
+            });
+
+            // Remove Avatar
+            document.getElementById('admin-avatar-remove').addEventListener('click', function() {
+                localStorage.removeItem(storageKeys.avatar);
+                avatarImg.src = '';
+                avatarImg.classList.add('hidden');
+                avatarFallback.classList.remove('hidden');
+                avatarMsg.textContent = "Ảnh đại diện hiện đang dùng mặc định.";
+                setHeaderAvatars(null);
+                showToast("Đã xóa ảnh đại diện thành công.");
+            });
+
+            // Handle Avatar Upload
+            document.getElementById('admin-avatar-input').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const dataUrl = evt.target.result;
+                    try {
+                        localStorage.setItem(storageKeys.avatar, dataUrl);
+                        avatarImg.src = dataUrl;
+                        avatarImg.classList.remove('hidden');
+                        avatarFallback.classList.add('hidden');
+                        avatarMsg.textContent = "Đã cập nhật ảnh đại diện mới.";
+                        setHeaderAvatars(dataUrl);
+                        showToast("Đã cập nhật ảnh đại diện thành công!");
+                    } catch(ex) {
+                        showToast("Kích thước ảnh quá lớn để lưu trữ!", true);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Password update
+            document.getElementById('admin-pwd-save-btn').addEventListener('click', function() {
+                const oldPwd = document.getElementById('admin-pwd-old').value;
+                const newPwd = document.getElementById('admin-pwd-new').value;
+                const confirmPwd = document.getElementById('admin-pwd-confirm').value;
+                const msg = document.getElementById('admin-pwd-msg');
+                
+                msg.classList.add('hidden');
+                
+                if (!oldPwd || !newPwd || !confirmPwd) {
+                    msg.textContent = "Vui lòng điền đầy đủ các trường mật khẩu.";
+                    msg.classList.remove('hidden');
+                    return;
+                }
+                if (newPwd !== confirmPwd) {
+                    msg.textContent = "Mật khẩu xác nhận không khớp.";
+                    msg.classList.remove('hidden');
+                    return;
+                }
+                
+                // Clear fields
+                document.getElementById('admin-pwd-old').value = '';
+                document.getElementById('admin-pwd-new').value = '';
+                document.getElementById('admin-pwd-confirm').value = '';
+                
+                showToast("Đã cập nhật mật khẩu thành công!");
+            });
+
+            // Biometric Face Capture simulation
+            const updateFaceBtn = document.getElementById('admin-update-face-btn');
+            const faceModal = document.getElementById('admin-face-modal');
+            const faceClose = document.getElementById('admin-face-close');
+            const faceVideo = document.getElementById('admin-face-video');
+            const faceCanvas = document.getElementById('admin-face-canvas');
+            const faceCapture = document.getElementById('admin-face-capture');
+            const faceScanline = document.getElementById('admin-face-scanline');
+            const faceStatus = document.getElementById('admin-face-status');
+            const faceStatusText = document.getElementById('admin-face-status-text');
+            const faceInstruction = document.getElementById('admin-face-instruction');
+            
+            let cameraStream = null;
+            let currentStep = 0;
+            const steps = [
+                { id: 'admin-step-0', inst: 'Nhìn thẳng trực diện vào camera và nhấn chụp.' },
+                { id: 'admin-step-1', inst: 'Quay đầu từ từ sang bên trái.' },
+                { id: 'admin-step-2', inst: 'Quay đầu từ từ sang bên phải.' },
+                { id: 'admin-step-3', inst: 'Ngước đầu lên góc trên.' }
+            ];
+
+            const stopCamera = () => {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                faceVideo.srcObject = null;
+            };
+
+            const resetSteps = () => {
+                currentStep = 0;
+                steps.forEach((s, idx) => {
+                    const el = document.getElementById(s.id);
+                    if (idx === 0) {
+                        el.className = "flex-1 rounded-lg bg-red-50 py-2 text-red-600 border border-red-200 transition-colors duration-300";
+                    } else {
+                        el.className = "flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300";
+                    }
+                });
+                faceInstruction.textContent = steps[0].inst;
+            };
+
+            updateFaceBtn.addEventListener('click', function() {
+                faceModal.classList.remove('hidden');
+                faceModal.classList.add('flex');
+                faceStatus.classList.remove('hidden');
+                faceStatusText.textContent = "Đang khởi tạo camera...";
+                resetSteps();
+                
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                    .then(stream => {
+                        cameraStream = stream;
+                        faceVideo.srcObject = stream;
+                        faceStatus.classList.add('hidden');
+                    })
+                    .catch(err => {
+                        faceStatusText.textContent = "Không thể truy cập camera. Vui lòng kiểm tra quyền.";
+                        console.error(err);
+                    });
+            });
+
+            faceClose.addEventListener('click', function() {
+                faceModal.classList.add('hidden');
+                faceModal.classList.remove('flex');
+                stopCamera();
+            });
+
+            faceCapture.addEventListener('click', function() {
+                if (!cameraStream) return;
+                
+                // Show scan animation
+                faceScanline.classList.remove('hidden');
+                faceScanline.style.animation = 'none';
+                faceScanline.offsetHeight; // trigger reflow
+                faceScanline.style.animation = 'scan 1.5s linear infinite';
+                
+                // Capture frame to canvas
+                const ctx = faceCanvas.getContext('2d');
+                faceCanvas.width = faceVideo.videoWidth || 640;
+                faceCanvas.height = faceVideo.videoHeight || 480;
+                ctx.drawImage(faceVideo, 0, 0, faceCanvas.width, faceCanvas.height);
+                
+                // Advance step
+                setTimeout(() => {
+                    faceScanline.classList.add('hidden');
+                    
+                    if (currentStep < 3) {
+                        const currentEl = document.getElementById(steps[currentStep].id);
+                        currentEl.className = "flex-1 rounded-lg bg-emerald-50 py-2 text-emerald-600 border border-emerald-200 transition-colors duration-300";
+                        
+                        currentStep++;
+                        const nextEl = document.getElementById(steps[currentStep].id);
+                        nextEl.className = "flex-1 rounded-lg bg-red-50 py-2 text-red-600 border border-red-200 transition-colors duration-300";
+                        faceInstruction.textContent = steps[currentStep].inst;
+                    } else {
+                        // All steps complete
+                        const finalPhoto = faceCanvas.toDataURL('image/jpeg');
+                        try {
+                            localStorage.setItem(storageKeys.avatar, finalPhoto);
+                            avatarImg.src = finalPhoto;
+                            avatarImg.classList.remove('hidden');
+                            avatarFallback.classList.add('hidden');
+                            avatarMsg.textContent = "Đã đăng ký sinh trắc học thành công.";
+                            setHeaderAvatars(finalPhoto);
+                            showToast("Cập nhật dữ liệu sinh trắc học và avatar thành công!");
+                        } catch(ex) {
+                            showToast("Cập nhật thành công (Lỗi lưu trữ ảnh quá lớn)!");
+                        }
+                        
+                        faceModal.classList.add('hidden');
+                        faceModal.classList.remove('flex');
+                        stopCamera();
+                    }
+                }, 1000);
+            });
+        });
+    </script>
+    
+    <style>
+        @@keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+    </style>
+}

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
@@ -14,10 +15,23 @@ public class ViolationDbContext : DbContext
     public DbSet<ViolationRecord> ViolationRecords { get; set; } = null!;
     public DbSet<AiModel> AiModels { get; set; } = null!;
     public DbSet<UserFaceEmbedding> UserFaceEmbeddings { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
+    public DbSet<WorkSession> WorkSessions { get; set; } = null!;
+    public DbSet<ApprovalRequest> ApprovalRequests { get; set; } = null!;
+    public DbSet<FormTemplate> FormTemplates { get; set; } = null!;
+    public DbSet<EmployeeMessage> EmployeeMessages { get; set; } = null!;
+    public DbSet<EmployeeTask> EmployeeTasks { get; set; } = null!;
+    public DbSet<PayrollRecord> PayrollRecords { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
 
         modelBuilder.Entity<User>(entity =>
         {

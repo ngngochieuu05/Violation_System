@@ -1,0 +1,62 @@
+<div data-tab-panel="home" class="space-y-6">
+    <div class="saas-card overflow-hidden relative">
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-10 text-white relative">
+            <div class="absolute w-64 h-64 bg-red-500/20 rounded-full blur-3xl -top-20 -right-20 pointer-events-none"></div>
+            <div class="relative z-10">
+                <span class="px-3 py-1 bg-white/10 text-slate-300 text-xs font-semibold uppercase tracking-wider rounded-full backdrop-blur-sm border border-white/10">Workspace Quản lý</span>
+                <h1 class="font-outfit text-3xl font-bold mt-4 tracking-tight text-white">Tổng quan Hoạt động Doanh nghiệp</h1>
+                <p class="text-slate-400 text-sm mt-2 font-medium max-w-2xl">Bảng điều khiển cung cấp cái nhìn toàn cảnh về tình hình nhân sự, vi phạm và các yêu cầu cần xử lý.</p>
+            </div>
+        </div>
+
+        <div class="p-8">
+            <h4 class="font-bold text-slate-900 mb-4 font-outfit text-lg">Chỉ số nhanh hôm nay</h4>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Stat 1 -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                            <i class="fa-solid fa-users text-lg"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase">Nhân sự</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-900" id="statEmployees">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Đang hoạt động</p>
+                </div>
+                <!-- Stat 2 -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="h-10 w-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                            <i class="fa-solid fa-fingerprint text-lg"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase">Chấm công</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-900" id="statAttendance">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Đã check-in hôm nay</p>
+                </div>
+                <!-- Stat 3 -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="h-10 w-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                            <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase">Vi phạm</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-900" id="statViolations">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Mới phát hiện</p>
+                </div>
+                <!-- Stat 4 -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <i class="fa-solid fa-file-signature text-lg"></i>
+                        </div>
+                        <span class="text-xs font-bold text-slate-400 uppercase">Yêu cầu</span>
+                    </div>
+                    <p class="text-3xl font-bold text-slate-900" id="statRequests">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Chờ xét duyệt</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

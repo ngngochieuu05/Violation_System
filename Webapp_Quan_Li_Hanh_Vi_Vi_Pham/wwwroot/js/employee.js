@@ -4,6 +4,7 @@
 
     const biometricVerifyUrl = "/Account/VerifyCurrentUserFace";
     const biometricRegistrationStatusUrl = "/Account/BiometricRegistrationStatus";
+    const onboardingStatusUrl = "/Account/OnboardingStatus";
     const initialTab = app.dataset.initialTab || "home";
     const currentUserId = app.dataset.userId || "";
     const currentUsername = app.dataset.username || "";
@@ -50,7 +51,7 @@
     const attendanceDetailModal = document.querySelector("[data-attendance-detail-modal]");
     const attendanceCameraModal = document.querySelector("[data-attendance-camera-modal]");
     // Teleport modals to body to escape z-index stacking contexts
-    [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]")].forEach(modal => {
+    [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]"), document.querySelector("[data-onboarding-modal]")].forEach(modal => {
         if (modal) {
             document.body.appendChild(modal);
         }
@@ -74,6 +75,17 @@
         } catch {
             console.warn("localStorage quota exceeded for key:", key);
         }
+    };
+
+    const validatePasswordPolicy = (password) => {
+        if (!password || password.length < 8) {
+            return false;
+        }
+
+        return /[A-Z]/.test(password)
+            && /[a-z]/.test(password)
+            && /\d/.test(password)
+            && /[^A-Za-z0-9]/.test(password);
     };
 
     const readAvatar = () => {
@@ -296,6 +308,11 @@
 
         if (normalized === "home") {
             loadMyViolations();
+            loadMyTasks();
+        } else if (normalized === "schedule") {
+            loadMyTasks();
+        } else if (normalized === "payroll") {
+            loadMyPayrolls();
         }
 
         const url = new URL(window.location.href);
@@ -602,33 +619,45 @@
         attendanceDetailModal.classList.remove("flex");
     };
 
-    const renderRequests = () => {
-        const list = document.querySelector("[data-request-list]");
-        if (!list) return;
+    const renderRequests = async () => {
+    const list = document.querySelector('[data-request-list]');
+    if (!list) return;
 
-        list.innerHTML = "";
-        if (!requests.length) {
-            list.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có đơn nào được tạo trong trình duyệt này.</div>';
-            return;
+    try {
+        const res = await fetch('/Employee/GetMyRequests');
+        const data = await res.json();
+        if (data.success) {
+            requests = data.data.map(r => ({
+                type: r.requestType,
+                date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
+                content: r.content,
+                status: r.status
+            }));
+            
+            list.innerHTML = '';
+            if (!requests.length) {
+                list.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có đơn nào được tạo trong hệ thống.</div>';
+                return;
+            }
+
+            requests.forEach((item) => {
+                const card = document.createElement('div');
+                let tone = 'bg-slate-50 text-slate-700';
+                if (item.status === 'Đã duyệt' || item.status === 'Approved') tone = 'bg-green-50 text-green-700';
+                else if (item.status === 'Từ chối' || item.status === 'Rejected') tone = 'bg-red-50 text-red-700';
+                else tone = 'bg-amber-50 text-amber-700';
+                
+                card.className = 'rounded-2xl border border-slate-200 bg-white p-4';
+                card.innerHTML = `<div class="flex items-center justify-between gap-3"><p class="font-semibold text-slate-900">${item.type}</p><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span></div><p class="mt-2 text-sm text-slate-500">${item.date}</p><p class="mt-2 text-sm text-slate-600">${item.content.replace(/
+/g, '<br>')}</p>`;
+                list.appendChild(card);
+            });
         }
-
-        [...requests].reverse().forEach((item) => {
-            const card = document.createElement("div");
-            const tone = item.status === "Đã gửi" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700";
-            card.className = "rounded-2xl border border-slate-200 bg-white p-4";
-            card.innerHTML = `
-                <div class="flex items-center justify-between gap-3">
-                    <p class="font-semibold text-slate-900">${item.type}</p>
-                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span>
-                </div>
-                <p class="mt-2 text-sm text-slate-500">${item.date || "Chưa chọn ngày"}</p>
-                <p class="mt-2 text-sm text-slate-600">${item.content}</p>
-            `;
-            list.appendChild(card);
-        });
-    };
+    } catch (e) { console.error(e); }
+};
 
     const renderChats = () => {
+        // ... (keep as is or just ignore, wait I must replace it carefully)
         const title = document.querySelector("[data-chat-title]");
         const thread = document.querySelector("[data-chat-thread]");
         if (!title || !thread) return;
@@ -679,9 +708,28 @@
         });
     };
 
+    const loadMyTasks = async () => {
+        try {
+            const res = await fetch("/Employee/GetMyTasks");
+            const result = await res.json();
+            if (result.success && Array.isArray(result.data)) {
+                const fetchedTasks = result.data.map(t => ({
+                    id: t.id,
+                    title: t.title,
+                    status: t.status.toLowerCase(),
+                    time: new Date(t.dueDate).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}),
+                    date: toDateKey(t.dueDate)
+                }));
+                // Combine or just use fetched
+                tasks = fetchedTasks;
+                renderTasks();
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const renderTasks = () => {
         const todayKey = toDateKey();
-        const todayTasks = tasks.filter(t => t.date === todayKey);
+        const todayTasks = tasks.filter(t => t.date === todayKey || t.date < todayKey && t.status !== 'done');
         const doneTasks = todayTasks.filter(t => t.status === "done");
         
         // Schedule Tab
@@ -694,19 +742,19 @@
 
         if (taskList) {
             taskList.innerHTML = "";
-            const pendingTasks = todayTasks.filter(t => t.status === "pending");
+            const pendingTasks = todayTasks.filter(t => t.status !== "done");
             if (pendingTasks.length === 0) {
-                taskList.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Tuyệt vời! Bạn đã hoàn thành hết công việc hôm nay.</div>';
+                taskList.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Tuyệt vời! Bạn đã hoàn thành hết công việc.</div>';
             } else {
                 pendingTasks.forEach(task => {
                     const el = document.createElement("div");
                     el.className = "flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-red-300 transition-colors cursor-pointer";
                     el.innerHTML = `
                         <div class="flex items-center gap-4">
-                            <input type="checkbox" data-task-checkbox="${task.id}" class="h-6 w-6 rounded-full border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" />
+                            <input type="checkbox" onchange="window.markTaskDone('${task.id}')" data-task-checkbox="${task.id}" class="h-6 w-6 rounded-full border-slate-300 text-red-600 focus:ring-red-600 cursor-pointer" />
                             <div>
                                 <p class="font-semibold text-slate-900">${task.title}</p>
-                                <p class="text-xs text-slate-500"><i class="fa-regular fa-clock mr-1"></i>${task.time}</p>
+                                <p class="text-xs text-slate-500"><i class="fa-regular fa-clock mr-1"></i>Hạn chót: ${task.time} ${task.date}</p>
                             </div>
                         </div>
                     `;
@@ -728,7 +776,6 @@
                             <i class="fa-solid fa-circle-check text-green-500"></i>
                             <p class="text-sm font-medium text-slate-600 line-through">${task.title}</p>
                         </div>
-                        <button type="button" data-task-undo="${task.id}" class="text-xs font-semibold text-slate-500 hover:text-slate-800"><i class="fa-solid fa-rotate-left"></i></button>
                     `;
                     doneList.appendChild(el);
                 });
@@ -757,7 +804,7 @@
             homeList.innerHTML = "";
             const recentTasks = todayTasks.slice(0, 3);
             if (recentTasks.length === 0) {
-                homeList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">Hôm nay chưa có nhiệm vụ nào.</div>';
+                homeList.innerHTML = '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-500">Chưa có nhiệm vụ nào.</div>';
             } else {
                 recentTasks.forEach(task => {
                     const el = document.createElement("div");
@@ -773,6 +820,54 @@
                 });
             }
         }
+    };
+
+    window.markTaskDone = async (id) => {
+        try {
+            await fetch(`/Employee/MarkTaskDone?id=${id}`, { method: 'POST' });
+            loadMyTasks();
+        } catch (e) { console.error(e); }
+    };
+
+    const loadMyPayrolls = async () => {
+        try {
+            const res = await fetch(`/Employee/GetMyPayrolls?year=2026`);
+            const result = await res.json();
+            if (result.success && result.data.length > 0) {
+                const latest = result.data[0];
+                document.getElementById('empBaseSalaryTop').textContent = latest.baseSalary.toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('empKpiBonusTop').textContent = '+' + latest.kpiBonus.toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('empDeductionTop').textContent = '-' + latest.violationDeduction.toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('empNetSalaryTop').textContent = latest.netSalary.toLocaleString('vi-VN') + ' ₫';
+                
+                document.getElementById('empBaseSalary').textContent = latest.baseSalary.toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('empKpiBonus').textContent = '+' + latest.kpiBonus.toLocaleString('vi-VN') + ' ₫';
+                document.getElementById('empDeduction').textContent = '-' + latest.violationDeduction.toLocaleString('vi-VN') + ' ₫';
+
+                const listEl = document.getElementById('payrollHistoryList');
+                if (listEl) {
+                    listEl.innerHTML = result.data.map(p => `
+                        <div class="rounded-xl border border-slate-100 bg-slate-50 p-4 flex items-center justify-between group hover:border-emerald-200 transition cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center ${p.status === 'Đã thanh toán' ? 'text-emerald-500' : 'text-slate-400'} font-bold font-outfit shadow-sm">
+                                    ${String(p.month).padStart(2, '0')}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-900">Tháng ${String(p.month).padStart(2, '0')}/${p.year}</p>
+                                    <p class="text-[10px] ${p.status === 'Đã thanh toán' ? 'text-emerald-600' : 'text-slate-500'} mt-0.5">${p.status}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-bold text-slate-900">${p.netSalary.toLocaleString('vi-VN')} ₫</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } else {
+                const listEl = document.getElementById('payrollHistoryList');
+                if (listEl) listEl.innerHTML = '<div class="p-4 text-center text-sm text-slate-400">Chưa có dữ liệu lương.</div>';
+            }
+        } catch (e) { console.error(e); }
     };
 
     const applySettings = () => {
@@ -1051,7 +1146,7 @@
         });
     });
 
-    document.querySelector("[data-chat-send]")?.addEventListener("click", () => {
+    document.querySelector("[data-chat-send]")?.addEventListener("click", async () => {
         const input = document.querySelector("[data-chat-input]");
         const text = input?.value.trim();
         if (!text) return;
@@ -1060,6 +1155,14 @@
         writeStore(storageKeys.chats, chats);
         input.value = "";
         renderChats();
+        
+        try {
+            await fetch('/Employee/SendMessage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "Gửi " + activeChat, content: text })
+            });
+        } catch (e) { console.error(e); }
     });
 
     const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
@@ -1180,29 +1283,35 @@
     document.querySelector("[data-request-date]")?.addEventListener("change", updateRequestPreview);
     document.querySelector("[data-request-reason]")?.addEventListener("input", updateRequestPreview);
 
-    document.querySelector("[data-request-submit]")?.addEventListener("click", () => {
-        const type = document.querySelector("[data-request-type]")?.value || "";
-        const date = document.querySelector("[data-request-date]")?.value || "";
-        const reason = document.querySelector("[data-request-reason]")?.value.trim() || "";
-        const previewEl = document.querySelector("[data-request-preview]");
-        const content = previewEl ? previewEl.textContent : "";
-        const message = document.querySelector("[data-request-message]");
+    document.querySelector('[data-request-submit]')?.addEventListener('click', async () => {
+    const type = document.querySelector('[data-request-type]')?.value || '';
+    const date = document.querySelector('[data-request-date]')?.value || '';
+    const reason = document.querySelector('[data-request-reason]')?.value.trim() || '';
+    const message = document.querySelector('[data-request-message]');
 
-        if (!reason) {
-            if (message) message.textContent = "Vui lòng nhập lý do trước khi gửi đơn.";
-            return;
+    if (!reason) {
+        if (message) message.textContent = 'Vui lòng nhập lý do trước khi gửi đơn.';
+        return;
+    }
+
+    try {
+        const res = await fetch('/Employee/SendRequest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestType: type, content: 'Ngày áp dụng: ' + date + '
+Lý do: ' + reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const reasonInput = document.querySelector('[data-request-reason]');
+            if (reasonInput) reasonInput.value = '';
+            if (message) message.textContent = 'Đơn đã được gửi thành công.';
+            renderRequests();
         }
-
-        requests.push({ type, date, content, status: "Đã gửi" });
-        writeStore(storageKeys.requests, requests);
-        
-        const reasonInput = document.querySelector("[data-request-reason]");
-        if (reasonInput) reasonInput.value = "";
-        updateRequestPreview();
-        
-        if (message) message.textContent = "Đơn đã được gửi thành công.";
-        renderRequests();
-    });
+    } catch (e) {
+        if (message) message.textContent = 'Lỗi kết nối khi gửi đơn.';
+    }
+});
 
     document.querySelector("[data-request-draft]")?.addEventListener("click", () => {
         const type = document.querySelector("[data-request-type]")?.value || "";
@@ -1236,6 +1345,81 @@
         const msg = document.querySelector("[data-profile-message]");
         if (msg) {
             msg.textContent = "Đã cập nhật thông tin hiển thị trong khu vực nhân viên.";
+        }
+    });
+
+    document.querySelector("[data-profile-change-pwd]")?.addEventListener("click", () => {
+        const oldPwd = document.querySelector("[data-profile-pwd-old]")?.value;
+        const newPwd = document.querySelector("[data-profile-pwd-new]")?.value;
+        const confirmPwd = document.querySelector("[data-profile-pwd-confirm]")?.value;
+        const msg = document.querySelector("[data-profile-pwd-msg]");
+        
+        if (!msg) return;
+
+        if (!oldPwd || !newPwd || !confirmPwd) {
+            msg.className = "text-xs font-semibold text-red-600";
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Vui lòng nhập đầy đủ thông tin.';
+            msg.classList.remove("hidden");
+            return;
+        }
+
+        if (newPwd !== confirmPwd) {
+            msg.className = "text-xs font-semibold text-red-600";
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu xác nhận không khớp.';
+            msg.classList.remove("hidden");
+            return;
+        }
+
+        if (newPwd.length < 8) {
+            msg.className = "text-xs font-semibold text-red-600";
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu mới phải từ 8 ký tự.';
+            msg.classList.remove("hidden");
+            return;
+        }
+
+        // Giả lập call API thành công
+        msg.className = "text-xs font-semibold text-emerald-600";
+        msg.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>Đổi mật khẩu thành công!';
+        msg.classList.remove("hidden");
+
+        document.querySelector("[data-profile-pwd-old]").value = "";
+        document.querySelector("[data-profile-pwd-new]").value = "";
+        document.querySelector("[data-profile-pwd-confirm]").value = "";
+        
+        setTimeout(() => {
+            msg.classList.add("hidden");
+        }, 3000);
+    });
+
+    // Mở khóa chỉnh sửa thông tin nhạy cảm
+    document.querySelectorAll('[data-profile-input="cccd"], [data-profile-input="bank"]').forEach(input => {
+        const btn = input.nextElementSibling;
+        if (btn && btn.tagName === 'BUTTON') {
+            btn.addEventListener('click', () => {
+                const isLocked = input.disabled;
+                if (isLocked) {
+                    const pin = prompt("Vui lòng nhập mã PIN bảo mật hoặc OTP (demo: 1234) để chỉnh sửa:");
+                    if (pin === "1234") {
+                        input.disabled = false;
+                        input.classList.remove("bg-slate-100", "text-slate-600");
+                        input.classList.add("bg-white", "text-slate-900", "focus:border-red-300", "focus:ring-2", "focus:ring-red-100");
+                        if (input.dataset.profileInput === "cccd") input.value = "079012345123";
+                        if (input.dataset.profileInput === "bank") input.value = "1903123456456";
+                        btn.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-500"></i>';
+                        btn.title = "Đang mở khóa";
+                    } else if (pin) {
+                        alert("Mã PIN không đúng!");
+                    }
+                } else {
+                    input.disabled = true;
+                    input.classList.add("bg-slate-100", "text-slate-600");
+                    input.classList.remove("bg-white", "text-slate-900", "focus:border-red-300", "focus:ring-2", "focus:ring-red-100");
+                    if (input.dataset.profileInput === "cccd") input.value = "079*****123";
+                    if (input.dataset.profileInput === "bank") input.value = "190*****456 (Techcombank)";
+                    btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+                    btn.title = "Mở khóa chỉnh sửa";
+                }
+            });
         }
     });
 

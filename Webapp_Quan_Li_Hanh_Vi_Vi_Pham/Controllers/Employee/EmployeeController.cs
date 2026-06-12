@@ -42,6 +42,53 @@ public class EmployeeController : Controller
         return Json(new { success = true, data = violations });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetMyTasks(CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Không xác định được danh tính." });
+        }
+
+        var tasks = await _context.EmployeeTasks
+            .Where(t => t.EmployeeId == userId)
+            .OrderByDescending(t => t.DueDate)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = tasks });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkTaskDone(Guid id, CancellationToken cancellationToken)
+    {
+        var task = await _context.EmployeeTasks.FindAsync(new object[] { id }, cancellationToken);
+        if (task != null)
+        {
+            task.Status = "Done";
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMyPayrolls(int year, CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Không xác định được danh tính." });
+        }
+
+        var payrolls = await _context.PayrollRecords
+            .Where(p => p.EmployeeId == userId && p.Year == year)
+            .OrderByDescending(p => p.Month)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = payrolls });
+    }
+
     public IActionResult Attendance()
     {
         return RedirectToAction(nameof(Index), new { tab = "attendance" });
@@ -80,5 +127,73 @@ public class EmployeeController : Controller
     public IActionResult Violations()
     {
         return RedirectToAction(nameof(Index), new { tab = "violations" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendRequest([FromBody] Models.Manager.ApprovalRequest dto, CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name ?? "Unknown";
+        var fullName = User.FindFirst("FullName")?.Value ?? username;
+        
+        var request = new Models.Manager.ApprovalRequest
+        {
+            EmployeeName = fullName,
+            RequestType = dto.RequestType,
+            Content = dto.Content,
+            SubmittedAt = DateTime.UtcNow,
+            Status = "Chờ duyệt"
+        };
+        _context.ApprovalRequests.Add(request);
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        return Json(new { success = true });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMyRequests(CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name ?? "Unknown";
+        var fullName = User.FindFirst("FullName")?.Value ?? username;
+        
+        var requests = await _context.ApprovalRequests
+            .Where(r => r.EmployeeName == fullName)
+            .OrderByDescending(r => r.SubmittedAt)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = requests });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendMessage([FromBody] Models.Manager.EmployeeMessage dto, CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name ?? "Unknown";
+        var fullName = User.FindFirst("FullName")?.Value ?? username;
+        
+        var msg = new Models.Manager.EmployeeMessage
+        {
+            EmployeeName = fullName,
+            Title = dto.Title ?? "Tin nhắn mới",
+            Content = dto.Content,
+            SentAt = DateTime.UtcNow,
+            IsRead = false
+        };
+        _context.EmployeeMessages.Add(msg);
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        return Json(new { success = true });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMyMessages(CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name ?? "Unknown";
+        var fullName = User.FindFirst("FullName")?.Value ?? username;
+        
+        var msgs = await _context.EmployeeMessages
+            .Where(m => m.EmployeeName == fullName)
+            .OrderByDescending(m => m.SentAt)
+            .ToListAsync(cancellationToken);
+            
+        return Json(new { success = true, data = msgs });
     }
 }

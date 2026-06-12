@@ -1,0 +1,31 @@
+<div data-tab-panel="requests" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="font-outfit text-2xl font-bold text-slate-900">Quản lý Đơn từ</h2>
+            <p class="text-sm text-slate-500 mt-1">Phê duyệt đơn xin phép, giải trình của nhân viên.</p>
+        </div>
+    </div>
+
+    <div class="saas-card bg-white">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl">
+            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-file-signature text-slate-400 mr-2"></i>Danh sách yêu cầu</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-slate-600">
+                <thead class="text-xs uppercase bg-slate-50 text-slate-500 border-b border-slate-200">
+                    <tr>
+                        <th class="p-4 py-3 font-bold">Mã NV</th>
+                        <th class="p-4 py-3 font-bold">Loại đơn</th>
+                        <th class="p-4 py-3 font-bold">Ngày gửi</th>
+                        <th class="p-4 py-3 font-bold">Trạng thái</th>
+                        <th class="p-4 py-3 font-bold text-right">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="requestTbody">
+                    <!-- Dữ liệu sẽ được load qua JS -->
+                    <tr><td colspan="4" class="p-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
