@@ -9,11 +9,11 @@
                     </div>
 
                     <div class="w-full text-zinc-900">
-                        <div class="grid w-full grid-cols-4 bg-zinc-100 rounded-lg p-1 text-sm font-medium mb-6">
-                            <button onclick="openTab(event, 'general')" class="tab-link active-tab w-full rounded-md py-1.5 transition-all text-zinc-900 bg-white shadow-sm">Cài đặt chung</button>
-                            <button onclick="openTab(event, 'notifications')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Thông báo</button>
-                            <button onclick="openTab(event, 'webhook')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Webhook</button>
-                            <button onclick="openTab(event, 'security')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-500 hover:text-zinc-700">Bảo mật</button>
+                        <div class="grid w-full grid-cols-4 bg-zinc-100 border border-zinc-200/80 rounded-lg p-1 text-sm font-medium mb-6 shadow-sm">
+                            <button onclick="openTab(event, 'general')" class="tab-link active-tab w-full rounded-md py-1.5 transition-all text-white bg-red-600 shadow-sm font-semibold">Cài đặt chung</button>
+                            <button onclick="openTab(event, 'notifications')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-600 hover:text-zinc-900 hover:bg-white/50">Thông báo</button>
+                            <button onclick="openTab(event, 'webhook')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-600 hover:text-zinc-900 hover:bg-white/50">Webhook</button>
+                            <button onclick="openTab(event, 'security')" class="tab-link w-full rounded-md py-1.5 transition-all text-zinc-600 hover:text-zinc-900 hover:bg-white/50">Bảo mật</button>
                         </div>
 
                         <div id="general" class="tab-content block">
@@ -124,10 +124,12 @@
                 }
                 tablinks = document.getElementsByClassName("tab-link");
                 for (i = 0; i < tablinks.length; i++) {
-                    tablinks[i].className = tablinks[i].className.replace(" bg-white shadow-sm text-zinc-900 active-tab", " text-zinc-500 hover:text-zinc-700");
+                    tablinks[i].classList.remove("bg-red-600", "text-white", "shadow-sm", "active-tab", "font-semibold");
+                    tablinks[i].classList.add("text-zinc-600", "hover:text-zinc-900", "hover:bg-white/50");
                 }
                 document.getElementById(tabId).style.display = "block";
-                evt.currentTarget.className = evt.currentTarget.className.replace(" text-zinc-500 hover:text-zinc-700", " bg-white shadow-sm text-zinc-900 active-tab");
+                evt.currentTarget.classList.remove("text-zinc-600", "hover:text-zinc-900", "hover:bg-white/50");
+                evt.currentTarget.classList.add("bg-red-600", "text-white", "shadow-sm", "active-tab", "font-semibold");
             }
     </script>
 }
