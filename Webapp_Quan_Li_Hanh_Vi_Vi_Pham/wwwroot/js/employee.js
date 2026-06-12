@@ -698,12 +698,19 @@ const loadChatContacts = async () => {
                 btn.dataset.chatName = contact.fullName;
                 
                 const avatarDiv = document.createElement("div");
-                avatarDiv.className = "w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden shrink-0";
+                avatarDiv.className = "relative shrink-0";
+                
+                let avatarInner = '';
                 if (contact.avatarUrl) {
-                    avatarDiv.innerHTML = `<img src="${contact.avatarUrl}" class="w-full h-full object-cover" />`;
+                    avatarInner = `<img src="${contact.avatarUrl}" class="w-10 h-10 rounded-full object-cover">`;
                 } else {
-                    avatarDiv.textContent = contact.fullName.charAt(0).toUpperCase();
+                    avatarInner = `<div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold">${contact.fullName.charAt(0).toUpperCase()}</div>`;
                 }
+
+                if (contact.unreadCount > 0) {
+                    avatarInner += `<div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-bold text-white">${contact.unreadCount > 9 ? '9+' : contact.unreadCount}</div>`;
+                }
+                avatarDiv.innerHTML = avatarInner;
                 
                 const infoDiv = document.createElement("div");
                 infoDiv.className = "flex-1 min-w-0";
@@ -733,13 +740,29 @@ const loadChatContacts = async () => {
                     
                     activeChat = contact.username;
                     document.querySelector("[data-chat-title]").textContent = contact.fullName;
+                    
+                    // Mark messages as read when clicking the contact
+                    if (contact.unreadCount > 0) {
+                        try {
+                            fetch('/Employee/MarkConversationRead', { 
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ channel: contact.username })
+                            }).then(() => {
+                                // Reload contacts to clear the badge
+                                loadChatContacts();
+                            });
+                        } catch(e) {}
+                    }
+                    
                     renderChats();
                 });
                 
                 listEl.appendChild(btn);
             });
             
-            if (result.data.length > 0 && (!activeChat || activeChat === 'manager')) {
+            const isChatExist = result.data.some(c => c.username === activeChat);
+            if (result.data.length > 0 && (!activeChat || !isChatExist)) {
                 activeChat = result.data[0].username;
                 document.querySelector("[data-chat-title]").textContent = result.data[0].fullName;
                 listEl.querySelector(`[data-chat-target="${activeChat}"]`)?.classList.add("bg-red-50");
@@ -882,6 +905,10 @@ const loadMessages = async () => {
             
             thread.appendChild(bubbleWrapper);
         });
+
+        setTimeout(() => {
+            if (thread) thread.scrollTop = thread.scrollHeight;
+        }, 10);
     };
 
     const loadMyTasks = async () => {
@@ -1746,7 +1773,7 @@ const loadMessages = async () => {
                 return;
             }
 
-            compressImage(file, async (dataUrl) => {
+            const uploadAvatar = async (dataUrl) => {
                 avatarDataUrl = dataUrl;
                 try {
                     const formData = new FormData();
@@ -1774,7 +1801,15 @@ const loadMessages = async () => {
                     console.error(e);
                 }
                 event.target.value = "";
-            });
+            };
+
+            if (file.type === "image/gif") {
+                const reader = new FileReader();
+                reader.onload = (e) => uploadAvatar(e.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                compressImage(file, uploadAvatar);
+            }
         });
     });
 
@@ -2304,11 +2339,11 @@ const loadMessages = async () => {
         confirmPayrollPinInput.value = "";
         setupPayrollPinError.classList.add("hidden");
         setupPayrollPinModal.classList.remove("hidden");
-        setupPayrollPinModal.style.display = "flex";
+        setupPayrollPinModal.classList.add("flex");
         setTimeout(() => {
             if (setupPayrollPinModalContent) {
-                setupPayrollPinModalContent.style.transform = "scale(1)";
-                setupPayrollPinModalContent.style.opacity = "1";
+                setupPayrollPinModalContent.classList.remove("scale-95", "opacity-0");
+                setupPayrollPinModalContent.classList.add("scale-100", "opacity-100");
             }
             newPayrollPinInput.focus();
         }, 10);
@@ -2317,11 +2352,11 @@ const loadMessages = async () => {
     const closeSetupPinModal = () => {
         if (!setupPayrollPinModal) return;
         if (setupPayrollPinModalContent) {
-            setupPayrollPinModalContent.style.transform = "scale(0.95)";
-            setupPayrollPinModalContent.style.opacity = "0";
+            setupPayrollPinModalContent.classList.remove("scale-100", "opacity-100");
+            setupPayrollPinModalContent.classList.add("scale-95", "opacity-0");
         }
         setTimeout(() => {
-            setupPayrollPinModal.style.display = "none";
+            setupPayrollPinModal.classList.remove("flex");
             setupPayrollPinModal.classList.add("hidden");
         }, 300);
     };
@@ -2406,4 +2441,53 @@ const loadMessages = async () => {
     window.addEventListener("beforeunload", () => {
         stopAttendanceCamera();
     });
+
+        const loadNotifications = async () => {
+        try {
+            const res = await fetch("/Employee/GetNotifications");
+            const data = await res.json();
+            if (data.success && data.data) {
+                const listEl = document.querySelector("[data-notification-list]");
+                const unreadBadge = document.querySelector("[data-notification-unread-badge]");
+                
+                if (listEl) {
+                    if (data.data.length === 0) {
+                        listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
+                    } else {
+                        listEl.innerHTML = data.data.map(n => `
+                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}">
+                                <p class="text-sm font-semibold text-slate-900">${n.title}</p>
+                                <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">${n.body}</p>
+                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt).toLocaleString('vi-VN')}</p>
+                            </div>
+                        `).join('');
+                    }
+                }
+                
+                if (unreadBadge) {
+                    const hasUnread = data.data.some(n => !n.isRead);
+                    if (hasUnread) {
+                        unreadBadge.classList.remove("hidden");
+                        unreadBadge.classList.add("flex");
+                    } else {
+                        unreadBadge.classList.add("hidden");
+                        unreadBadge.classList.remove("flex");
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    // Load initial notifications and poll periodically
+    loadNotifications();
+    setInterval(loadNotifications, 10000); // 10 seconds
+
+    document.querySelector("[data-notification-mark-all]")?.addEventListener("click", async () => {
+        try {
+            await fetch('/Employee/MarkAllNotificationsRead', { method: 'POST' });
+            loadNotifications();
+        } catch (e) { console.error(e); }
+    });
+
 })();
+

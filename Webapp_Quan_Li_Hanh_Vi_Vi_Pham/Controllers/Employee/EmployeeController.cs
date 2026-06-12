@@ -696,7 +696,8 @@ public class EmployeeController : Controller
                 username = u.Username,
                 fullName = u.FullName ?? u.Username,
                 role = u.Role ?? "Employee",
-                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}"
+                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                unreadCount = _context.EmployeeMessages.Count(m => m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee" && !m.IsRead)
             })
             .ToListAsync(cancellationToken);
 
@@ -968,5 +969,44 @@ public class EmployeeController : Controller
         public string Pin { get; set; } = string.Empty;
     }
 
+    public sealed class MarkConversationReadReq
+    {
+        public string Channel { get; set; } = string.Empty;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkConversationRead([FromBody] MarkConversationReadReq req, CancellationToken cancellationToken)
+    {
+        var user = await GetCurrentUserAsync(cancellationToken);
+        if (user == null || string.IsNullOrWhiteSpace(req.Channel))
+        {
+            return Json(new { success = false });
+        }
+
+        var unreadMessages = await _context.EmployeeMessages
+            .Where(m => m.EmployeeUserId == user.Id 
+                     && m.Channel == req.Channel 
+                     && m.SenderRole != "Employee" 
+                     && !m.IsRead)
+            .ToListAsync(cancellationToken);
+
+        if (unreadMessages.Any())
+        {
+            foreach (var m in unreadMessages)
+            {
+                m.IsRead = true;
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return Json(new { success = true });
+    }
 
 }
+
+
+
+
+
+
+

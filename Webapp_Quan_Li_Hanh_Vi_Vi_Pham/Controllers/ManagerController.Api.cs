@@ -159,8 +159,8 @@ public partial class ManagerController
         var employee = await _context.Users.FindAsync(new object[] { req.EmployeeId }, cancellationToken);
         if (employee == null) return Json(new { success = false, message = "Không tìm thấy nhân viên." });
 
-        if (string.IsNullOrWhiteSpace(req.Title) || string.IsNullOrWhiteSpace(req.Content))
-            return Json(new { success = false, message = "Vui lòng nhập đầy đủ tiêu đề và nội dung." });
+        if (string.IsNullOrWhiteSpace(req.Content))
+            return Json(new { success = false, message = "Vui lòng nhập nội dung." });
 
         var msg = new EmployeeMessage
         {
@@ -170,7 +170,7 @@ public partial class ManagerController
             Channel = manager.Username, // Use manager's username so Employee can group it correctly
             SenderRole = "Manager",
             SenderName = manager.FullName,
-            Title = req.Title,
+            Title = string.IsNullOrWhiteSpace(req.Title) ? "Tin nhắn từ Quản lý" : req.Title,
             Content = req.Content,
             SentAt = DateTime.UtcNow,
             IsRead = false
@@ -186,19 +186,19 @@ public partial class ManagerController
     public async Task<IActionResult> EditMessage([FromBody] ManagerEditMessageRequest req, CancellationToken cancellationToken)
     {
         var manager = await GetCurrentUserAsync(cancellationToken);
-        if (manager == null) return Json(new { success = false, message = "Không xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c tÃ i khoáº£n quáº£n lÃ½." });
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
 
         if (req.Id <= 0 || string.IsNullOrWhiteSpace(req.Content))
-            return Json(new { success = false, message = "Dá»¯ liá»‡u chá»‰nh sá»­a khÃ´ng há»£p lá»‡." });
+            return Json(new { success = false, message = "Dữ liệu chỉnh sửa không hợp lệ." });
 
         var msg = await _context.EmployeeMessages.FindAsync(new object[] { req.Id }, cancellationToken);
-        if (msg == null) return Json(new { success = false, message = "Không tÃ¬m tháº¥y tin nháº¯n." });
+        if (msg == null) return Json(new { success = false, message = "Không tìm thấy tin nhắn." });
 
         if (msg.SenderRole != "Manager" || msg.SenderName != manager.FullName)
             return Json(new { success = false, message = "Báº¡n khÃ´ng cÃ³ quyá»n chá»‰nh sá»­a tin nháº¯n nÃ y." });
 
         if (msg.IsRevoked)
-            return Json(new { success = false, message = "Tin nháº¯n Ä‘Ã£ bá»‹ thu há»“i, khÃ´ng thá»ƒ chá»‰nh sá»­a." });
+            return Json(new { success = false, message = "Tin nhắn đã bị thu hồi, không thể chỉnh sửa." });
 
         msg.Content = req.Content.Trim();
         msg.EditedAtUtc = DateTime.UtcNow;
@@ -208,12 +208,12 @@ public partial class ManagerController
     }
 
     [HttpPost]
-    public async Task<IActionResult> RevokeMessage(int id, CancellationToken cancellationToken)
+    public async Task<IActionResult> RevokeMessage([FromBody] ManagerRevokeMessageRequest req, CancellationToken cancellationToken)
     {
         var manager = await GetCurrentUserAsync(cancellationToken);
         if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
 
-        var msg = await _context.EmployeeMessages.FindAsync(new object[] { id }, cancellationToken);
+        var msg = await _context.EmployeeMessages.FindAsync(new object[] { req.Id }, cancellationToken);
         if (msg == null) return Json(new { success = false, message = "Không tìm thấy tin nhắn." });
 
         if (msg.SenderRole != "Manager" || msg.SenderName != manager.FullName)
@@ -228,4 +228,77 @@ public partial class ManagerController
 
         return Json(new { success = true });
     }
+    [HttpGet]
+    public async Task<IActionResult> GetChatContacts(CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        var employees = await _context.Users
+            .Where(u => u.Role == "Employee")
+            .Select(u => new
+            {
+                userId = u.Id,
+                username = u.Username,
+                fullName = u.FullName ?? u.Username,
+                role = u.Role,
+                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                unreadCount = _context.EmployeeMessages.Count(m => m.EmployeeUserId == u.Id && m.Channel == manager.Username && m.SenderRole == "Employee" && !m.IsRead),
+                lastMessage = _context.EmployeeMessages
+                    .Where(m => m.EmployeeUserId == u.Id && m.Channel == manager.Username)
+                    .OrderByDescending(m => m.SentAt)
+                    .Select(m => m.IsRevoked ? "Đã thu hồi" : m.Content)
+                    .FirstOrDefault()
+            })
+            .ToListAsync(cancellationToken);
+
+        return Json(new { success = true, data = employees });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetConversation(Guid employeeUserId, CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        var messages = await _context.EmployeeMessages
+            .Where(m => m.EmployeeUserId == employeeUserId && m.Channel == manager.Username)
+            .OrderBy(m => m.SentAt)
+            .ToListAsync(cancellationToken);
+
+        return Json(new { success = true, data = messages });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkConversationRead([FromBody] ManagerMarkReadRequest req, CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false });
+
+        var unreadMessages = await _context.EmployeeMessages
+            .Where(m => m.EmployeeUserId == req.EmployeeUserId && m.Channel == manager.Username && m.SenderRole == "Employee" && !m.IsRead)
+            .ToListAsync(cancellationToken);
+
+        if (unreadMessages.Any())
+        {
+            foreach (var m in unreadMessages)
+            {
+                m.IsRead = true;
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return Json(new { success = true });
+    }
 }
+
+public class ManagerMarkReadRequest
+{
+    public Guid EmployeeUserId { get; set; }
+}
+
+public class ManagerRevokeMessageRequest
+{
+    public int Id { get; set; }
+}
+

@@ -122,7 +122,7 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chưa có vi phạm nÃ o.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chưa có vi phạm nào.</td></tr>`;
                     return;
                 }
 
@@ -137,7 +137,7 @@
                         <td class="p-4 py-3">
                             <div class="flex flex-col gap-1">
                                 <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
-                                ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' â€¢ ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
+                                ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' • ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
                             </div>
                         </td>
                         <td class="p-4 py-3 text-right">
@@ -145,7 +145,7 @@
                             <div class="flex justify-end gap-2">
                                 <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyệt</button>
                                 <button onclick="window.reviewViolation('${v.id}', 'Rejected')" class="rounded bg-red-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-600">Từ chối</button>
-                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'ÄÃ£ xá»­ lÃ½'}</span>`}
+                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Đã xử lý'}</span>`}
                         </td>
                     </tr>
                 `).join('');
@@ -155,8 +155,8 @@
 
     window.reviewViolation = async (id, status) => {
         const note = status === 'Rejected'
-            ? (prompt('Nhập ghi chú tá»« chá»‘i vi phạm:') || 'Manager tá»« chá»‘i tá»« dashboard')
-            : 'Manager duyá»‡t tá»« dashboard';
+            ? (prompt('Nhập ghi chú từ chối vi phạm:') || 'Manager từ chối từ dashboard')
+            : 'Manager duyệt từ dashboard';
 
         if (!confirm(`Xác nhận cập nhật vi phạm sang trạng thái ${status}?`)) return;
 
@@ -307,17 +307,17 @@
             const bgClass = isActive ? "bg-red-50" : "hover:bg-slate-50";
             return `
                 <div class="flex items-center justify-between p-3 rounded-xl cursor-pointer transition ${bgClass}" onclick="window.selectManagerContact('${c.userId}')">
-                    <div class="flex items-center gap-3">
-                        <div class="relative">
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="relative shrink-0">
                             ${c.avatarUrl 
                                 ? `<img src="${c.avatarUrl}" class="w-10 h-10 rounded-full object-cover">`
                                 : `<div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold">${c.fullName.charAt(0)}</div>`
                             }
-                            ${c.unreadCount > 0 ? `<div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-bold text-white">${c.unreadCount}</div>` : ''}
+                            ${c.unreadCount > 0 ? `<div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-bold text-white">${c.unreadCount > 9 ? '9+' : c.unreadCount}</div>` : ''}
                         </div>
-                        <div>
-                            <div class="font-semibold text-slate-800 text-sm">${c.fullName}</div>
-                            <div class="text-xs text-slate-500">${c.role}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-slate-800 text-sm truncate">${c.fullName}</div>
+                            <div class="text-xs text-slate-500 truncate">${c.lastMessage ? c.lastMessage : "Chưa có tin nhắn"}</div>
                         </div>
                     </div>
                 </div>
@@ -386,7 +386,7 @@
             const isSelf = m.senderRole === "Manager";
             if (isSelf) {
                 return `
-                <div class="flex gap-4 flex-row-reverse group">
+                <div class="flex gap-4 flex-row-reverse">
                     <div class="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 font-bold overflow-hidden shadow-sm border border-slate-200">
                         <i class="fa-solid fa-user-tie text-xs"></i>
                     </div>
@@ -396,15 +396,14 @@
                             <span class="text-[10px] text-slate-400">${new Date(m.sentAt).toLocaleTimeString('vi-VN')}</span>
                             ${m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic">(đã chỉnh sửa)</span>' : ''}
                         </div>
-                        <div class="relative">
-                            <div class="bg-red-600 text-white p-3 rounded-2xl rounded-tr-none shadow-sm text-sm break-words relative inline-block ${m.isRevoked ? 'opacity-50 italic' : ''}">
+                        <div class="flex items-center gap-2">
+                            ${!m.isRevoked ? `
+                            <button onclick="window.editManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-blue-600 font-medium transition-colors px-2 py-1">Chỉnh sửa</button>
+                            <button onclick="window.revokeManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1">Thu hồi</button>
+                            ` : ''}
+                            <div class="${m.isRevoked ? 'max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-400 italic border border-slate-200' : 'max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white rounded-tr-none'} shadow-sm break-words">
                                 ${m.content}
                             </div>
-                            ${!m.isRevoked ? `
-                            <div class="absolute top-1/2 -translate-y-1/2 -left-16 opacity-0 group-hover:opacity-100 transition flex gap-1 bg-white shadow-sm border border-slate-100 rounded-md p-1">
-                                <button onclick="window.editManagerMessage(${m.id})" class="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-slate-50"><i class="fa-solid fa-pen text-[10px]"></i></button>
-                                <button onclick="window.revokeManagerMessage(${m.id})" class="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-slate-50"><i class="fa-solid fa-trash text-[10px]"></i></button>
-                            </div>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -570,19 +569,19 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Chưa có dá»¯ liá»‡u lÆ°Æ¡ng thÃ¡ng ${month}/${year}. HÃ£y báº¥m "TÃ­nh lÆ°Æ¡ng thÃ¡ng nÃ y".</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Chưa có dữ liệu lương tháng ${month}/${year}. Hãy bấm "Tính lương tháng này".</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(p => `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-medium">${p.employeeName}</td>
-                        <td class="p-4 py-3 text-slate-700 text-right">${p.baseSalary.toLocaleString('vi-VN')} â‚«</td>
-                        <td class="p-4 py-3 text-emerald-600 font-medium text-right">+${p.kpiBonus.toLocaleString('vi-VN')} â‚«</td>
-                        <td class="p-4 py-3 text-red-600 font-medium text-right">-${p.violationDeduction.toLocaleString('vi-VN')} â‚«</td>
-                        <td class="p-4 py-3 text-slate-900 font-bold text-right">${p.netSalary.toLocaleString('vi-VN')} â‚«</td>
-                        <td class="p-4 py-3 text-center"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${p.status === 'ÄÃ£ thanh toÃ¡n' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}">${p.status}</span></td>
+                        <td class="p-4 py-3 text-slate-700 text-right">${p.baseSalary.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-emerald-600 font-medium text-right">+${p.kpiBonus.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-red-600 font-medium text-right">-${p.violationDeduction.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-slate-900 font-bold text-right">${p.netSalary.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-center"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${p.status === 'Đã thanh toán' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}">${p.status}</span></td>
                         <td class="p-4 py-3 text-center">
-                            ${p.status !== 'ÄÃ£ thanh toÃ¡n' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'ÄÃ£ thanh toÃ¡n')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm">Thanh toÃ¡n</button>` : ''}
+                            ${p.status !== 'Đã thanh toán' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'Đã thanh toán')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm">Thanh toán</button>` : ''}
                         </td>
                     </tr>
                 `).join('');
@@ -797,21 +796,29 @@
     document.querySelectorAll("[data-avatar-input]").forEach((input) => {
         input.addEventListener("change", async (e) => {
             const file = e.target.files[0];
-            if (file) {
-                compressImage(file, async (dataUrl) => {
-                    document.querySelectorAll("[data-avatar-image]").forEach(img => {
-                        img.src = dataUrl;
-                        img.classList.remove("hidden");
-                    });
-                    document.querySelectorAll("[data-avatar-fallback]").forEach(icon => icon.classList.add("hidden"));
-                    
-                    const formData = new FormData();
-                    formData.append("avatarBase64", dataUrl);
-                    formData.append("fileName", file.name);
-                    try {
-                        await fetch("/Manager/UploadAvatar", { method: "POST", body: formData });
-                    } catch(err) { console.error("Error uploading avatar", err); }
+            if (!file) return;
+
+            const uploadAvatar = async (dataUrl) => {
+                document.querySelectorAll("[data-avatar-image]").forEach(img => {
+                    img.src = dataUrl;
+                    img.classList.remove("hidden");
                 });
+                document.querySelectorAll("[data-avatar-fallback]").forEach(icon => icon.classList.add("hidden"));
+                
+                const formData = new FormData();
+                formData.append("avatarBase64", dataUrl);
+                formData.append("fileName", file.name);
+                try {
+                    await fetch("/Manager/UploadAvatar", { method: "POST", body: formData });
+                } catch(err) { console.error("Error uploading avatar", err); }
+            };
+
+            if (file.type === "image/gif") {
+                const reader = new FileReader();
+                reader.onload = (event) => uploadAvatar(event.target.result);
+                reader.readAsDataURL(file);
+            } else {
+                compressImage(file, uploadAvatar);
             }
         });
     });
