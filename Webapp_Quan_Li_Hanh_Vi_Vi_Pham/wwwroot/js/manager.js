@@ -120,7 +120,7 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chua co vi pham nao.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chưa có vi phạm nào.</td></tr>`;
                     return;
                 }
 
@@ -141,9 +141,9 @@
                         <td class="p-4 py-3 text-right">
                             ${v.status === 'Pending' ? `
                             <div class="flex justify-end gap-2">
-                                <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyet</button>
-                                <button onclick="window.reviewViolation('${v.id}', 'Rejected')" class="rounded bg-red-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-600">Tu choi</button>
-                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Da xu ly'}</span>`}
+                                <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyệt</button>
+                                <button onclick="window.reviewViolation('${v.id}', 'Rejected')" class="rounded bg-red-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-600">Từ chối</button>
+                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Đã xử lý'}</span>`}
                         </td>
                     </tr>
                 `).join('');
@@ -153,10 +153,10 @@
 
     window.reviewViolation = async (id, status) => {
         const note = status === 'Rejected'
-            ? (prompt('Nhap ghi chu tu choi vi pham:') || 'Manager tu choi tu dashboard')
-            : 'Manager duyet tu dashboard';
+            ? (prompt('Nhập ghi chú từ chối vi phạm:') || 'Manager từ chối từ dashboard')
+            : 'Manager duyệt từ dashboard';
 
-        if (!confirm(`Xac nhan cap nhat vi pham sang trang thai ${status}?`)) return;
+        if (!confirm(`Xác nhận cập nhật vi phạm sang trạng thái ${status}?`)) return;
 
         try {
             const res = await fetch(`/Manager/ReviewViolation?id=${id}&status=${encodeURIComponent(status)}&note=${encodeURIComponent(note)}`, { method: 'POST' });
@@ -165,11 +165,11 @@
                 loadViolations();
                 loadHomeStats();
             } else {
-                alert(data.message || 'Co loi xay ra');
+                alert(data.message || 'Có lỗi xảy ra');
             }
         } catch (err) {
             console.error(err);
-            alert('Khong the cap nhat vi pham');
+            alert('Không thể cập nhật vi phạm');
         }
     };
 

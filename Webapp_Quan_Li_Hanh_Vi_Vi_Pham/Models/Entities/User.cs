@@ -8,8 +8,9 @@ public class User
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty; // Admin, Manager, Employee
+    public string Role { get; set; } = string.Empty;
     public string FaceImagePath { get; set; } = string.Empty;
+    public string AvatarPath { get; set; } = string.Empty;
     public string ManagerKey { get; set; } = string.Empty;
     public bool IsKeyActivated { get; set; }
     public bool MustChangePassword { get; set; }
@@ -18,6 +19,7 @@ public class User
     public string Phone { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public string EmployeeCode { get; set; } = string.Empty;
-    public decimal BaseSalary { get; set; } = 15000000; // Mức lương cơ bản mặc định
+    public decimal BaseSalary { get; set; } = 15000000;
+    public string PayrollPin { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
 }

@@ -194,7 +194,7 @@ public class ManagerController : Controller
 
         if (!success)
         {
-            return Json(new { success = false, message = "Khong tim thay vi pham can cap nhat." });
+            return Json(new { success = false, message = "Không tìm thấy vi phạm cần cập nhật." });
         }
 
         _context.AuditLogs.Add(new AuditLog

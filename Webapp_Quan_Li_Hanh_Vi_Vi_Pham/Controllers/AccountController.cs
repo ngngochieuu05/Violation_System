@@ -41,14 +41,14 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
-            ModelState.AddModelError("", "Vui long nhap ten dang nhap va mat khau.");
+            ModelState.AddModelError("", "Vui lòng nhập tên đăng nhập và mật khẩu.");
             return View();
         }
 
         var user = await _userService.AuthenticateAsync(username, password, cancellationToken);
         if (user == null)
         {
-            ModelState.AddModelError("", "Ten dang nhap hoac mat khau khong dung.");
+            ModelState.AddModelError("", "Tên đăng nhập hoặc mật khẩu không đúng.");
             return View();
         }
 
@@ -84,7 +84,7 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(faceImage))
         {
-            ModelState.AddModelError("", "Vui long dien day du thong tin va chup anh nhan dien khuon mat.");
+            ModelState.AddModelError("", "Vui lòng điền đầy đủ thông tin và chụp ảnh nhận diện khuôn mặt.");
             return View();
         }
 
@@ -107,7 +107,7 @@ public class AccountController : Controller
             var registered = await _userService.RegisterAsync(newUser, password, faceImage, cancellationToken);
             if (registered != null)
             {
-                TempData["SuccessMessage"] = "Dang ky thanh cong. Vui long dang nhap.";
+                TempData["SuccessMessage"] = "Đăng ký thành công. Vui lòng đăng nhập.";
                 return RedirectToAction(nameof(Login));
             }
         }
@@ -130,13 +130,13 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(faceImage))
         {
-            return Json(new { success = false, message = "Vui long cung cap ten dang nhap va hinh anh khuon mat." });
+            return Json(new { success = false, message = "Vui lòng cung cấp tên đăng nhập và hình ảnh khuôn mặt." });
         }
 
         var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "login", cancellationToken);
         if (!verified)
         {
-            return Json(new { success = false, message = "Nhan dien khuon mat that bai hoac khong khop." });
+            return Json(new { success = false, message = "Nhận diện khuôn mặt thất bại hoặc không khớp." });
         }
 
         using var db = HttpContext.RequestServices.GetRequiredService<ViolationDbContext>();
@@ -144,7 +144,7 @@ public class AccountController : Controller
 
         if (user == null)
         {
-            return Json(new { success = false, message = "Khong tim thay nguoi dung." });
+            return Json(new { success = false, message = "Không tìm thấy người dùng." });
         }
 
         if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase) && !user.IsKeyActivated)
@@ -172,69 +172,6 @@ public class AccountController : Controller
         return Json(new { success = true, redirectUrl });
     }
 
-    [HttpPost]
-    [AllowAnonymous]
-    public IActionResult GoogleLogin(string? mode = "login", string? returnUrl = null)
-    {
-        var normalizedMode = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase) ? "register" : "login";
-        var redirectUrl = Url.Action(nameof(GoogleResponse), new { mode = normalizedMode, returnUrl }) ?? Url.Action(nameof(Login))!;
-        var properties = new AuthenticationProperties
-        {
-            RedirectUri = redirectUrl
-        };
-
-        return Challenge(properties, "Google");
-    }
-
-    [HttpGet]
-    [AllowAnonymous]
-    public async Task<IActionResult> GoogleResponse(string? mode = "login", string? returnUrl = null, CancellationToken cancellationToken = default)
-    {
-        if (User.Identity?.IsAuthenticated != true)
-        {
-            TempData["ErrorMessage"] = "Dang nhap Google that bai.";
-            return RedirectToAction(nameof(Login));
-        }
-
-        var username = User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            TempData["ErrorMessage"] = "Khong the xac dinh tai khoan tu Google.";
-            return RedirectToAction(nameof(Login));
-        }
-
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
-        if (user == null)
-        {
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            TempData["ErrorMessage"] = "Tai khoan Google chua duoc lien ket voi he thong.";
-            return RedirectToAction(nameof(Login));
-        }
-
-        if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase) && !user.IsKeyActivated)
-        {
-            TempData["UsernameToActivate"] = user.Username;
-            return RedirectToAction("ActivateKey", "Manager");
-        }
-
-        var isRegisterFlow = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase);
-        var createdNow = string.Equals(User.FindFirst("GoogleAccountCreated")?.Value, "true", StringComparison.OrdinalIgnoreCase);
-
-        if (isRegisterFlow)
-        {
-            TempData["SuccessMessage"] = createdNow
-                ? "Dang ky bang Google thanh cong. Hay doi mat khau va bo sung khuon mat ngay khi vao dashboard."
-                : "Tai khoan Google nay da ton tai. He thong da dang nhap cho ban.";
-        }
-
-        if (!isRegisterFlow && !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-        {
-            return Redirect(returnUrl);
-        }
-
-        return RedirectToDashboard(user.Role);
-    }
 
     [HttpPost]
     [AllowAnonymous]
@@ -318,7 +255,7 @@ public class AccountController : Controller
         var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "attendance", cancellationToken);
         if (!verified)
         {
-            return Json(new { success = false, message = "Khuon mat khong khop voi tai khoan dang dang nhap." });
+            return Json(new { success = false, message = "Khuôn mặt không khớp với tài khoản đang đăng nhập." });
         }
 
         return Json(new { success = true, message = "Xac thuc khuon mat thanh cong." });
@@ -331,23 +268,23 @@ public class AccountController : Controller
         var userIdStr = User.FindFirst("UserId")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
         {
-            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
         }
 
         var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
         if (currentUser == null)
         {
-            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
         }
 
         if (string.IsNullOrWhiteSpace(newPassword))
         {
-            return Json(new { success = false, message = "Vui long nhap mat khau moi." });
+            return Json(new { success = false, message = "Vui lòng nhập mật khẩu mới." });
         }
 
         if (!currentUser.MustChangePassword && string.IsNullOrWhiteSpace(oldPassword))
         {
-            return Json(new { success = false, message = "Vui long nhap mat khau cu." });
+            return Json(new { success = false, message = "Vui lòng nhập mật khẩu cũ." });
         }
 
         if (!PasswordPolicy.TryValidate(newPassword, out var passwordError))
@@ -358,10 +295,10 @@ public class AccountController : Controller
         var success = await _userService.ChangePasswordAsync(userId, oldPassword, newPassword, cancellationToken);
         if (!success)
         {
-            return Json(new { success = false, message = "Mat khau cu khong dung." });
+            return Json(new { success = false, message = "Mật khẩu cũ không đúng." });
         }
 
-        return Json(new { success = true, message = "Doi mat khau thanh cong." });
+        return Json(new { success = true, message = "Đổi mật khẩu thành công." });
     }
 
     [Authorize]
@@ -371,7 +308,7 @@ public class AccountController : Controller
         var userIdStr = User.FindFirst("UserId")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
         {
-            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
         }
 
         var status = await _userService.GetSecuritySetupStatusAsync(userId, cancellationToken);
@@ -392,21 +329,21 @@ public class AccountController : Controller
         var userIdStr = User.FindFirst("UserId")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
         {
-            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+            return Json(new { success = false, message = "Người dùng không hợp lệ." });
         }
 
         if (string.IsNullOrWhiteSpace(faceImagesBase64))
         {
-            return Json(new { success = false, message = "Thieu du lieu khuon mat." });
+            return Json(new { success = false, message = "Thiếu dữ liệu khuôn mặt." });
         }
 
         var success = await _userService.UpdateBiometricImageAsync(userId, faceImagesBase64, cancellationToken);
         if (!success)
         {
-            return Json(new { success = false, message = "Cap nhat du lieu khuon mat that bai. Dam bao anh ro rang va chi co 1 khuon mat." });
+            return Json(new { success = false, message = "Cập nhật dữ liệu khuôn mặt thất bại. Đảm bảo ảnh rõ ràng và chỉ có 1 khuôn mặt." });
         }
 
-        return Json(new { success = true, message = "Cap nhat du lieu khuon mat thanh cong." });
+        return Json(new { success = true, message = "Cập nhật dữ liệu khuôn mặt thành công." });
     }
 
     public async Task<IActionResult> Logout()
@@ -427,7 +364,7 @@ public class AccountController : Controller
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username))
         {
-            return Json(new { success = false, hasBiometricRegistration = false, message = "Thieu thong tin nguoi dung." });
+            return Json(new { success = false, hasBiometricRegistration = false, message = "Thiếu thông tin người dùng." });
         }
 
         var hasBiometricRegistration = await _userService.HasBiometricRegistrationAsync(username, cancellationToken);
@@ -436,8 +373,8 @@ public class AccountController : Controller
             success = true,
             hasBiometricRegistration,
             message = hasBiometricRegistration
-                ? "Da co du lieu sinh trac hoc."
-                : "Ban chua dang ky sinh trac hoc. Vui long cap nhat o Cai dat ho so."
+                ? "Đã có dữ liệu sinh trắc học."
+                : "Bạn chưa đăng ký sinh trắc học. Vui lòng cập nhật ở Cài đặt hồ sơ."
         });
     }
 

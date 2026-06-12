@@ -39,7 +39,7 @@
             return;
         }
 
-        element.textContent = done ? "Da hoan tat" : "Chua hoan tat";
+        element.textContent = done ? "Đã hoàn tất" : "Chưa hoàn tất";
         element.className = `inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${done ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`;
     };
 
@@ -87,25 +87,25 @@
             setBadge(faceBadge, hasBiometric);
 
             if (passwordHint) {
-                passwordHint.textContent = data.passwordPolicyDescription || "Mat khau moi phai manh hon de bao ve tai khoan.";
+                passwordHint.textContent = data.passwordPolicyDescription || "Mật khẩu mới phải mạnh hơn để bảo vệ tài khoản.";
             }
 
             if (faceMsg) {
                 faceMsg.textContent = hasBiometric
-                    ? "Da co du lieu khuon mat."
-                    : "Hay mo camera va chup du 4 anh khuon mat.";
+                    ? "Đã có dữ liệu khuôn mặt."
+                    : "Hãy mở camera và chụp đủ 4 ảnh khuôn mặt.";
             }
 
             if (completeMsg) {
                 completeMsg.textContent = requiresSetup
-                    ? "Dashboard se duoc mo khi ban hoan tat 2 buoc tren."
-                    : "Ban da hoan tat xac thuc tai khoan.";
+                    ? "Dashboard sẽ được mở khi bạn hoàn tất 2 bước trên."
+                    : "Bạn đã hoàn tất xác thực tài khoản.";
             }
 
             if (summary) {
                 summary.textContent = requiresSetup
-                    ? "Tai khoan dang nhap bang email phai doi mat khau va bo sung khuon mat truoc khi tiep tuc su dung dashboard."
-                    : "Tai khoan da hoan tat xac thuc bat buoc.";
+                    ? "Tài khoản đăng nhập bằng email phải đổi mật khẩu và bổ sung khuôn mặt trước khi tiếp tục sử dụng dashboard."
+                    : "Tài khoản đã hoàn tất xác thực bắt buộc.";
             }
 
             if (requiresSetup) {
@@ -127,24 +127,24 @@
         }
 
         if (!newPassword || !confirmPassword) {
-            passwordMsg.textContent = "Vui long nhap day du mat khau moi va xac nhan.";
+            passwordMsg.textContent = "Vui lòng nhập đầy đủ mật khẩu mới và xác nhận.";
             passwordMsg.className = "mt-3 text-xs font-semibold text-red-600";
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            passwordMsg.textContent = "Mat khau xac nhan khong khop.";
+            passwordMsg.textContent = "Mật khẩu xác nhận không khớp.";
             passwordMsg.className = "mt-3 text-xs font-semibold text-red-600";
             return;
         }
 
         if (!validatePasswordPolicy(newPassword)) {
-            passwordMsg.textContent = "Mat khau phai co it nhat 8 ky tu, gom chu hoa, chu thuong, so va ky tu dac biet.";
+            passwordMsg.textContent = "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.";
             passwordMsg.className = "mt-3 text-xs font-semibold text-red-600";
             return;
         }
 
-        passwordMsg.textContent = "Dang cap nhat mat khau...";
+        passwordMsg.textContent = "Đang cập nhật mật khẩu...";
         passwordMsg.className = "mt-3 text-xs font-semibold text-amber-600";
 
         try {
@@ -155,7 +155,7 @@
             });
             const data = await response.json();
 
-            passwordMsg.textContent = data.message || (data.success ? "Doi mat khau thanh cong." : "Khong the doi mat khau.");
+            passwordMsg.textContent = data.message || (data.success ? "Đổi mật khẩu thành công." : "Không thể đổi mật khẩu.");
             passwordMsg.className = `mt-3 text-xs font-semibold ${data.success ? "text-emerald-600" : "text-red-600"}`;
 
             if (data.success) {
@@ -164,7 +164,7 @@
                 refreshStatus();
             }
         } catch (error) {
-            passwordMsg.textContent = "Loi ket noi may chu.";
+            passwordMsg.textContent = "Lỗi kết nối máy chủ.";
             passwordMsg.className = "mt-3 text-xs font-semibold text-red-600";
         }
     });

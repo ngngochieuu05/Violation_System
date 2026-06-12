@@ -60,7 +60,7 @@
             <div class="saas-card p-6">
                 <div class="mb-6 border-b border-slate-100 pb-4">
                     <p class="saas-label mb-1">Tài khoản</p>
-                    <h3 class="saas-heading text-lg">Phiên làm việc</h3>
+                    <h3 class="saas-heading text-lg">Phiên làm việc & Bảo mật</h3>
                 </div>
                 
                 <div class="space-y-3">
@@ -69,11 +69,45 @@
                         <i class="fa-solid fa-angle-right text-slate-400 group-hover:text-slate-600 transition"></i>
                     </button>
                     
+                    <button type="button" id="btnOpenPayrollPinSetup" class="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition group active:scale-95">
+                        <div>
+                            <span class="text-sm font-bold block text-left">Đăng ký / Đổi mã PIN</span>
+                            <span class="text-xs text-slate-500 font-normal">Dùng để xem phiếu lương</span>
+                        </div>
+                        <i class="fa-solid fa-key text-slate-400 group-hover:text-slate-600 transition"></i>
+                    </button>
+                    
                     <a asp-controller="Account" asp-action="Logout" class="w-full flex items-center justify-between p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition group active:scale-95 no-underline">
                         <span class="text-sm font-bold">Đăng xuất an toàn</span>
                         <i class="fa-solid fa-right-from-bracket group-hover:translate-x-1 transition-transform"></i>
                     </a>
                 </div>
+            </div>
+        </div>
+    <!-- Setup Payroll PIN Modal -->
+    <div id="setupPayrollPinModal" class="fixed inset-0 z-[1200] hidden items-center justify-center p-4 backdrop-blur-sm" style="background-color: rgba(15, 23, 42, 0.5);">
+        <div class="w-full max-w-sm overflow-hidden rounded-[20px] bg-white shadow-2xl flex flex-col transform scale-95 opacity-0 transition-all duration-300" id="setupPayrollPinModalContent">
+            <div class="flex flex-col items-center border-b border-slate-100 p-6 bg-slate-50">
+                <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <i class="fa-solid fa-key text-2xl"></i>
+                </div>
+                <h3 class="font-outfit text-xl font-bold text-slate-900">Đăng ký Mã PIN</h3>
+                <p class="mt-1 text-center text-sm text-slate-500">Mã PIN dùng để bảo mật khi xem phiếu lương</p>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="mb-2 block text-sm font-bold uppercase tracking-wider text-slate-500">Mã PIN mới</label>
+                    <input type="password" id="newPayrollPinInput" maxlength="6" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-slate-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100" placeholder="••••" />
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-bold uppercase tracking-wider text-slate-500">Xác nhận mã PIN</label>
+                    <input type="password" id="confirmPayrollPinInput" maxlength="6" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] text-slate-900 outline-none transition focus:border-red-300 focus:bg-white focus:ring-2 focus:ring-red-100" placeholder="••••" />
+                </div>
+                <p id="setupPayrollPinError" class="hidden text-center text-sm font-medium text-red-500"></p>
+            </div>
+            <div class="border-t border-slate-100 bg-slate-50 p-6 flex gap-3">
+                <button type="button" id="closeSetupPayrollPinModal" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition">Hủy</button>
+                <button type="button" id="submitSetupPayrollPinBtn" class="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 transition">Xác nhận</button>
             </div>
         </div>
     </div>

@@ -71,11 +71,16 @@ public class AdminController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var activeSetting = await _modelSettingService.GetActiveSettingAsync(cancellationToken);
+        var managers = await _context.Users.Where(u => u.Role == "Manager").OrderByDescending(u => u.CreatedAtUtc).ToListAsync(cancellationToken);
+        var aiModels = await _context.AiModels.OrderByDescending(m => m.CreatedAtUtc).ToListAsync(cancellationToken);
+
+        // Calculate actual statistics from the database
+        var totalEmployees = await _context.Users.CountAsync(u => u.Role == "Manager" || u.Role == "Employee", cancellationToken);
         
-        var managers = await _context.Users
-            .Where(u => u.Role == "Manager")
-            .OrderByDescending(u => u.CreatedAtUtc)
-            .ToListAsync(cancellationToken);
+        var todayUtc = DateTime.UtcNow.Date;
+        var violationsToday = await _context.ViolationRecords.CountAsync(v => v.DetectedAtUtc >= todayUtc, cancellationToken);
+        
+        var pendingRequests = await _context.ApprovalRequests.CountAsync(r => r.Status == "Chờ duyệt", cancellationToken);
 
         // Compliance rate: percentage of employees who did NOT violate today
         var usersWithViolationsToday = await _context.ViolationRecords
@@ -100,12 +105,16 @@ public class AdminController : Controller
         return View(activeSetting);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> UpdateModelSettings(
-        string yoloModelPath, 
-        decimal yoloConfThreshold, 
-        decimal yoloIouThreshold, 
-        decimal deepfaceConfThreshold,
+    [HttpPost("AddPersonnel")]
+    public async Task<IActionResult> AddPersonnel(
+        string fullName,
+        string username,
+        string password,
+        string role,
+        string department,
+        string email,
+        string phone,
+        string employeeCode,
         CancellationToken cancellationToken)
     {
         role = "Manager";
@@ -274,7 +283,7 @@ public class AdminController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, string confThreshold, string iouThreshold, CancellationToken cancellationToken)
+    public async Task<IActionResult> AddAiModel(string name, string type, string modelPath, decimal confThreshold, decimal iouThreshold, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type) || string.IsNullOrEmpty(modelPath))
         {
@@ -288,8 +297,8 @@ public class AdminController : Controller
             Name = name,
             Type = type,
             ModelPath = modelPath,
-            ConfThreshold = parsedConf,
-            IouThreshold = parsedIou,
+            ConfThreshold = confThreshold,
+            IouThreshold = iouThreshold,
             IsActive = false, // starts as inactive, user can toggle active
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -307,8 +316,8 @@ public class AdminController : Controller
         Guid id, 
         string name, 
         string modelPath, 
-        string confThreshold, 
-        string iouThreshold, 
+        decimal confThreshold, 
+        decimal iouThreshold, 
         CancellationToken cancellationToken)
     {
         var model = await _context.AiModels.FindAsync(new object[] { id }, cancellationToken);
@@ -323,9 +332,6 @@ public class AdminController : Controller
             TempData["ErrorMessage"] = "Vui lòng điền đầy đủ tên và đường dẫn mô hình.";
             return RedirectToAction("Index");
         }
-
-        decimal.TryParse(confThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedConf);
-        decimal.TryParse(iouThreshold?.Replace(",", "."), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedIou);
 
         model.Name = name;
         model.ModelPath = modelPath;

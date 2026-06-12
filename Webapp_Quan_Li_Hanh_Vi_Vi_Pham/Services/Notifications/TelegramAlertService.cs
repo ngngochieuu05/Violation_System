@@ -112,7 +112,7 @@ public class TelegramAlertService : ITelegramAlertService
                 Success = false,
                 ChatId = effectiveChatId,
                 Message = message,
-                ResponseSummary = "Bot token chua duoc cau hinh."
+                ResponseSummary = "Bot token chưa được cấu hình."
             };
         }
 
@@ -123,7 +123,7 @@ public class TelegramAlertService : ITelegramAlertService
                 Success = false,
                 ChatId = string.Empty,
                 Message = message,
-                ResponseSummary = "Chua co chat id de gui thu."
+                ResponseSummary = "Chưa có chat id để gửi thử."
             };
         }
 
@@ -212,7 +212,7 @@ public class TelegramAlertService : ITelegramAlertService
                 return 1;
 
             case "/chatid":
-                await SendMessageCoreAsync(update.ChatId, $"Chat ID cua ban la: {update.ChatId}", cancellationToken: cancellationToken);
+                await SendMessageCoreAsync(update.ChatId, $"Chat ID của bạn là: {update.ChatId}", cancellationToken: cancellationToken);
                 return 1;
 
             case "/status":
@@ -248,7 +248,7 @@ public class TelegramAlertService : ITelegramAlertService
             default:
                 await SendMessageCoreAsync(
                     update.ChatId,
-                    "Lenh khong hop le. Gui /help de xem danh sach lenh duoc ho tro.",
+                    "Lệnh không hợp lệ. Gửi /help để xem danh sách lệnh được hỗ trợ.",
                     cancellationToken: cancellationToken);
                 return 1;
         }
@@ -264,7 +264,7 @@ public class TelegramAlertService : ITelegramAlertService
         var parts = update.CallbackData.Split('|', 3, StringSplitOptions.TrimEntries);
         if (parts.Length < 3 || !string.Equals(parts[0], "violation", StringComparison.OrdinalIgnoreCase))
         {
-            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Callback khong duoc ho tro.", cancellationToken);
+            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Callback không được hỗ trợ.", cancellationToken);
             return 1;
         }
 
@@ -273,28 +273,28 @@ public class TelegramAlertService : ITelegramAlertService
 
         if (string.Equals(action, "detail", StringComparison.OrdinalIgnoreCase))
         {
-            await AnswerCallbackQueryAsync(update.CallbackQueryId, $"Dang mo chi tiet {trackingId}", cancellationToken);
+            await AnswerCallbackQueryAsync(update.CallbackQueryId, $"Đang mở chi tiết {trackingId}", cancellationToken);
             await SendMessageCoreAsync(update.ChatId, await BuildViolationDetailMessageAsync(trackingId, cancellationToken), cancellationToken: cancellationToken);
             return 1;
         }
 
         if (string.Equals(action, "approve", StringComparison.OrdinalIgnoreCase))
         {
-            var result = await ReviewViolationFromTelegramAsync(trackingId, "Approved", update, "Phe duyet tu button Telegram", cancellationToken);
-            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Da cap nhat trang thai.", cancellationToken);
+            var result = await ReviewViolationFromTelegramAsync(trackingId, "Approved", update, "Phê duyệt từ button Telegram", cancellationToken);
+            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Đã cập nhật trạng thái.", cancellationToken);
             await SendMessageCoreAsync(update.ChatId, result, cancellationToken: cancellationToken);
             return 1;
         }
 
         if (string.Equals(action, "reject", StringComparison.OrdinalIgnoreCase))
         {
-            var result = await ReviewViolationFromTelegramAsync(trackingId, "Rejected", update, "Tu choi tu button Telegram", cancellationToken);
-            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Da cap nhat trang thai.", cancellationToken);
+            var result = await ReviewViolationFromTelegramAsync(trackingId, "Rejected", update, "Từ chối từ button Telegram", cancellationToken);
+            await AnswerCallbackQueryAsync(update.CallbackQueryId, "Đã cập nhật trạng thái.", cancellationToken);
             await SendMessageCoreAsync(update.ChatId, result, cancellationToken: cancellationToken);
             return 1;
         }
 
-        await AnswerCallbackQueryAsync(update.CallbackQueryId, "Hanh dong khong duoc ho tro.", cancellationToken);
+        await AnswerCallbackQueryAsync(update.CallbackQueryId, "Hành động không được hỗ trợ.", cancellationToken);
         return 1;
     }
 
@@ -307,7 +307,7 @@ public class TelegramAlertService : ITelegramAlertService
     {
         if (string.IsNullOrWhiteSpace(trackingId))
         {
-            return "Thieu ma vi pham. Dung /pending hoac /latest de lay danh sach.";
+            return "Thiếu mã vi phạm. Dùng /pending hoặc /latest để lấy danh sách.";
         }
 
         using var scope = _scopeFactory.CreateScope();
@@ -317,12 +317,12 @@ public class TelegramAlertService : ITelegramAlertService
         var record = await violationService.GetViolationByTrackingIdAsync(trackingId, cancellationToken);
         if (record == null)
         {
-            return $"Khong tim thay vi pham {trackingId}.";
+            return $"Không tìm thấy vi phạm {trackingId}.";
         }
 
         if (string.Equals(record.Status, status, StringComparison.OrdinalIgnoreCase))
         {
-            return $"Vi pham {trackingId} da o trang thai {status}.";
+            return $"Vi pham {trackingId} đã ở trạng thái {status}.";
         }
 
         var reviewer = string.IsNullOrWhiteSpace(update.SenderUsername)
@@ -339,7 +339,7 @@ public class TelegramAlertService : ITelegramAlertService
 
         if (!success)
         {
-            return $"Khong the cap nhat vi pham {trackingId}.";
+            return $"Không thể cập nhật vi phạm {trackingId}.";
         }
 
         dbContext.AuditLogs.Add(new AuditLog
@@ -348,13 +348,13 @@ public class TelegramAlertService : ITelegramAlertService
             Timestamp = DateTime.UtcNow,
             Username = reviewer,
             Action = "Review violation",
-            Details = $"Telegram cap nhat {trackingId} sang trang thai {status}. Ghi chu: {reviewNote}",
+            Details = $"Telegram cap nhat {trackingId} sang trạng thái {status}. Ghi chu: {reviewNote}",
             IpAddress = "Telegram",
             Status = "Thanh cong"
         });
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return $"Da cap nhat vi pham {trackingId} sang trang thai {status}.";
+        return $"Đã cập nhật vi phạm {trackingId} sang trạng thái {status}.";
     }
 
     private async Task<string> BuildStatusMessageAsync(CancellationToken cancellationToken)
@@ -368,7 +368,7 @@ public class TelegramAlertService : ITelegramAlertService
         var approved = await dbContext.ViolationRecords.CountAsync(v => v.Status == "Approved", cancellationToken);
         var rejected = await dbContext.ViolationRecords.CountAsync(v => v.Status == "Rejected", cancellationToken);
 
-        return $"Thong ke hom nay:\n- Tong vi pham: {totalToday}\n- Cho duyet: {pending}\n- Da duyet: {approved}\n- Tu choi: {rejected}";
+        return $"Thống kê hôm nay:\n- Tổng vi phạm: {totalToday}\n- Chờ duyệt: {pending}\n- Đã duyệt: {approved}\n- Từ chối: {rejected}";
     }
 
     private async Task<string> BuildPendingMessageAsync(CancellationToken cancellationToken)
@@ -384,16 +384,16 @@ public class TelegramAlertService : ITelegramAlertService
 
         if (pending.Count == 0)
         {
-            return "Khong co vi pham nao dang cho duyet.";
+            return "Không có vi phạm nào đang chờ duyệt.";
         }
 
-        var builder = new StringBuilder("Danh sach vi pham cho duyet:\n");
+        var builder = new StringBuilder("Danh sách vi phạm chờ duyệt:\n");
         foreach (var item in pending)
         {
             builder.AppendLine($"- {item.TrackingId}: {item.ViolationType} | {item.Severity} | {item.DetectedAtUtc:dd/MM HH:mm}");
         }
 
-        builder.Append("Dung /approve <TrackingId> hoac /reject <TrackingId> de cap nhat.");
+        builder.Append("Dùng /approve <TrackingId> hoặc /reject <TrackingId> để cập nhật.");
         return builder.ToString();
     }
 
@@ -409,10 +409,10 @@ public class TelegramAlertService : ITelegramAlertService
 
         if (latest.Count == 0)
         {
-            return "He thong chua ghi nhan vi pham nao.";
+            return "Hệ thống chưa ghi nhận vi phạm nào.";
         }
 
-        var builder = new StringBuilder("5 vi pham moi nhat:\n");
+        var builder = new StringBuilder("5 vi phạm mới nhất:\n");
         foreach (var item in latest)
         {
             builder.AppendLine($"- {item.TrackingId}: {item.ViolationType} | {item.Status} | {item.DetectedAtUtc:dd/MM HH:mm}");
@@ -425,7 +425,7 @@ public class TelegramAlertService : ITelegramAlertService
     {
         if (string.IsNullOrWhiteSpace(trackingId))
         {
-            return "Thieu ma vi pham. Dung /violation <TrackingId>.";
+            return "Thiếu mã vi phạm. Dùng /violation <TrackingId>.";
         }
 
         using var scope = _scopeFactory.CreateScope();
@@ -433,39 +433,39 @@ public class TelegramAlertService : ITelegramAlertService
         var item = await violationService.GetViolationByTrackingIdAsync(trackingId, cancellationToken);
         if (item == null)
         {
-            return $"Khong tim thay vi pham {trackingId}.";
+            return $"Không tìm thấy vi phạm {trackingId}.";
         }
 
         var reviewedAt = item.ReviewedAtUtc.HasValue
             ? item.ReviewedAtUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")
-            : "Chua duyet";
+            : "Chưa duyệt";
 
         return
-            $"Chi tiet vi pham {item.TrackingId}\n" +
-            $"- Nhan vien: {item.EmployeeName} ({item.EmployeeCode})\n" +
-            $"- Loai: {item.ViolationType}\n" +
-            $"- Muc do: {item.Severity}\n" +
+            $"Chi tiết vi phạm {item.TrackingId}\n" +
+            $"- Nhân viên: {item.EmployeeName} ({item.EmployeeCode})\n" +
+            $"- Loại: {item.ViolationType}\n" +
+            $"- Mức độ: {item.Severity}\n" +
             $"- Camera: {item.CameraLocation}\n" +
-            $"- Trang thai: {item.Status}\n" +
-            $"- Ghi nhan: {item.DetectedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm:ss}\n" +
-            $"- Nguoi duyet: {item.ReviewedBy ?? "Chua cap nhat"}\n" +
-            $"- Kenh duyet: {item.ReviewChannel ?? "Chua cap nhat"}\n" +
-            $"- Thoi diem duyet: {reviewedAt}";
+            $"- Trạng thái: {item.Status}\n" +
+            $"- Ghi nhận: {item.DetectedAtUtc.ToLocalTime():dd/MM/yyyy HH:mm:ss}\n" +
+            $"- Người duyệt: {item.ReviewedBy ?? "Chưa cập nhật"}\n" +
+            $"- Kênh duyệt: {item.ReviewChannel ?? "Chưa cập nhật"}\n" +
+            $"- Thời điểm duyệt: {reviewedAt}";
     }
 
     private static string BuildHelpMessage()
     {
         return
-            "Danh sach lenh Telegram:\n" +
-            "/start - Khoi dong bot\n" +
-            "/help - Xem huong dan\n" +
-            "/chatid - Lay chat id hien tai\n" +
-            "/status - Xem thong ke vi pham hom nay\n" +
-            "/pending - Xem vi pham dang cho duyet\n" +
-            "/latest - Xem 5 vi pham moi nhat\n" +
-            "/violation <TrackingId> - Xem chi tiet 1 vi pham\n" +
-            "/approve <TrackingId> - Duyet vi pham\n" +
-            "/reject <TrackingId> <ghi-chu> - Tu choi vi pham";
+            "Danh sách lệnh Telegram:\n" +
+            "/start - Khởi động bot\n" +
+            "/help - Xem hướng dẫn\n" +
+            "/chatid - Lấy chat id hiện tại\n" +
+            "/status - Xem thống kê vi phạm hôm nay\n" +
+            "/pending - Xem vi phạm đang chờ duyệt\n" +
+            "/latest - Xem 5 vi phạm mới nhất\n" +
+            "/violation <TrackingId> - Xem chi tiết 1 vi phạm\n" +
+            "/approve <TrackingId> - Duyệt vi phạm\n" +
+            "/reject <TrackingId> <ghi-chu> - Từ chối vi phạm";
     }
 
     private async Task<IReadOnlyCollection<TelegramChatUpdate>> GetUpdatesCoreAsync(long? offset, CancellationToken cancellationToken)
@@ -698,7 +698,7 @@ public class TelegramAlertService : ITelegramAlertService
 
     private string BuildWelcomeMessage(string chatId)
     {
-        return $"{_options.WelcomeMessage}\nChat ID cua ban: {chatId}\nGui /help de xem danh sach lenh.";
+        return $"{_options.WelcomeMessage}\nChat ID của bạn: {chatId}\nGửi /help để xem danh sách lệnh.";
     }
 
     private static object BuildViolationInlineKeyboard(ViolationRecord violation)
@@ -709,12 +709,12 @@ public class TelegramAlertService : ITelegramAlertService
             {
                 new object[]
                 {
-                    new { text = "Duyet", callback_data = $"violation|approve|{violation.TrackingId}" },
-                    new { text = "Tu choi", callback_data = $"violation|reject|{violation.TrackingId}" }
+                    new { text = "Duyệt", callback_data = $"violation|approve|{violation.TrackingId}" },
+                    new { text = "Từ chối", callback_data = $"violation|reject|{violation.TrackingId}" }
                 },
                 new object[]
                 {
-                    new { text = "Chi tiet", callback_data = $"violation|detail|{violation.TrackingId}" }
+                    new { text = "Chi tiết", callback_data = $"violation|detail|{violation.TrackingId}" }
                 }
             }
         };
@@ -724,10 +724,10 @@ public class TelegramAlertService : ITelegramAlertService
     {
         return
             $"{message}\n" +
-            $"Ma vi pham: {violation.TrackingId}\n" +
-            $"Nhan vien: {violation.EmployeeName} ({violation.EmployeeCode})\n" +
-            $"Muc do: {violation.Severity}\n" +
-            $"Trang thai: {violation.Status}\n" +
-            $"Dung /approve {violation.TrackingId} hoac /reject {violation.TrackingId} neu can.";
+            $"Mã vi phạm: {violation.TrackingId}\n" +
+            $"Nhân viên: {violation.EmployeeName} ({violation.EmployeeCode})\n" +
+            $"Mức độ: {violation.Severity}\n" +
+            $"Trạng thái: {violation.Status}\n" +
+            $"Dùng /approve {violation.TrackingId} hoặc /reject {violation.TrackingId} nếu cần.";
     }
 }

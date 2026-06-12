@@ -158,9 +158,6 @@
             <div class="my-4 border-t border-slate-200"></div>
             <p class="px-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Hệ thống</p>
             
-            <button type="button" data-tab-trigger="profile" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
-                <i class="fa-solid fa-user-gear w-5 text-center mr-3"></i>Cài đặt hồ sơ
-            </button>
             <button type="button" data-tab-trigger="settings" class="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md text-slate-600 hover:bg-red-50 hover:text-red-600">
                 <i class="fa-solid fa-gear w-5 text-center mr-3"></i>Cài đặt
             </button>
@@ -181,32 +178,23 @@
                 <div class="hidden sm:flex items-center relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-sm"></i>
                     <input type="text" placeholder="Tìm kiếm..." class="bg-white border border-slate-200 rounded-full py-1.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-red-100 focus:border-red-300 transition w-48 text-slate-700 shadow-sm">
-                </div>
-
-                <!-- Notifications -->
+                </div>                <!-- Notifications -->
                 <div class="relative ml-2" id="dashboardNotificationDropdown">
                     <button type="button" class="relative text-slate-500 hover:text-red-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 focus:outline-none" id="dashboardNotificationTrigger">
                         <i class="fa-regular fa-bell text-xl"></i>
-                        <span class="absolute top-0 right-0 flex h-2 w-2">
+                        <span data-notification-unread-badge class="absolute top-0 right-0 hidden h-2 w-2">
                             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                         </span>
                     </button>
                     
                     <div id="dashboardNotificationMenu" class="absolute mt-2 w-80 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
                         <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center gap-2">
                             <p class="text-sm font-semibold text-slate-900 whitespace-nowrap">Thông báo</p>
-                            <span class="text-xs text-red-600 cursor-pointer hover:underline whitespace-nowrap text-right">Đánh dấu đã đọc</span>
+                            <button type="button" data-notification-mark-all class="text-xs text-red-600 hover:underline whitespace-nowrap text-right">Đánh dấu đã đọc</button>
                         </div>
-                        <div class="py-2 max-h-64 overflow-y-auto">
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                <p class="text-sm text-slate-800 font-medium">Đơn xin nghỉ phép của bạn đã được duyệt</p>
-                                <p class="text-xs text-slate-500 mt-1">10 phút trước</p>
-                            </div>
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                <p class="text-sm text-slate-800 font-medium">Sếp nhắn tin cho bạn: "Cập nhật tiến độ nhé"</p>
-                                <p class="text-xs text-slate-500 mt-1">1 giờ trước</p>
-                            </div>
+                        <div data-notification-list class="py-2 max-h-64 overflow-y-auto">
+                            <div class="px-4 py-5 text-center text-sm text-slate-500">Đang tải thông báo...</div>
                         </div>
                     </div>
                 </div>

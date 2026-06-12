@@ -191,6 +191,7 @@
 
     let profile = { ...defaultProfile, ...readStore(storageKeys.profile, {}) };
     let avatarDataUrl = readAvatar();
+    let hasPayrollPin = false;
     let attendance = normalizeAttendance(readStore(storageKeys.attendance, null));
     let requests = readStore(storageKeys.requests, []);
     let chats = readStore(storageKeys.chats, defaultChats);
@@ -207,6 +208,7 @@
         reducedMotion: false
     });
     let activeChat = "manager";
+    let editingMessageId = null;
 
     const getLocale = () => settings.language || "vi-VN";
 
@@ -648,21 +650,164 @@
                 else tone = 'bg-amber-50 text-amber-700';
                 
                 card.className = 'rounded-2xl border border-slate-200 bg-white p-4';
-                card.innerHTML = `<div class="flex items-center justify-between gap-3"><p class="font-semibold text-slate-900">${item.type}</p><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span></div><p class="mt-2 text-sm text-slate-500">${item.date}</p><p class="mt-2 text-sm text-slate-600">${item.content.replace(/
-/g, '<br>')}</p>`;
+                card.innerHTML = `<div class="flex items-center justify-between gap-3"><p class="font-semibold text-slate-900">${item.type}</p><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span></div><p class="mt-2 text-sm text-slate-500">${item.date}</p><p class="mt-2 text-sm text-slate-600">${item.content.replace(/\r?\n/g, '<br>')}</p>
+                <div class="mt-3 flex justify-end">
+                    <button type="button" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Xem chi tiết</button>
+                </div>`;
+                
+                // Add detail button click handler
+                const detailBtn = card.querySelector('button');
+                detailBtn.onclick = () => {
+                    const modal = document.getElementById("requestDetailModal");
+                    const content = document.getElementById("requestDetailPreviewContent");
+                    if (modal && content) {
+                        content.innerHTML = item.content;
+                        modal.classList.remove("hidden");
+                        modal.classList.add("flex");
+                    } else {
+                        alert(`Chi tiết đơn:\n\nNội dung:\n${item.content}`);
+                    }
+                };
+                
                 list.appendChild(card);
             });
         }
     } catch (e) { console.error(e); }
 };
 
+const loadChatContacts = async () => {
+    try {
+        const res = await fetch("/Employee/GetChatContacts");
+        const result = await res.json();
+        if (result.success && Array.isArray(result.data)) {
+            const listEl = document.getElementById("messageChannelList");
+            if (!listEl) return;
+            listEl.innerHTML = "";
+            
+            result.data.forEach(contact => {
+                if (!chats[contact.username]) chats[contact.username] = [];
+                
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition text-left";
+                if (activeChat === contact.username) {
+                    btn.classList.add("bg-red-50");
+                    btn.classList.remove("hover:bg-slate-50");
+                }
+                btn.dataset.chatTarget = contact.username;
+                btn.dataset.chatName = contact.fullName;
+                
+                const avatarDiv = document.createElement("div");
+                avatarDiv.className = "w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 overflow-hidden shrink-0";
+                if (contact.avatarUrl) {
+                    avatarDiv.innerHTML = `<img src="${contact.avatarUrl}" class="w-full h-full object-cover" />`;
+                } else {
+                    avatarDiv.textContent = contact.fullName.charAt(0).toUpperCase();
+                }
+                
+                const infoDiv = document.createElement("div");
+                infoDiv.className = "flex-1 min-w-0";
+                
+                const nameP = document.createElement("p");
+                nameP.className = "text-sm font-bold text-slate-900 truncate";
+                nameP.textContent = contact.fullName;
+                
+                const preP = document.createElement("p");
+                preP.className = "text-xs text-slate-500 truncate";
+                preP.dataset.chatPreview = contact.username;
+                const msgs = chats[contact.username];
+                preP.textContent = msgs && msgs.length > 0 ? (msgs[msgs.length-1].revoked ? "Đã thu hồi" : msgs[msgs.length-1].text) : "Chưa có tin nhắn";
+                
+                infoDiv.appendChild(nameP);
+                infoDiv.appendChild(preP);
+                btn.appendChild(avatarDiv);
+                btn.appendChild(infoDiv);
+                
+                btn.addEventListener("click", () => {
+                    listEl.querySelectorAll("[data-chat-target]").forEach(b => {
+                        b.classList.remove("bg-red-50");
+                        b.classList.add("hover:bg-slate-50");
+                    });
+                    btn.classList.add("bg-red-50");
+                    btn.classList.remove("hover:bg-slate-50");
+                    
+                    activeChat = contact.username;
+                    document.querySelector("[data-chat-title]").textContent = contact.fullName;
+                    renderChats();
+                });
+                
+                listEl.appendChild(btn);
+            });
+            
+            if (result.data.length > 0 && (!activeChat || activeChat === 'manager')) {
+                activeChat = result.data[0].username;
+                document.querySelector("[data-chat-title]").textContent = result.data[0].fullName;
+                listEl.querySelector(`[data-chat-target="${activeChat}"]`)?.classList.add("bg-red-50");
+                listEl.querySelector(`[data-chat-target="${activeChat}"]`)?.classList.remove("hover:bg-slate-50");
+                renderChats();
+            }
+        }
+    } catch (e) { console.error(e); }
+};
+
+const loadMessages = async () => {
+    try {
+        const res = await fetch("/Employee/GetMyMessages");
+        const result = await res.json();
+        if (result.success && Array.isArray(result.data)) {
+            chats = {}; // Reset toàn bộ
+            result.data.forEach(m => {
+                const ch = m.channel || "manager";
+                if (!chats[ch]) chats[ch] = [];
+                chats[ch].push({
+                    id: m.id,
+                    author: m.senderRole === "Employee" ? "self" : "other",
+                    text: m.content,
+                    revoked: m.isRevoked
+                });
+            });
+            await loadChatContacts(); // Load danh bạ thực tế thay vì hardcode
+            renderChats();
+        }
+    } catch (e) { console.error(e); }
+};
+
+    const clearMessageEditing = () => {
+        editingMessageId = null;
+        const chatEditBar = document.querySelector("[data-chat-edit-bar]");
+        const chatEditLabel = document.querySelector("[data-chat-edit-label]");
+        const chatInput = document.querySelector("[data-chat-input]");
+        if (chatEditBar) {
+            chatEditBar.classList.add("hidden");
+            chatEditBar.classList.remove("flex");
+        }
+        if (chatEditLabel) chatEditLabel.textContent = "Đang chỉnh sửa tin nhắn";
+        if (chatInput) chatInput.value = "";
+    };
+
+    const startMessageEditing = (message) => {
+        editingMessageId = message.id;
+        const chatEditBar = document.querySelector("[data-chat-edit-bar]");
+        const chatEditLabel = document.querySelector("[data-chat-edit-label]");
+        const chatInput = document.querySelector("[data-chat-input]");
+        if (chatInput) {
+            chatInput.value = message.text || "";
+            chatInput.focus();
+        }
+        if (chatEditLabel) {
+            chatEditLabel.textContent = `Đang chỉnh sửa: ${message.text || ""}`;
+        }
+        if (chatEditBar) {
+            chatEditBar.classList.remove("hidden");
+            chatEditBar.classList.add("flex");
+        }
+    };
+
     const renderChats = () => {
-        // ... (keep as is or just ignore, wait I must replace it carefully)
         const title = document.querySelector("[data-chat-title]");
         const thread = document.querySelector("[data-chat-thread]");
         if (!title || !thread) return;
 
-        title.textContent = activeChat === "manager" ? "Quản lý trực tiếp" : "Phòng nhân sự";
         thread.innerHTML = "";
 
         (chats[activeChat] || []).forEach((message, index) => {
@@ -690,12 +835,43 @@
                     const revokeBtn = document.createElement("button");
                     revokeBtn.className = "text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1";
                     revokeBtn.textContent = "Thu hồi";
-                    revokeBtn.onclick = () => {
-                        message.revoked = true;
-                        writeStore(storageKeys.chats, chats);
-                        renderChats();
+                    revokeBtn.onclick = async () => {
+                        if (confirm("Bạn có chắc chắn muốn thu hồi tin nhắn này?")) {
+                            message.revoked = true;
+                            renderChats(); // Cập nhật UI ngay lập tức
+                            
+                            if (!message.id || typeof message.id === 'string' && message.id.length > 10) {
+                                // Nếu không có id hoặc là id ảo từ localStorage cũ, không cần gọi API
+                                writeStore(storageKeys.chats, chats);
+                                return;
+                            }
+                            
+                            try {
+                                const res = await fetch('/Employee/RevokeMessage', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: message.id })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    loadMessages();
+                                } else {
+                                    alert(data.message || "Không thể thu hồi tin nhắn.");
+                                    loadMessages(); // Phục hồi nếu lỗi
+                                }
+                            } catch (e) { console.error(e); loadMessages(); }
+                        }
+                    };
+
+                    const editBtn = document.createElement("button");
+                    editBtn.className = "text-[11px] text-slate-400 hover:text-blue-600 font-medium transition-colors px-2 py-1";
+                    editBtn.textContent = "Chỉnh sửa";
+                    editBtn.onclick = () => {
+                        if (!message.id) message.id = Date.now().toString();
+                        startMessageEditing(message);
                     };
                     
+                    row.appendChild(editBtn);
                     row.appendChild(revokeBtn);
                     row.appendChild(bubble);
                     bubbleWrapper.appendChild(row);
@@ -820,6 +996,86 @@
                 });
             }
         }
+        
+        renderScheduleCalendar();
+    };
+
+    const renderScheduleCalendar = () => {
+        const cal = document.getElementById("scheduleCalendar");
+        if (!cal) return;
+        cal.innerHTML = "";
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDay = new Date(year, month, 1).getDay();
+        const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+        const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+        dayNames.forEach(d => {
+            const el = document.createElement("div");
+            el.className = "bg-slate-100 p-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider";
+            el.textContent = d;
+            cal.appendChild(el);
+        });
+
+        for (let i = 0; i < startOffset; i++) {
+            const el = document.createElement("div");
+            el.className = "bg-white p-2 min-h-[60px]";
+            cal.appendChild(el);
+        }
+
+        const todayKey = toDateKey(now);
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dateStr = toDateKey(dateObj);
+            const dayTasks = tasks.filter(t => t.date === dateStr);
+            const isToday = dateStr === todayKey;
+
+            const el = document.createElement("div");
+            el.className = `bg-white p-2 min-h-[80px] border-t border-slate-100 flex flex-col gap-1 transition-colors hover:bg-slate-50 cursor-pointer ${isToday ? "ring-2 ring-inset ring-red-500 rounded-lg relative z-10 bg-red-50" : ""}`;
+            
+            const dateSpan = document.createElement("span");
+            dateSpan.className = `text-sm font-semibold ${isToday ? "text-red-600 font-bold" : "text-slate-700"}`;
+            dateSpan.textContent = d;
+            
+            const headerDiv = document.createElement("div");
+            headerDiv.className = "flex items-center justify-between";
+            headerDiv.appendChild(dateSpan);
+            el.appendChild(headerDiv);
+
+            dayTasks.slice(0, 2).forEach(t => {
+                const isDone = t.status === "done";
+                const taskDiv = document.createElement("div");
+                taskDiv.className = `text-[10px] leading-tight px-1.5 py-1 rounded truncate ${isDone ? "bg-slate-100 text-slate-400 line-through" : "bg-red-50 text-red-700 font-medium"}`;
+                taskDiv.textContent = t.title;
+                el.appendChild(taskDiv);
+            });
+            
+            if (dayTasks.length > 2) {
+                const moreDiv = document.createElement("div");
+                moreDiv.className = "text-[10px] text-slate-400 font-medium px-1";
+                moreDiv.textContent = `+${dayTasks.length - 2} việc nữa`;
+                el.appendChild(moreDiv);
+            }
+
+            el.addEventListener("click", () => {
+                if (dayTasks.length > 0) {
+                    alert(`Ngày ${d}/${month + 1}/${year}:\n` + dayTasks.map(t => `- ${t.title}`).join('\n'));
+                } else {
+                    if (confirm("Chưa có công việc trong ngày này. Bạn có muốn thêm mới?")) {
+                        const modal = document.querySelector("[data-task-add-modal]");
+                        if (modal) {
+                            modal.classList.remove("hidden");
+                            modal.classList.add("flex");
+                            document.getElementById("newTaskDate").value = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}T08:00`;
+                        }
+                    }
+                }
+            });
+
+            cal.appendChild(el);
+        }
     };
 
     window.markTaskDone = async (id) => {
@@ -940,27 +1196,27 @@
 
     const processAttendanceAction = async (action) => {
         if (action === "checkin" && attendance.currentSession) {
-            alert("Báº¡n Ä‘Ã£ check-in rá»“i. HÃ£y check-out trÆ°á»›c khi táº¡o phiÃªn má»›i.");
-            if (attendanceMessage) attendanceMessage.textContent = "Báº¡n Ä‘Ã£ check-in rá»“i. HÃ£y check-out trÆ°á»›c khi táº¡o phiÃªn má»›i.";
+            alert("Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.");
+            if (attendanceMessage) attendanceMessage.textContent = "Bạn đã check-in rồi. Hãy check-out trước khi tạo phiên mới.";
             return;
         }
 
         if (action === "checkout" && !attendance.currentSession) {
-            alert("Báº¡n cáº§n check-in trÆ°á»›c khi check-out.");
-            if (attendanceMessage) attendanceMessage.textContent = "Báº¡n cáº§n check-in trÆ°á»›c khi check-out.";
+            alert("Bạn cần check-in trước khi check-out.");
+            if (attendanceMessage) attendanceMessage.textContent = "Bạn cần check-in trước khi check-out.";
             return;
         }
 
         try {
             const biometricStatus = await ensureBiometricRegistration();
             if (!biometricStatus.success || !biometricStatus.hasBiometricRegistration) {
-                const message = biometricStatus.message || "Báº¡n chÆ°a Ä‘Äƒng kÃ½ sinh tráº¯c há»c. Vui lÃ²ng cáº­p nháº­t á»Ÿ CÃ i Ä‘áº·t há»“ sÆ¡.";
+                const message = biometricStatus.message || "Bạn chưa đăng ký sinh trắc học. Vui lòng cập nhật ở Cài đặt hồ sơ.";
                 alert(message);
                 if (attendanceMessage) attendanceMessage.textContent = message;
                 return;
             }
         } catch (error) {
-            const message = error.message || "KhÃ´ng thá»ƒ kiá»ƒm tra tráº¡ng thÃ¡i sinh tráº¯c há»c.";
+            const message = error.message || "Không thể kiểm tra trạng thái sinh trắc học.";
             alert(message);
             if (attendanceMessage) attendanceMessage.textContent = message;
             return;
@@ -975,8 +1231,15 @@
                 checkInAt: nowIso,
                 checkInImage: null
             };
-            attendance.status = "Äang lÃ m viá»‡c";
-            if (attendanceMessage) attendanceMessage.textContent = "Check-in thÃ nh cÃ´ng. TÃ i khoáº£n Ä‘Ã£ cÃ³ dá»¯ liá»‡u sinh tráº¯c há»c.";
+            attendance.status = "Đang làm việc";
+            if (attendanceMessage) attendanceMessage.textContent = "Check-in thành công. Tài khoản đã có dữ liệu sinh trắc học.";
+            try {
+                await fetch('/Employee/CheckIn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageDataUrl: null })
+                });
+            } catch (e) { console.error(e); }
         } else {
             attendance.sessions.push({
                 id: attendance.currentSession.id,
@@ -984,11 +1247,18 @@
                 checkOutAt: nowIso,
                 checkInImage: attendance.currentSession.checkInImage || null,
                 checkOutImage: null,
-                status: "ÄÃ£ check-out"
+                status: "Đã check-out"
             });
             attendance.currentSession = null;
-            attendance.status = "ÄÃ£ check-out";
-            if (attendanceMessage) attendanceMessage.textContent = "Check-out thÃ nh cÃ´ng. TÃ i khoáº£n Ä‘Ã£ cÃ³ dá»¯ liá»‡u sinh tráº¯c há»c.";
+            attendance.status = "Đã check-out";
+            if (attendanceMessage) attendanceMessage.textContent = "Check-out thành công. Tài khoản đã có dữ liệu sinh trắc học.";
+            try {
+                await fetch('/Employee/CheckOut', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageDataUrl: null })
+                });
+            } catch (e) { console.error(e); }
         }
 
         saveAttendance();
@@ -1111,6 +1381,13 @@
                     checkInImage: imageDataUrl
                 };
                 attendance.status = "Đang làm việc";
+                try {
+                    await fetch('/Employee/CheckIn', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageDataUrl: imageDataUrl })
+                    });
+                } catch (e) { console.error(e); }
                 if (attendanceMessage) attendanceMessage.textContent = "Check-in thành công sau khi xác thực đúng khuôn mặt.";
             } else if (attendance.currentSession) {
                 attendance.sessions.push({
@@ -1123,6 +1400,13 @@
                 });
                 attendance.currentSession = null;
                 attendance.status = "Đã check-out";
+                try {
+                    await fetch('/Employee/CheckOut', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageDataUrl: imageDataUrl })
+                    });
+                } catch (e) { console.error(e); }
                 if (attendanceMessage) attendanceMessage.textContent = "Check-out thành công sau khi xác thực đúng khuôn mặt.";
             }
 
@@ -1139,30 +1423,36 @@
         button.addEventListener("click", () => setActiveTab(button.dataset.tabTrigger));
     });
 
-    document.querySelectorAll("[data-chat-target]").forEach((button) => {
-        button.addEventListener("click", () => {
-            activeChat = button.dataset.chatTarget;
-            renderChats();
-        });
-    });
 
     document.querySelector("[data-chat-send]")?.addEventListener("click", async () => {
         const input = document.querySelector("[data-chat-input]");
         const text = input?.value.trim();
         if (!text) return;
         chats[activeChat] = chats[activeChat] || [];
-        chats[activeChat].push({ author: "self", text, id: Date.now().toString() });
+        
+        if (editingMessageId) {
+            const msg = chats[activeChat].find(m => m.id === editingMessageId);
+            if (msg) msg.text = text;
+            clearMessageEditing();
+        } else {
+            chats[activeChat].push({ author: "self", text, id: Date.now().toString() });
+        }
         writeStore(storageKeys.chats, chats);
-        input.value = "";
+        if (!editingMessageId) input.value = "";
         renderChats();
         
         try {
-            await fetch('/Employee/SendMessage', {
+            await fetch(editingMessageId ? '/Employee/EditMessage' : '/Employee/SendMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: "Gửi " + activeChat, content: text })
+                body: JSON.stringify(editingMessageId ? { id: editingMessageId, content: text } : { channel: activeChat, title: "Gửi " + activeChat, content: text })
             });
+            loadMessages(); // Reload from DB after sending
         } catch (e) { console.error(e); }
+    });
+
+    document.querySelector("[data-chat-edit-cancel]")?.addEventListener("click", () => {
+        clearMessageEditing();
     });
 
     const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
@@ -1269,13 +1559,15 @@
         if (!typeEl || !previewEl) return;
 
         const type = typeEl.value;
+        const selectedOption = typeEl.options[typeEl.selectedIndex];
+        const code = selectedOption ? selectedOption.getAttribute('data-code') : '';
         const dateRaw = dateEl?.value;
         const dateStr = dateRaw ? new Date(dateRaw).toLocaleDateString("vi-VN") : "[Ngày/Tháng/Năm]";
         const reason = reasonEl?.value.trim() || "[Nhập lý do chi tiết...]";
         const name = profile.name || "[Tên nhân viên]";
         const department = profile.department || "[Bộ phận]";
 
-        const builder = buildDoc[type] || buildDoc["Nghỉ phép"];
+        const builder = buildDoc[code] || buildDoc["Nghỉ phép"];
         previewEl.innerHTML = builder(name, department, dateStr, reason);
     };
 
@@ -1289,6 +1581,11 @@
     const reason = document.querySelector('[data-request-reason]')?.value.trim() || '';
     const message = document.querySelector('[data-request-message]');
 
+    if (!type || type === "") {
+        if (message) message.textContent = 'Vui lòng chọn mẫu đơn.';
+        return;
+    }
+
     if (!reason) {
         if (message) message.textContent = 'Vui lòng nhập lý do trước khi gửi đơn.';
         return;
@@ -1298,8 +1595,7 @@
         const res = await fetch('/Employee/SendRequest', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ requestType: type, content: 'Ngày áp dụng: ' + date + '
-Lý do: ' + reason })
+            body: JSON.stringify({ TemplateId: parseInt(type, 10), RequestedDate: date, Reason: reason })
         });
         const data = await res.json();
         if (data.success) {
@@ -1314,19 +1610,27 @@ Lý do: ' + reason })
 });
 
     document.querySelector("[data-request-draft]")?.addEventListener("click", () => {
-        const type = document.querySelector("[data-request-type]")?.value || "";
+        const typeEl = document.querySelector("[data-request-type]");
+        const typeValue = typeEl?.value || "";
+        const selectedOption = typeEl?.options[typeEl.selectedIndex];
+        const typeText = selectedOption ? selectedOption.text : "";
         const date = document.querySelector("[data-request-date]")?.value || "";
         const reason = document.querySelector("[data-request-reason]")?.value.trim() || "";
         const previewEl = document.querySelector("[data-request-preview]");
         const content = previewEl ? previewEl.textContent : "";
         const message = document.querySelector("[data-request-message]");
 
+        if (!typeValue) {
+            if (message) message.textContent = "Vui lòng chọn mẫu đơn.";
+            return;
+        }
+
         if (!reason) {
             if (message) message.textContent = "Vui lòng nhập lý do trước khi lưu nháp.";
             return;
         }
 
-        requests.push({ type, date, content, status: "Lưu nháp" });
+        requests.push({ type: typeText, date, content, status: "Lưu nháp" });
         writeStore(storageKeys.requests, requests);
         if (message) message.textContent = "Đã lưu nháp đơn hiện tại.";
         renderRequests();
@@ -1435,11 +1739,34 @@ Lý do: ' + reason })
                 return;
             }
 
-            compressImage(file, (dataUrl) => {
+            compressImage(file, async (dataUrl) => {
                 avatarDataUrl = dataUrl;
-                writeAvatar(avatarDataUrl);
+                try {
+                    const formData = new FormData();
+                    formData.append("avatarBase64", dataUrl);
+                    formData.append("fileName", file.name);
+
+                    const res = await fetch("/Employee/UploadAvatar", {
+                        method: "POST",
+                        body: formData
+                    });
+                    const result = await res.json();
+                    if (result.success && result.avatarUrl) {
+                        document.querySelectorAll("[data-avatar-image]").forEach(img => {
+                            img.src = result.avatarUrl;
+                            img.classList.remove("hidden");
+                        });
+                        document.querySelectorAll("[data-avatar-fallback]").forEach(icon => {
+                            icon.classList.add("hidden");
+                        });
+                    } else {
+                        const msg = document.querySelector("[data-avatar-message]");
+                        if (msg) msg.textContent = result.message || "Lỗi lưu ảnh.";
+                    }
+                } catch(e) {
+                    console.error(e);
+                }
                 event.target.value = "";
-                renderProfile();
             });
         });
     });
@@ -1617,6 +1944,53 @@ Lý do: ' + reason })
         }
     });
 
+    document.getElementById("closeRequestDetailModalBtn")?.addEventListener("click", () => {
+        const modal = document.getElementById("requestDetailModal");
+        if(modal) {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+    });
+
+    document.getElementById("closeRequestDetailModalBtn2")?.addEventListener("click", () => {
+        const modal = document.getElementById("requestDetailModal");
+        if(modal) {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+    });
+
+    document.getElementById("submitNewTaskBtn")?.addEventListener("click", async () => {
+        const title = document.getElementById("newTaskTitle")?.value.trim();
+        const desc = document.getElementById("newTaskDesc")?.value.trim();
+        const date = document.getElementById("newTaskDate")?.value;
+        if (!title || !date) {
+            alert("Vui lòng nhập tiêu đề và hạn chót.");
+            return;
+        }
+        
+        try {
+            const res = await fetch('/Employee/AddTask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, description: desc, dueDate: new Date(date).toISOString() })
+            });
+            const result = await res.json();
+            if (result.success) {
+                document.querySelector("[data-task-add-modal]")?.classList.add("hidden");
+                document.querySelector("[data-task-add-modal]")?.classList.remove("flex");
+                
+                document.getElementById("newTaskTitle").value = "";
+                document.getElementById("newTaskDesc").value = "";
+                document.getElementById("newTaskDate").value = "";
+                
+                loadMyTasks();
+            } else {
+                alert(result.message || "Lỗi thêm công việc");
+            }
+        } catch (e) { console.error(e); }
+    });
+
     // --- Face Update ---
     const faceModal = document.querySelector("[data-face-modal]");
     const faceVideo = document.querySelector("[data-face-video]");
@@ -1746,6 +2120,12 @@ Lý do: ' + reason })
     }
 
     const openPayrollModal = () => {
+        if (!hasPayrollPin) {
+            alert("Bạn chưa đăng ký mã PIN. Vui lòng vào mục Cài đặt -> Phiên làm việc & Bảo mật để đăng ký mã PIN trước khi xem lương.");
+            const settingsTabTrigger = document.querySelector('[data-tab-trigger="settings"]');
+            if (settingsTabTrigger) settingsTabTrigger.click();
+            return;
+        }
         if (!payrollPinModal) return;
         payrollPinInput.value = "";
         payrollPinError.classList.add("hidden");
@@ -1779,26 +2159,121 @@ Lý do: ' + reason })
         if (e.key === "Enter") verifyPayrollPinBtn?.click();
     });
 
-    verifyPayrollPinBtn?.addEventListener("click", () => {
+    verifyPayrollPinBtn?.addEventListener("click", async () => {
         const pin = payrollPinInput?.value;
-        if (pin === "1234") {
-            closePayrollModal();
-            document.querySelectorAll(".payroll-secure-data").forEach(el => {
-                el.classList.remove("blur-md", "select-none");
-            });
-            if (unlockPayrollBtn) {
-                unlockPayrollBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2 text-green-400"></i>Đã mở khóa';
-                unlockPayrollBtn.classList.remove("bg-slate-800", "hover:bg-slate-700");
-                unlockPayrollBtn.classList.add("bg-green-600", "hover:bg-green-700");
-                setTimeout(() => {
-                    unlockPayrollBtn.classList.add("hidden");
-                }, 2000);
+        if (!pin) {
+            if (payrollPinError) {
+                payrollPinError.textContent = "Vui lòng nhập mã PIN";
+                payrollPinError.classList.remove("hidden");
             }
-        } else {
-            payrollPinError?.classList.remove("hidden");
-            payrollPinInput.value = "";
             payrollPinInput.focus();
+            return;
         }
+        
+        try {
+            const res = await fetch("/Employee/VerifyPayrollPin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: pin })
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                closePayrollModal();
+                document.querySelectorAll(".payroll-secure-data").forEach(el => {
+                    el.classList.remove("blur-md", "select-none");
+                });
+                if (unlockPayrollBtn) {
+                    unlockPayrollBtn.innerHTML = '<i class="fa-solid fa-unlock mr-2 text-green-400"></i>Đã mở khóa';
+                    unlockPayrollBtn.classList.remove("bg-slate-800", "hover:bg-slate-700");
+                    unlockPayrollBtn.classList.add("bg-green-600", "hover:bg-green-700");
+                    setTimeout(() => {
+                        unlockPayrollBtn.classList.add("hidden");
+                    }, 2000);
+                }
+            } else {
+                if (payrollPinError) {
+                    payrollPinError.textContent = result.message || "Mã PIN không đúng!";
+                    payrollPinError.classList.remove("hidden");
+                }
+                payrollPinInput.value = "";
+                payrollPinInput.focus();
+            }
+        } catch (e) { console.error(e); }
+    });
+
+    // --- Setup Payroll PIN Logic ---
+    const setupPayrollPinModal = document.getElementById("setupPayrollPinModal");
+    const setupPayrollPinModalContent = document.getElementById("setupPayrollPinModalContent");
+    const closeSetupPayrollPinModal = document.getElementById("closeSetupPayrollPinModal");
+    const submitSetupPayrollPinBtn = document.getElementById("submitSetupPayrollPinBtn");
+    const newPayrollPinInput = document.getElementById("newPayrollPinInput");
+    const confirmPayrollPinInput = document.getElementById("confirmPayrollPinInput");
+    const setupPayrollPinError = document.getElementById("setupPayrollPinError");
+    
+    document.getElementById("btnOpenPayrollPinSetup")?.addEventListener("click", () => {
+        if (!setupPayrollPinModal) return;
+        newPayrollPinInput.value = "";
+        confirmPayrollPinInput.value = "";
+        setupPayrollPinError.classList.add("hidden");
+        setupPayrollPinModal.classList.remove("hidden");
+        setupPayrollPinModal.style.display = "flex";
+        setTimeout(() => {
+            if (setupPayrollPinModalContent) {
+                setupPayrollPinModalContent.style.transform = "scale(1)";
+                setupPayrollPinModalContent.style.opacity = "1";
+            }
+            newPayrollPinInput.focus();
+        }, 10);
+    });
+
+    const closeSetupPinModal = () => {
+        if (!setupPayrollPinModal) return;
+        if (setupPayrollPinModalContent) {
+            setupPayrollPinModalContent.style.transform = "scale(0.95)";
+            setupPayrollPinModalContent.style.opacity = "0";
+        }
+        setTimeout(() => {
+            setupPayrollPinModal.style.display = "none";
+            setupPayrollPinModal.classList.add("hidden");
+        }, 300);
+    };
+
+    closeSetupPayrollPinModal?.addEventListener("click", closeSetupPinModal);
+
+    submitSetupPayrollPinBtn?.addEventListener("click", async () => {
+        const pin1 = newPayrollPinInput.value;
+        const pin2 = confirmPayrollPinInput.value;
+        
+        if (!pin1 || pin1.length < 4) {
+            setupPayrollPinError.textContent = "Mã PIN phải có ít nhất 4 ký tự.";
+            setupPayrollPinError.classList.remove("hidden");
+            newPayrollPinInput.focus();
+            return;
+        }
+        if (pin1 !== pin2) {
+            setupPayrollPinError.textContent = "Mã PIN xác nhận không khớp.";
+            setupPayrollPinError.classList.remove("hidden");
+            confirmPayrollPinInput.focus();
+            return;
+        }
+        
+        try {
+            const res = await fetch("/Employee/UpdatePayrollPin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin: pin1 })
+            });
+            const result = await res.json();
+            if (result.success) {
+                hasPayrollPin = true;
+                alert("Đăng ký mã PIN thành công!");
+                closeSetupPinModal();
+            } else {
+                setupPayrollPinError.textContent = result.message || "Lỗi cập nhật mã PIN.";
+                setupPayrollPinError.classList.remove("hidden");
+            }
+        } catch (e) { console.error(e); }
     });
 
     renderDateTime();
@@ -1806,9 +2281,31 @@ Lý do: ' + reason })
     renderAttendance();
     renderRequests();
     updateRequestPreview();
-    renderChats();
-    renderTasks();
+    loadMessages();
+    loadMyTasks();
+    renderScheduleCalendar();
     applySettings();
+    
+    // Load Avatar from DB initially
+    (async () => {
+        try {
+            const res = await fetch("/Employee/GetProfile");
+            const result = await res.json();
+            if (result.success && result.data) {
+                hasPayrollPin = result.data.hasPayrollPin;
+                if (result.data.avatarUrl) {
+                    document.querySelectorAll("[data-avatar-image]").forEach(img => {
+                        img.src = result.data.avatarUrl;
+                        img.classList.remove("hidden");
+                    });
+                    document.querySelectorAll("[data-avatar-fallback]").forEach(icon => {
+                        icon.classList.add("hidden");
+                    });
+                }
+            }
+        } catch (e) { console.error("Failed to load initial avatar", e); }
+    })();
+
     loadMyViolations();
     setActiveTab(initialTab);
 

@@ -16,13 +16,14 @@ public class ViolationDbContext : DbContext
     public DbSet<AiModel> AiModels { get; set; } = null!;
     public DbSet<UserFaceEmbedding> UserFaceEmbeddings { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
-
     public DbSet<WorkSession> WorkSessions { get; set; } = null!;
     public DbSet<ApprovalRequest> ApprovalRequests { get; set; } = null!;
     public DbSet<FormTemplate> FormTemplates { get; set; } = null!;
     public DbSet<EmployeeMessage> EmployeeMessages { get; set; } = null!;
     public DbSet<EmployeeTask> EmployeeTasks { get; set; } = null!;
     public DbSet<PayrollRecord> PayrollRecords { get; set; } = null!;
+    public DbSet<EmployeePreference> EmployeePreferences { get; set; } = null!;
+    public DbSet<KnowledgeBaseItem> KnowledgeBaseItems { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,17 @@ public class ViolationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeePreference>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId).IsUnique();
+        });
+
+        modelBuilder.Entity<KnowledgeBaseItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
         });
     }
 }
