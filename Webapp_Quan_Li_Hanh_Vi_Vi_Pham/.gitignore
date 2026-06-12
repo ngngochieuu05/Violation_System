@@ -14,3 +14,15 @@ ML/runs/*
 # Ignore C# build artifacts
 bin/
 obj/
+
+# Custom ignores
+.venv/
+*.pt
+*.onnx
+*.mp4
+*.avi
+patch_*.py
+fix_*.py
+__pycache__/
+build_verify_tmp/
+.run-monitoring.*

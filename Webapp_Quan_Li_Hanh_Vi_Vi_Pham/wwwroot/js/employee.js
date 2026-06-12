@@ -4,6 +4,7 @@
 
     const biometricVerifyUrl = "/Account/VerifyCurrentUserFace";
     const biometricRegistrationStatusUrl = "/Account/BiometricRegistrationStatus";
+    const onboardingStatusUrl = "/Account/OnboardingStatus";
     const initialTab = app.dataset.initialTab || "home";
     const currentUserId = app.dataset.userId || "";
     const currentUsername = app.dataset.username || "";
@@ -50,7 +51,7 @@
     const attendanceDetailModal = document.querySelector("[data-attendance-detail-modal]");
     const attendanceCameraModal = document.querySelector("[data-attendance-camera-modal]");
     // Teleport modals to body to escape z-index stacking contexts
-    [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]")].forEach(modal => {
+    [attendanceDetailModal, attendanceCameraModal, document.querySelector("[data-face-modal]"), document.querySelector("[data-onboarding-modal]")].forEach(modal => {
         if (modal) {
             document.body.appendChild(modal);
         }
@@ -74,6 +75,17 @@
         } catch {
             console.warn("localStorage quota exceeded for key:", key);
         }
+    };
+
+    const validatePasswordPolicy = (password) => {
+        if (!password || password.length < 8) {
+            return false;
+        }
+
+        return /[A-Z]/.test(password)
+            && /[a-z]/.test(password)
+            && /\d/.test(password)
+            && /[^A-Za-z0-9]/.test(password);
     };
 
     const readAvatar = () => {
@@ -607,31 +619,41 @@
         attendanceDetailModal.classList.remove("flex");
     };
 
-    const renderRequests = () => {
-        const list = document.querySelector("[data-request-list]");
-        if (!list) return;
+    const renderRequests = async () => {
+    const list = document.querySelector('[data-request-list]');
+    if (!list) return;
 
-        list.innerHTML = "";
-        if (!requests.length) {
-            list.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có đơn nào được tạo trong trình duyệt này.</div>';
-            return;
+    try {
+        const res = await fetch('/Employee/GetMyRequests');
+        const data = await res.json();
+        if (data.success) {
+            requests = data.data.map(r => ({
+                type: r.requestType,
+                date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
+                content: r.content,
+                status: r.status
+            }));
+            
+            list.innerHTML = '';
+            if (!requests.length) {
+                list.innerHTML = '<div class="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Chưa có đơn nào được tạo trong hệ thống.</div>';
+                return;
+            }
+
+            requests.forEach((item) => {
+                const card = document.createElement('div');
+                let tone = 'bg-slate-50 text-slate-700';
+                if (item.status === 'Đã duyệt' || item.status === 'Approved') tone = 'bg-green-50 text-green-700';
+                else if (item.status === 'Từ chối' || item.status === 'Rejected') tone = 'bg-red-50 text-red-700';
+                else tone = 'bg-amber-50 text-amber-700';
+                
+                card.className = 'rounded-2xl border border-slate-200 bg-white p-4';
+                card.innerHTML = `<div class="flex items-center justify-between gap-3"><p class="font-semibold text-slate-900">${item.type}</p><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span></div><p class="mt-2 text-sm text-slate-500">${item.date}</p><p class="mt-2 text-sm text-slate-600">${item.content.replace(/\r?\n/g, '<br>') }</p>`;
+                list.appendChild(card);
+            });
         }
-
-        [...requests].reverse().forEach((item) => {
-            const card = document.createElement("div");
-            const tone = item.status === "Đã gửi" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700";
-            card.className = "rounded-2xl border border-slate-200 bg-white p-4";
-            card.innerHTML = `
-                <div class="flex items-center justify-between gap-3">
-                    <p class="font-semibold text-slate-900">${item.type}</p>
-                    <span class="rounded-full px-2.5 py-1 text-xs font-semibold ${tone}">${item.status}</span>
-                </div>
-                <p class="mt-2 text-sm text-slate-500">${item.date || "Chưa chọn ngày"}</p>
-                <p class="mt-2 text-sm text-slate-600">${item.content}</p>
-            `;
-            list.appendChild(card);
-        });
-    };
+    } catch (e) { console.error(e); }
+};
 
     const renderChats = () => {
         // ... (keep as is or just ignore, wait I must replace it carefully)
@@ -1123,7 +1145,7 @@
         });
     });
 
-    document.querySelector("[data-chat-send]")?.addEventListener("click", () => {
+    document.querySelector("[data-chat-send]")?.addEventListener("click", async () => {
         const input = document.querySelector("[data-chat-input]");
         const text = input?.value.trim();
         if (!text) return;
@@ -1132,6 +1154,14 @@
         writeStore(storageKeys.chats, chats);
         input.value = "";
         renderChats();
+        
+        try {
+            await fetch('/Employee/SendMessage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "Gửi " + activeChat, content: text })
+            });
+        } catch (e) { console.error(e); }
     });
 
     const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
@@ -1252,29 +1282,35 @@
     document.querySelector("[data-request-date]")?.addEventListener("change", updateRequestPreview);
     document.querySelector("[data-request-reason]")?.addEventListener("input", updateRequestPreview);
 
-    document.querySelector("[data-request-submit]")?.addEventListener("click", () => {
-        const type = document.querySelector("[data-request-type]")?.value || "";
-        const date = document.querySelector("[data-request-date]")?.value || "";
-        const reason = document.querySelector("[data-request-reason]")?.value.trim() || "";
-        const previewEl = document.querySelector("[data-request-preview]");
-        const content = previewEl ? previewEl.textContent : "";
-        const message = document.querySelector("[data-request-message]");
+    document.querySelector('[data-request-submit]')?.addEventListener('click', async () => {
+    const type = document.querySelector('[data-request-type]')?.value || '';
+    const date = document.querySelector('[data-request-date]')?.value || '';
+    const reason = document.querySelector('[data-request-reason]')?.value.trim() || '';
+    const message = document.querySelector('[data-request-message]');
 
-        if (!reason) {
-            if (message) message.textContent = "Vui lòng nhập lý do trước khi gửi đơn.";
-            return;
+    if (!reason) {
+        if (message) message.textContent = 'Vui lòng nhập lý do trước khi gửi đơn.';
+        return;
+    }
+
+    try {
+        const res = await fetch('/Employee/SendRequest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requestType: type, content: 'Ngày áp dụng: ' + date + '
+Lý do: ' + reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const reasonInput = document.querySelector('[data-request-reason]');
+            if (reasonInput) reasonInput.value = '';
+            if (message) message.textContent = 'Đơn đã được gửi thành công.';
+            renderRequests();
         }
-
-        requests.push({ type, date, content, status: "Đã gửi" });
-        writeStore(storageKeys.requests, requests);
-        
-        const reasonInput = document.querySelector("[data-request-reason]");
-        if (reasonInput) reasonInput.value = "";
-        updateRequestPreview();
-        
-        if (message) message.textContent = "Đơn đã được gửi thành công.";
-        renderRequests();
-    });
+    } catch (e) {
+        if (message) message.textContent = 'Lỗi kết nối khi gửi đơn.';
+    }
+});
 
     document.querySelector("[data-request-draft]")?.addEventListener("click", () => {
         const type = document.querySelector("[data-request-type]")?.value || "";

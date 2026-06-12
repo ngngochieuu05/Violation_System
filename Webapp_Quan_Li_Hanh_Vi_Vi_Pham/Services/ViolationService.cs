@@ -58,10 +58,31 @@ public class ViolationService : IViolationService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<ViolationRecord?> GetViolationByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.ViolationRecords
+            .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+    }
+
+    public async Task<ViolationRecord?> GetViolationByTrackingIdAsync(string trackingId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(trackingId))
+        {
+            return null;
+        }
+
+        return await _context.ViolationRecords
+            .FirstOrDefaultAsync(v => v.TrackingId == trackingId, cancellationToken);
+    }
+
     public async Task AddViolationAsync(ViolationRecord record, CancellationToken cancellationToken = default)
     {
         record.Id = Guid.NewGuid();
         record.DetectedAtUtc = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(record.TrackingId))
+        {
+            record.TrackingId = $"VR-{record.Id.ToString("N")[..10].ToUpperInvariant()}";
+        }
         _context.ViolationRecords.Add(record);
         await _context.SaveChangesAsync(cancellationToken);
     }
@@ -74,5 +95,57 @@ public class ViolationService : IViolationService
             record.Status = status;
             await _context.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    public async Task<bool> ReviewViolationAsync(
+        Guid id,
+        string status,
+        string reviewer,
+        string reviewChannel,
+        string? reviewNote = null,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await _context.ViolationRecords.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+        if (record == null)
+        {
+            return false;
+        }
+
+        ApplyReview(record, status, reviewer, reviewChannel, reviewNote);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> ReviewViolationByTrackingIdAsync(
+        string trackingId,
+        string status,
+        string reviewer,
+        string reviewChannel,
+        string? reviewNote = null,
+        CancellationToken cancellationToken = default)
+    {
+        var record = await GetViolationByTrackingIdAsync(trackingId, cancellationToken);
+        if (record == null)
+        {
+            return false;
+        }
+
+        ApplyReview(record, status, reviewer, reviewChannel, reviewNote);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private void ApplyReview(
+        ViolationRecord record,
+        string status,
+        string reviewer,
+        string reviewChannel,
+        string? reviewNote)
+    {
+        record.Status = status;
+        record.ReviewedBy = reviewer;
+        record.ReviewedAtUtc = DateTime.UtcNow;
+        record.ReviewChannel = reviewChannel;
+        record.ReviewNote = reviewNote;
     }
 }

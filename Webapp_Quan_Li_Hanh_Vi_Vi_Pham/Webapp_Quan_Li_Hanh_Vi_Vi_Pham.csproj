@@ -27,6 +27,7 @@
   <ItemGroup>
     <Folder Include="Controllers\Employee\" />
     <Folder Include="Controllers\Manager\" />
+    <Folder Include="wwwroot\images\logo\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

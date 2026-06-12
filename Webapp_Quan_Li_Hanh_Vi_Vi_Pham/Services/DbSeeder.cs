@@ -12,6 +12,8 @@ public static class DbSeeder
     {
         // Auto-create database if not exists
         context.Database.EnsureCreated();
+        EnsureUserColumns(context);
+        EnsureViolationColumns(context);
 
         // Seed Users
         if (!context.Users.Any())
@@ -26,6 +28,8 @@ public static class DbSeeder
                 FaceImagePath = "",
                 ManagerKey = "",
                 IsKeyActivated = true,
+                MustChangePassword = false,
+                RequiresInitialSecuritySetup = false,
                 Email = "admin@compliancehub.vn",
                 Phone = "0987 654 321",
                 Department = "Quản trị hệ thống",
@@ -43,6 +47,8 @@ public static class DbSeeder
                 FaceImagePath = "",
                 ManagerKey = "hieudeptraivcl",
                 IsKeyActivated = false,
+                MustChangePassword = false,
+                RequiresInitialSecuritySetup = false,
                 Email = "manager@compliancehub.vn",
                 Phone = "0912 345 678",
                 Department = "Ban Giám Đốc",
@@ -60,6 +66,8 @@ public static class DbSeeder
                 FaceImagePath = "",
                 ManagerKey = "",
                 IsKeyActivated = true,
+                MustChangePassword = false,
+                RequiresInitialSecuritySetup = false,
                 Email = "employee@compliancehub.vn",
                 Phone = "0123 456 789",
                 Department = "Khối vận hành",
@@ -144,6 +152,7 @@ public static class DbSeeder
                 new()
                 {
                     Id = Guid.NewGuid(),
+                    TrackingId = "VR-SEED-0001",
                     EmployeeCode = "NV001",
                     EmployeeName = "Nguyen Van A",
                     ViolationType = "Khong doi mu bao ho",
@@ -156,6 +165,7 @@ public static class DbSeeder
                 new()
                 {
                     Id = Guid.NewGuid(),
+                    TrackingId = "VR-SEED-0002",
                     EmployeeCode = "NV014",
                     EmployeeName = "Tran Thi B",
                     ViolationType = "Vao khu vuc han che",
@@ -167,6 +177,17 @@ public static class DbSeeder
                 }
             };
             context.ViolationRecords.AddRange(seedViolations);
+        }
+        else
+        {
+            var existingViolations = context.ViolationRecords
+                .Where(v => string.IsNullOrWhiteSpace(v.TrackingId))
+                .ToList();
+
+            foreach (var violation in existingViolations)
+            {
+                violation.TrackingId = $"VR-{violation.Id.ToString("N")[..10].ToUpperInvariant()}";
+            }
         }
 
         // Seed AuditLogs
@@ -239,5 +260,67 @@ public static class DbSeeder
         }
 
         context.SaveChanges();
+    }
+
+    private static void EnsureUserColumns(ViolationDbContext context)
+    {
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('Users', 'MustChangePassword') IS NULL
+            BEGIN
+                ALTER TABLE [Users] ADD [MustChangePassword] bit NOT NULL CONSTRAINT [DF_Users_MustChangePassword] DEFAULT(0);
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('Users', 'RequiresInitialSecuritySetup') IS NULL
+            BEGIN
+                ALTER TABLE [Users] ADD [RequiresInitialSecuritySetup] bit NOT NULL CONSTRAINT [DF_Users_RequiresInitialSecuritySetup] DEFAULT(0);
+            END
+            """);
+    }
+
+    private static void EnsureViolationColumns(ViolationDbContext context)
+    {
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TrackingId') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TrackingId] nvarchar(64) NOT NULL CONSTRAINT [DF_ViolationRecords_TrackingId] DEFAULT('');
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ReviewedBy') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ReviewedBy] nvarchar(256) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ReviewedAtUtc') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ReviewedAtUtc] datetime2 NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ReviewChannel') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ReviewChannel] nvarchar(64) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ReviewNote') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ReviewNote] nvarchar(512) NULL;
+            END
+            """);
     }
 }

@@ -122,7 +122,7 @@
         <!-- Logo -->
         <div class="h-16 flex items-center px-6 border-b border-slate-200">
             <a class="flex items-center space-x-2 text-red-600 hover:text-red-700 transition" asp-area="" asp-controller="Manager" asp-action="Index">
-                <i class="fa-solid fa-shield-halved text-2xl"></i>
+                <img src="~/images/logo/logo.png" alt="ComplianceHub Logo" class="h-10 w-10 rounded-lg object-contain" />
                 <span class="font-outfit font-extrabold text-xl tracking-tight text-slate-900">Compliance<span class="text-red-600">Hub</span></span>
             </a>
         </div>
@@ -180,10 +180,7 @@
             </div>
             
             <div class="flex items-center space-x-4">
-                <div class="hidden sm:flex items-center relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 text-slate-400 text-sm"></i>
-                    <input type="text" placeholder="Tìm kiếm..." class="bg-white border border-slate-200 rounded-full py-1.5 pl-9 pr-4 text-sm focus:ring-2 focus:ring-red-100 focus:border-red-300 transition w-48 text-slate-700 shadow-sm">
-                </div>
+                <!-- Removed Search Bar per request -->
 
                 <!-- Notifications -->
                 <div class="relative ml-2" id="dashboardNotificationDropdown">
@@ -224,7 +221,7 @@
                             <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
                         </div>
                         <div class="border-t border-slate-100 py-1">
-                            <a href="@Url.Action("Logout", "Account")" class="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md">
+                            <a href="/Account/Logout" class="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 hover:-translate-y-0.5 active:scale-95 hover:shadow-md">
                                 <i class="fa-solid fa-right-from-bracket w-5 text-center mr-3"></i>Đăng xuất
                             </a>
                         </div>
@@ -279,7 +276,7 @@
                 }
             });
             
-            const items = menu.querySelectorAll('button, a');
+            const items = menu.querySelectorAll('button');
             items.forEach(item => {
                 item.addEventListener('click', () => {
                     menu.classList.add('hidden');

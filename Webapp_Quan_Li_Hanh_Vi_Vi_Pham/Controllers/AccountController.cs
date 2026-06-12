@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
@@ -25,12 +26,14 @@ public class AccountController : Controller
     }
 
     [HttpGet]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Login()
     {
         if (User.Identity?.IsAuthenticated == true)
         {
             return RedirectToDashboard();
         }
+
         return View();
     }
 
@@ -39,14 +42,14 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
-            ModelState.AddModelError("", "Vui lòng nhập tên đăng nhập và mật khẩu.");
+            ModelState.AddModelError("", "Vui long nhap ten dang nhap va mat khau.");
             return View();
         }
 
         var user = await _userService.AuthenticateAsync(username, password, cancellationToken);
         if (user == null)
         {
-            ModelState.AddModelError("", "Tên đăng nhập hoặc mật khẩu không đúng.");
+            ModelState.AddModelError("", "Ten dang nhap hoac mat khau khong dung.");
             return View();
         }
 
@@ -67,6 +70,7 @@ public class AccountController : Controller
         {
             return RedirectToDashboard();
         }
+
         return View();
     }
 
@@ -82,7 +86,13 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(fullName) || string.IsNullOrEmpty(faceImage))
         {
-            ModelState.AddModelError("", "Vui lòng điền đầy đủ thông tin và chụp ảnh nhận diện khuôn mặt.");
+            ModelState.AddModelError("", "Vui long dien day du thong tin va chup anh nhan dien khuon mat.");
+            return View();
+        }
+
+        if (!PasswordPolicy.TryValidate(password, out var passwordError))
+        {
+            ModelState.AddModelError("", passwordError);
             return View();
         }
 
@@ -99,8 +109,8 @@ public class AccountController : Controller
             var registered = await _userService.RegisterAsync(newUser, password, faceImage, cancellationToken);
             if (registered != null)
             {
-                TempData["SuccessMessage"] = "Đăng ký thành công! Vui lòng đăng nhập.";
-                return RedirectToAction("Login");
+                TempData["SuccessMessage"] = "Dang ky thanh cong. Vui long dang nhap.";
+                return RedirectToAction(nameof(Login));
             }
         }
         catch (Exception ex)
@@ -122,22 +132,21 @@ public class AccountController : Controller
     {
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(faceImage))
         {
-            return Json(new { success = false, message = "Vui lòng cung cấp tên đăng nhập và hình ảnh khuôn mặt." });
+            return Json(new { success = false, message = "Vui long cung cap ten dang nhap va hinh anh khuon mat." });
         }
 
         var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "login", cancellationToken);
         if (!verified)
         {
-            return Json(new { success = false, message = "Nhận diện khuôn mặt thất bại hoặc không khớp." });
+            return Json(new { success = false, message = "Nhan dien khuon mat that bai hoac khong khop." });
         }
 
-        // Login the user without password checks (biometrics bypassed standard authentication)
         using var db = HttpContext.RequestServices.GetRequiredService<ViolationDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
 
         if (user == null)
         {
-            return Json(new { success = false, message = "Không tìm thấy người dùng." });
+            return Json(new { success = false, message = "Khong tim thay nguoi dung." });
         }
 
         if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase) && !user.IsKeyActivated)
@@ -149,7 +158,6 @@ public class AccountController : Controller
         await SignInUserAsync(user);
         string redirectUrl;
 
-        // Đã sửa cứng URL cho Admin tại đây
         if (user.Role.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
             redirectUrl = "/Admin";
@@ -162,7 +170,8 @@ public class AccountController : Controller
         {
             redirectUrl = Url.Action("Index", "Employee") ?? "/Employee";
         }
-        return Json(new { success = true, redirectUrl = redirectUrl });
+
+        return Json(new { success = true, redirectUrl });
     }
 
     [HttpPost]
@@ -185,7 +194,7 @@ public class AccountController : Controller
     {
         if (User.Identity?.IsAuthenticated != true)
         {
-            TempData["ErrorMessage"] = "Đăng nhập Google thất bại.";
+            TempData["ErrorMessage"] = "Dang nhap Google that bai.";
             return RedirectToAction(nameof(Login));
         }
 
@@ -193,7 +202,7 @@ public class AccountController : Controller
         if (string.IsNullOrWhiteSpace(username))
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            TempData["ErrorMessage"] = "Không thể xác định tài khoản từ Google.";
+            TempData["ErrorMessage"] = "Khong the xac dinh tai khoan tu Google.";
             return RedirectToAction(nameof(Login));
         }
 
@@ -201,7 +210,7 @@ public class AccountController : Controller
         if (user == null)
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            TempData["ErrorMessage"] = "Tài khoản Google chưa được liên kết với hệ thống.";
+            TempData["ErrorMessage"] = "Tai khoan Google chua duoc lien ket voi he thong.";
             return RedirectToAction(nameof(Login));
         }
 
@@ -216,14 +225,9 @@ public class AccountController : Controller
 
         if (isRegisterFlow)
         {
-            if (createdNow)
-            {
-                TempData["SuccessMessage"] = "Đăng ký bằng Google thành công. Hãy cập nhật sinh trắc học trong hồ sơ sau khi đăng nhập.";
-            }
-            else
-            {
-                TempData["SuccessMessage"] = "Tài khoản Google này đã tồn tại. Hệ thống đã đăng nhập cho bạn.";
-            }
+            TempData["SuccessMessage"] = createdNow
+                ? "Dang ky bang Google thanh cong. Hay doi mat khau va bo sung khuon mat ngay khi vao dashboard."
+                : "Tai khoan Google nay da ton tai. He thong da dang nhap cho ban.";
         }
 
         if (!isRegisterFlow && !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -241,16 +245,16 @@ public class AccountController : Controller
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(faceImage))
         {
-            return Json(new { success = false, message = "Thiếu dữ liệu xác thực khuôn mặt." });
+            return Json(new { success = false, message = "Thieu du lieu xac thuc khuon mat." });
         }
 
         var verified = await _userService.VerifyBiometricsAsync(username, faceImage, "attendance", cancellationToken);
         if (!verified)
         {
-            return Json(new { success = false, message = "Khuôn mặt không khớp với tài khoản đang đăng nhập." });
+            return Json(new { success = false, message = "Khuon mat khong khop voi tai khoan dang dang nhap." });
         }
 
-        return Json(new { success = true, message = "Xác thực khuôn mặt thành công." });
+        return Json(new { success = true, message = "Xac thuc khuon mat thanh cong." });
     }
 
     [Authorize]
@@ -260,21 +264,58 @@ public class AccountController : Controller
         var userIdStr = User.FindFirst("UserId")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
         {
-            return Json(new { success = false, message = "Người dùng không hợp lệ." });
+            return Json(new { success = false, message = "Nguoi dung khong hop le." });
         }
 
-        if (string.IsNullOrWhiteSpace(oldPassword) || string.IsNullOrWhiteSpace(newPassword))
+        var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
+        if (currentUser == null)
         {
-            return Json(new { success = false, message = "Vui lòng nhập đầy đủ mật khẩu cũ và mới." });
+            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+        }
+
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            return Json(new { success = false, message = "Vui long nhap mat khau moi." });
+        }
+
+        if (!currentUser.MustChangePassword && string.IsNullOrWhiteSpace(oldPassword))
+        {
+            return Json(new { success = false, message = "Vui long nhap mat khau cu." });
+        }
+
+        if (!PasswordPolicy.TryValidate(newPassword, out var passwordError))
+        {
+            return Json(new { success = false, message = passwordError });
         }
 
         var success = await _userService.ChangePasswordAsync(userId, oldPassword, newPassword, cancellationToken);
         if (!success)
         {
-            return Json(new { success = false, message = "Mật khẩu cũ không đúng." });
+            return Json(new { success = false, message = "Mat khau cu khong dung." });
         }
 
-        return Json(new { success = true, message = "Đổi mật khẩu thành công." });
+        return Json(new { success = true, message = "Doi mat khau thanh cong." });
+    }
+
+    [Authorize]
+    [HttpGet]
+    public async Task<IActionResult> OnboardingStatus(CancellationToken cancellationToken)
+    {
+        var userIdStr = User.FindFirst("UserId")?.Value;
+        if (!Guid.TryParse(userIdStr, out var userId))
+        {
+            return Json(new { success = false, message = "Nguoi dung khong hop le." });
+        }
+
+        var status = await _userService.GetSecuritySetupStatusAsync(userId, cancellationToken);
+        return Json(new
+        {
+            success = true,
+            requiresInitialSecuritySetup = status.RequiresInitialSecuritySetup,
+            mustChangePassword = status.MustChangePassword,
+            hasBiometricRegistration = status.HasBiometricRegistration,
+            passwordPolicyDescription = PasswordPolicy.Description
+        });
     }
 
     [Authorize]
@@ -284,27 +325,27 @@ public class AccountController : Controller
         var userIdStr = User.FindFirst("UserId")?.Value;
         if (!Guid.TryParse(userIdStr, out var userId))
         {
-            return Json(new { success = false, message = "Người dùng không hợp lệ." });
+            return Json(new { success = false, message = "Nguoi dung khong hop le." });
         }
 
         if (string.IsNullOrWhiteSpace(faceImagesBase64))
         {
-            return Json(new { success = false, message = "Thiếu dữ liệu khuôn mặt." });
+            return Json(new { success = false, message = "Thieu du lieu khuon mat." });
         }
 
         var success = await _userService.UpdateBiometricImageAsync(userId, faceImagesBase64, cancellationToken);
         if (!success)
         {
-            return Json(new { success = false, message = "Cập nhật dữ liệu khuôn mặt thất bại. Đảm bảo ảnh rõ ràng và chỉ có 1 khuôn mặt." });
+            return Json(new { success = false, message = "Cap nhat du lieu khuon mat that bai. Dam bao anh ro rang va chi co 1 khuon mat." });
         }
 
-        return Json(new { success = true, message = "Cập nhật dữ liệu khuôn mặt thành công." });
+        return Json(new { success = true, message = "Cap nhat du lieu khuon mat thanh cong." });
     }
 
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return RedirectToAction("Login");
+        return RedirectToAction(nameof(Login));
     }
 
     public IActionResult AccessDenied()
@@ -319,7 +360,7 @@ public class AccountController : Controller
         var username = User.Identity?.Name;
         if (string.IsNullOrWhiteSpace(username))
         {
-            return Json(new { success = false, hasBiometricRegistration = false, message = "Thiếu thông tin người dùng." });
+            return Json(new { success = false, hasBiometricRegistration = false, message = "Thieu thong tin nguoi dung." });
         }
 
         var hasBiometricRegistration = await _userService.HasBiometricRegistrationAsync(username, cancellationToken);
@@ -328,8 +369,8 @@ public class AccountController : Controller
             success = true,
             hasBiometricRegistration,
             message = hasBiometricRegistration
-                ? "Đã có dữ liệu sinh trắc học."
-                : "Bạn chưa đăng ký sinh trắc học. Vui lòng cập nhật ở Cài đặt hồ sơ."
+                ? "Da co du lieu sinh trac hoc."
+                : "Ban chua dang ky sinh trac hoc. Vui long cap nhat o Cai dat ho so."
         });
     }
 
@@ -355,32 +396,31 @@ public class AccountController : Controller
     private IActionResult RedirectToDashboard(string? role = null)
     {
         var activeRole = role;
-        if (string.IsNullOrEmpty(activeRole))
+        if (string.IsNullOrEmpty(activeRole) && User.Identity?.IsAuthenticated == true)
         {
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                if (User.IsInRole("Admin")) activeRole = "Admin";
-                else if (User.IsInRole("Manager")) activeRole = "Manager";
-                else if (User.IsInRole("Employee")) activeRole = "Employee";
-            }
+            if (User.IsInRole("Admin")) activeRole = "Admin";
+            else if (User.IsInRole("Manager")) activeRole = "Manager";
+            else if (User.IsInRole("Employee")) activeRole = "Employee";
         }
 
         if (activeRole != null)
         {
-            // Đã sửa cứng URL cho Admin tại đây
             if (activeRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
                 return Redirect("/Admin");
             }
+
             if (activeRole.Equals("Manager", StringComparison.OrdinalIgnoreCase))
             {
                 return RedirectToAction("Index", "Manager");
             }
+
             if (activeRole.Equals("Employee", StringComparison.OrdinalIgnoreCase))
             {
                 return RedirectToAction("Index", "Employee");
             }
         }
+
         return RedirectToAction("Index", "Home");
     }
 }

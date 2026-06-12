@@ -1,12 +1,18 @@
 using System.Diagnostics;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Monitoring;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,6 +93,9 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
                     FaceImagePath = string.Empty,
                     ManagerKey = string.Empty,
                     IsKeyActivated = true,
+                    MustChangePassword = true,
+                    RequiresInitialSecuritySetup = true,
+                    Email = email,
                     CreatedAtUtc = DateTime.UtcNow
                 };
 
@@ -120,12 +129,21 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 builder.Services.AddControllersWithViews();
 builder.Services.Configure<YoloModelOptions>(
     builder.Configuration.GetSection(YoloModelOptions.SectionName));
+builder.Services.Configure<ViolationMonitoringOptions>(
+    builder.Configuration.GetSection(ViolationMonitoringOptions.SectionName));
+builder.Services.Configure<TelegramBotOptions>(
+    builder.Configuration.GetSection(TelegramBotOptions.SectionName));
 
 // Scoped services registration
 builder.Services.AddScoped<IYoloInferenceService, LocalYoloInferenceService>();
 builder.Services.AddScoped<IViolationService, ViolationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IModelSettingService, ModelSettingService>();
+builder.Services.AddSingleton<TelegramBotState>();
+builder.Services.AddSingleton<IViolationMonitoringOrchestrator, ViolationMonitoringOrchestrator>();
+builder.Services.AddHttpClient<ITelegramAlertService, TelegramAlertService>();
+builder.Services.AddHostedService<ViolationMonitoringHostedService>();
+builder.Services.AddHostedService<TelegramCommandPollingHostedService>();
 
 var app = builder.Build();
 
@@ -217,7 +235,28 @@ if (args.Contains("--test-biometrics"))
     return;
 }
 
-app.Run();
+if (args.Contains("--test-monitoring"))
+{
+    await RunMonitoringTestsAsync(app.Services);
+    return;
+}
+
+if (TryFindBusyUrl(args, app.Environment.ContentRootPath, out var busyUrl))
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning("Ứng dụng đã chạy trên {Url}. Bỏ qua khởi động instance mới.", busyUrl);
+    return;
+}
+
+try
+{
+    await app.RunAsync();
+}
+catch (IOException ex) when (IsAddressInUse(ex))
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning(ex, "Không thể khởi động vì cổng đang được sử dụng.");
+}
 
 async Task RunBiometricsTestsAsync(IServiceProvider services)
 {
@@ -401,4 +440,108 @@ async Task RunBiometricsTestsAsync(IServiceProvider services)
     Console.WriteLine("\n==================================================");
     Console.WriteLine("BIOMETRICS TESTCASES COMPLETED");
     Console.WriteLine("==================================================");
+}
+
+async Task RunMonitoringTestsAsync(IServiceProvider services)
+{
+    Console.WriteLine("==================================================");
+    Console.WriteLine("STARTING MONITORING TESTCASES");
+    Console.WriteLine("==================================================");
+
+    using var scope = services.CreateScope();
+    var orchestrator = scope.ServiceProvider.GetRequiredService<IViolationMonitoringOrchestrator>();
+    var telegramAlertService = scope.ServiceProvider.GetRequiredService<ITelegramAlertService>();
+
+    var smokeResult = await orchestrator.TriggerSmokeTestAsync();
+    Console.WriteLine($"[SMOKE] Track={smokeResult.TrackId}; Severity={smokeResult.Severity}; Message={smokeResult.Message}");
+
+    var leavingResult = await orchestrator.TriggerLeavingPositionTestAsync();
+    Console.WriteLine($"[LEAVING] Track={leavingResult.TrackId}; Severity={leavingResult.Severity}; Message={leavingResult.Message}");
+
+    var handledCommands = await telegramAlertService.ProcessPendingUpdatesAsync();
+    Console.WriteLine($"[TELEGRAM] Handled commands = {handledCommands}");
+
+    var updates = await telegramAlertService.GetRecentUpdatesAsync();
+    Console.WriteLine($"[TELEGRAM] Recent updates count = {updates.Count}");
+    foreach (var update in updates.Take(5))
+    {
+        Console.WriteLine($"  ChatId={update.ChatId}; Type={update.ChatType}; Sender={update.SenderName}; Text={update.MessageText}");
+    }
+    
+    var knownChatIds = telegramAlertService.GetKnownChatIds();
+    Console.WriteLine($"[TELEGRAM] Known chat ids = {(knownChatIds.Count == 0 ? "none" : string.Join(", ", knownChatIds))}");
+
+    Console.WriteLine("==================================================");
+    Console.WriteLine("MONITORING TESTCASES COMPLETED");
+    Console.WriteLine("==================================================");
+}
+
+static bool TryFindBusyUrl(string[] args, string contentRootPath, out string busyUrl)
+{
+    foreach (var url in GetCandidateUrls(args, contentRootPath))
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            continue;
+        }
+
+        var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+        if (listeners.Any(endpoint => endpoint.Port == uri.Port))
+        {
+            busyUrl = url;
+            return true;
+        }
+    }
+
+    busyUrl = string.Empty;
+    return false;
+}
+
+static IEnumerable<string> GetCandidateUrls(string[] args, string contentRootPath)
+{
+    var urls = new List<string>();
+    var argUrlsIndex = Array.FindIndex(args, static arg => string.Equals(arg, "--urls", StringComparison.OrdinalIgnoreCase));
+    if (argUrlsIndex >= 0 && argUrlsIndex + 1 < args.Length)
+    {
+        urls.AddRange(args[argUrlsIndex + 1].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    var envUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+    if (!string.IsNullOrWhiteSpace(envUrls))
+    {
+        urls.AddRange(envUrls.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
+    var launchSettingsPath = Path.Combine(contentRootPath, "Properties", "launchSettings.json");
+    if (File.Exists(launchSettingsPath))
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(launchSettingsPath));
+            if (document.RootElement.TryGetProperty("profiles", out var profilesElement))
+            {
+                foreach (var profile in profilesElement.EnumerateObject())
+                {
+                    if (profile.Value.TryGetProperty("applicationUrl", out var urlElement))
+                    {
+                        urls.AddRange(
+                            (urlElement.GetString() ?? string.Empty)
+                                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Ignore launchSettings parsing errors and continue with other URL sources.
+        }
+    }
+
+    return urls.Distinct(StringComparer.OrdinalIgnoreCase);
+}
+
+static bool IsAddressInUse(IOException exception)
+{
+    return exception.Message.Contains("address already in use", StringComparison.OrdinalIgnoreCase)
+        || exception.Message.Contains("Only one usage of each socket address", StringComparison.OrdinalIgnoreCase);
 }

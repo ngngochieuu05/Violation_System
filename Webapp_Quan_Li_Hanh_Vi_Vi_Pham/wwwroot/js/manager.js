@@ -5,6 +5,7 @@
     const initialTab = app.dataset.initialTab || "home";
     const tabButtons = Array.from(document.querySelectorAll("[data-tab-trigger]"));
     const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+    const viewedViolations = new Set();
 
     const setActiveTab = (tab) => {
         const normalized = tabPanels.some((panel) => panel.dataset.tabPanel === tab) ? tab : "home";
@@ -81,10 +82,8 @@
                         <td class="p-4 py-3 text-slate-700">${e.fullName}</td>
                         <td class="p-4 py-3 text-slate-500">${e.department || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-500">${e.username}</td>
-                        <td class="p-4 py-3 text-center">
-                            <button onclick="window.openCameraModal('${e.employeeCode}')" class="text-slate-400 hover:text-red-500 transition">
-                                <i class="fa-solid fa-video text-lg"></i>
-                            </button>
+                        <td class="p-4 py-3 text-right">
+                            <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Hoạt động</span>
                         </td>
                     </tr>
                 `).join('');
@@ -119,39 +118,120 @@
             const res = await fetch('/Manager/GetAllViolations');
             const data = await res.json();
             if (data.success) {
+                if (data.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chua co vi pham nao.</td></tr>`;
+                    return;
+                }
+
                 tbody.innerHTML = data.data.map(v => `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
+                        <td class="p-4 py-3 text-slate-900 font-semibold">${v.trackingId || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-900 font-medium">${v.employeeCode}</td>
                         <td class="p-4 py-3 text-slate-700">${v.violationType}</td>
                         <td class="p-4 py-3 text-slate-500">${v.cameraLocation}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</td>
                         <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700">${v.severity}</span></td>
+                        <td class="p-4 py-3">
+                            <div class="flex flex-col gap-1">
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
+                                ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' • ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
+                            </div>
+                        </td>
+                        <td class="p-4 py-3 text-right">
+                            ${v.status === 'Pending' ? `
+                            <div class="flex justify-end gap-2 items-center">
+                                <button onclick="window.openCameraForViolation('${v.employeeCode}', '${v.id}', '${v.status}')" class="text-red-500 hover:text-red-700 px-2 py-1 transition" title="Xem video vi phạm">
+                                    <i class="fa-solid fa-video text-lg"></i>
+                                </button>
+                            </div>` : `
+                            <div class="flex justify-end gap-2 items-center">
+                                <span class="text-xs text-slate-400 mr-2">${v.reviewChannel || 'Đã xử lý'}</span>
+                                <button onclick="window.openCameraModal('${v.employeeCode}')" class="text-red-500 hover:text-red-700 px-2 py-1 transition" title="Xem video vi phạm">
+                                    <i class="fa-solid fa-video text-lg"></i>
+                                </button>
+                            </div>`}
+                        </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
     };
 
-    const loadRequests = async () => {
+    window.reviewViolation = async (id, status) => {
+        const note = status === 'Rejected'
+            ? (prompt('Nhap ghi chu tu choi vi pham:') || 'Manager tu choi tu dashboard')
+            : 'Manager duyet tu dashboard';
+
+        if (!confirm(`Xac nhan cap nhat vi pham sang trang thai ${status}?`)) return;
+
+        try {
+            const res = await fetch(`/Manager/ReviewViolation?id=${id}&status=${encodeURIComponent(status)}&note=${encodeURIComponent(note)}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadViolations();
+                loadHomeStats();
+                window.closeCameraModal();
+            } else {
+                alert(data.message || 'Co loi xay ra');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Khong the cap nhat vi pham');
+        }
+    };
+
+        const loadRequests = async () => {
         const tbody = document.getElementById("requestTbody");
         if (!tbody) return;
         try {
             const res = await fetch('/Manager/GetAllRequests');
             const data = await res.json();
             if (data.success) {
-                tbody.innerHTML = data.data.map(r => `
+                if (data.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Không có đơn từ nào</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = data.data.map(r => {
+                    let tone = 'bg-slate-100 text-slate-700';
+                    if (r.status === 'Đã duyệt' || r.status === 'Approved') tone = 'bg-green-100 text-green-700';
+                    else if (r.status === 'Từ chối' || r.status === 'Rejected') tone = 'bg-red-100 text-red-700';
+                    else tone = 'bg-amber-100 text-amber-700';
+                    
+                    return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeId}</td>
-                        <td class="p-4 py-3 text-slate-700">${r.requestType}</td>
+                        <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeName || 'N/A'}</td>
+                        <td class="p-4 py-3 text-slate-700">
+                            <div>${r.requestType}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/\r?\n/g, '<br>')}</div>
+                        </td>
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${r.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${r.status}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>
+                        <td class="p-4 py-3 text-right">
+                            ${r.status === 'Chờ duyệt' || r.status === 'Pending' ? `
+                            <button onclick="updateRequestStatus(${r.id}, 'Đã duyệt')" class="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 mr-1">Duyệt</button>
+                            <button onclick="updateRequestStatus(${r.id}, 'Từ chối')" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Từ chối</button>
+                            ` : ''}
+                        </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
         } catch(err) { console.error(err); }
     };
+    
+    window.updateRequestStatus = async (id, status) => {
+        if (!confirm('Xác nhận ' + status + ' đơn này?')) return;
+        try {
+            const res = await fetch(`/Manager/UpdateRequestStatus?id=${id}&status=${encodeURIComponent(status)}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadRequests();
+            } else {
+                alert('Có lỗi xảy ra');
+            }
+        } catch(e) { console.error(e); }
+    };
 
-    const loadMessages = async () => {
+        const loadMessages = async () => {
         const tbody = document.getElementById("messageTbody");
         if (!tbody) return;
         try {
@@ -159,19 +239,32 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">Chưa có tin nhắn nào.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Chưa có tin nhắn nào.</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(m => `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-4 py-3 text-slate-900 font-medium">${m.senderId || 'Hệ thống'}</td>
-                        <td class="p-4 py-3 text-slate-700">${m.title || 'Không có tiêu đề'}</td>
-                        <td class="p-4 py-3 text-slate-500">${m.content}</td>
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 ${m.isRead ? 'opacity-70' : 'font-semibold'}">
+                        <td class="p-4 py-3 text-slate-900">${m.employeeName || 'Hệ thống'}</td>
+                        <td class="p-4 py-3 text-slate-800">${m.title || 'Không có tiêu đề'}</td>
+                        <td class="p-4 py-3 text-slate-600">${m.content}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(m.sentAt).toLocaleString('vi-VN')}</td>
+                        <td class="p-4 py-3 text-right">
+                            ${!m.isRead ? `<button onclick="markMessageRead(${m.id})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Đánh dấu đã đọc</button>` : `<span class="text-xs text-slate-400">Đã đọc</span>`}
+                        </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
+    };
+    
+    window.markMessageRead = async (id) => {
+        try {
+            const res = await fetch(`/Manager/UpdateMessageStatus?id=${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                loadMessages();
+            }
+        } catch(e) { console.error(e); }
     };
 
     const loadForms = async () => {
@@ -319,6 +412,9 @@
     };
 
     window.openCameraModal = (employeeCode) => {
+        const reviewActions = document.getElementById("cameraReviewActions");
+        if (reviewActions) reviewActions.classList.add("hidden");
+
         const modal = document.getElementById("cameraModal");
         document.getElementById("cameraModalTitle").textContent = "Camera: " + employeeCode;
         modal.classList.remove("hidden");
@@ -344,6 +440,71 @@
         const modal = document.getElementById("cameraModal");
         modal.classList.add("hidden");
         modal.classList.remove("flex");
+    };
+
+    window.openCameraForViolation = (employeeCode, violationId, status) => {
+        window.openCameraModal(employeeCode);
+        
+        const reviewActions = document.getElementById("cameraReviewActions");
+        if (reviewActions) {
+            if (status === 'Pending') {
+                reviewActions.classList.remove("hidden");
+                
+                const approveBtn = document.getElementById("cameraModalApproveBtn");
+                const rejectBtn = document.getElementById("cameraModalRejectBtn");
+                
+                if (approveBtn) approveBtn.onclick = () => window.reviewViolation(violationId, 'Approved');
+                if (rejectBtn) rejectBtn.onclick = () => window.reviewViolation(violationId, 'Rejected');
+            } else {
+                reviewActions.classList.add("hidden");
+            }
+        }
+    };
+
+    window.openAddEmployeeModal = () => {
+        const modal = document.getElementById("addEmployeeModal");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        document.getElementById("newEmpFullName").value = "";
+        document.getElementById("newEmpDepartment").value = "";
+        document.getElementById("newEmpResult").classList.add("hidden");
+        setTimeout(() => modal.querySelector('.saas-card').style.transform = 'scale(1)', 10);
+    };
+
+    window.closeAddEmployeeModal = () => {
+        const modal = document.getElementById("addEmployeeModal");
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        loadEmployees(); // Refresh list after close
+    };
+
+    window.submitAddEmployee = async () => {
+        const fullName = document.getElementById("newEmpFullName").value.trim();
+        const department = document.getElementById("newEmpDepartment").value.trim();
+        if (!fullName || !department) {
+            alert("Vui lòng nhập đầy đủ Họ Tên và Phòng ban.");
+            return;
+        }
+
+        try {
+            const res = await fetch('/Manager/AddEmployee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ FullName: fullName, Department: department })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById("resUsername").textContent = data.username;
+                document.getElementById("resPassword").textContent = data.password;
+                document.getElementById("newEmpResult").classList.remove("hidden");
+                // Don't close immediately so they can copy
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Lỗi kết nối.');
+        }
     };
 
     tabButtons.forEach((button) => {
@@ -430,3 +591,27 @@
     });
 
 })();
+
+
+window.handleTestVideoSelect = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const res = await fetch('/Manager/UploadTestVideo', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert('Lỗi: ' + data.message);
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Lỗi khi tải lên video');
+    }
+};

@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
@@ -46,6 +47,11 @@ public class UserService : IUserService
 
     public async Task<User?> RegisterAsync(User user, string plainPassword, string faceImageBase64, CancellationToken cancellationToken = default)
     {
+        if (!PasswordPolicy.TryValidate(plainPassword, out var passwordError))
+        {
+            throw new InvalidOperationException(passwordError);
+        }
+
         var existingUser = await _context.Users.AnyAsync(u => u.Username == user.Username, cancellationToken);
         if (existingUser)
         {
@@ -55,6 +61,8 @@ public class UserService : IUserService
         user.Id = Guid.NewGuid();
         user.PasswordHash = PasswordHasher.HashPassword(plainPassword);
         user.CreatedAtUtc = DateTime.UtcNow;
+        user.MustChangePassword = false;
+        user.RequiresInitialSecuritySetup = false;
 
         if (user.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase))
         {
@@ -122,6 +130,7 @@ public class UserService : IUserService
             }
 
             user.FaceImagePath = savedFiles.Count > 0 ? savedFiles[0] : "embeddings_saved";
+            await FinalizeInitialSecuritySetupIfReadyAsync(user, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             return user;
         }
@@ -316,14 +325,40 @@ public class UserService : IUserService
             return false;
         }
 
-        if (!PasswordHasher.VerifyPassword(oldPassword, user.PasswordHash))
+        var oldPasswordMatches = !string.IsNullOrWhiteSpace(oldPassword) && PasswordHasher.VerifyPassword(oldPassword, user.PasswordHash);
+        if (!oldPasswordMatches)
         {
-            return false;
+            if (!user.MustChangePassword)
+            {
+                return false;
+            }
         }
 
         user.PasswordHash = PasswordHasher.HashPassword(newPassword);
+        user.MustChangePassword = false;
+        await FinalizeInitialSecuritySetupIfReadyAsync(user, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<(bool RequiresInitialSecuritySetup, bool MustChangePassword, bool HasBiometricRegistration)> GetSecuritySetupStatusAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _context.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user == null)
+        {
+            return (false, false, false);
+        }
+
+        var hasBiometricRegistration = await _context.UserFaceEmbeddings
+            .AsNoTracking()
+            .AnyAsync(e => e.UserId == user.Id, cancellationToken);
+
+        return (user.RequiresInitialSecuritySetup, user.MustChangePassword, hasBiometricRegistration);
     }
 
     private static double CosineDistance(double[] vector1, double[] vector2)
@@ -566,6 +601,22 @@ public class UserService : IUserService
         }
 
         return (double)activeDeepfaceModel.ConfThreshold;
+    }
+
+    private async Task FinalizeInitialSecuritySetupIfReadyAsync(User user, CancellationToken cancellationToken)
+    {
+        if (!user.RequiresInitialSecuritySetup)
+        {
+            return;
+        }
+
+        var hasBiometricRegistration = await _context.UserFaceEmbeddings
+            .AnyAsync(e => e.UserId == user.Id, cancellationToken);
+
+        if (!user.MustChangePassword && hasBiometricRegistration)
+        {
+            user.RequiresInitialSecuritySetup = false;
+        }
     }
 
     private static void DeleteTempFiles(IEnumerable<string> tempFiles)

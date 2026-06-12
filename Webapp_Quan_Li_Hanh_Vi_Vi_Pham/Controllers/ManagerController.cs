@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
@@ -19,11 +21,13 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 public class ManagerController : Controller
 {
     private readonly IUserService _userService;
+    private readonly IViolationService _violationService;
     private readonly ViolationDbContext _context;
 
-    public ManagerController(IUserService userService, ViolationDbContext context)
+    public ManagerController(IUserService userService, IViolationService violationService, ViolationDbContext context)
     {
         _userService = userService;
+        _violationService = violationService;
         _context = context;
     }
 
@@ -90,6 +94,8 @@ public class ManagerController : Controller
         return View(form);
     }
 
+    [HttpGet]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Index()
     {
         return View();
@@ -142,6 +148,42 @@ public class ManagerController : Controller
         return Json(new { success = true, data = employees });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeDto req, CancellationToken cancellationToken)
+    {
+        if (req == null || string.IsNullOrWhiteSpace(req.FullName) || string.IsNullOrWhiteSpace(req.Department))
+        {
+            return Json(new { success = false, message = "Vui lòng cung cấp đầy đủ thông tin." });
+        }
+
+        var random = new Random();
+        var empCode = "EMP" + random.Next(1000, 9999);
+        var username = "emp_" + random.Next(1000, 9999);
+        var password = "Aa@" + random.Next(100000, 999999);
+        var hash = PasswordHasher.HashPassword(password);
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            FullName = req.FullName,
+            Department = req.Department,
+            Role = "Employee",
+            EmployeeCode = empCode,
+            Username = username,
+            PasswordHash = hash,
+            CreatedAtUtc = DateTime.UtcNow,
+            MustChangePassword = true,
+            RequiresInitialSecuritySetup = true,
+            IsKeyActivated = true,
+            BaseSalary = 15000000
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Json(new { success = true, username, password, employeeCode = empCode });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllWorkSessions(CancellationToken cancellationToken)
     {
@@ -158,8 +200,56 @@ public class ManagerController : Controller
         var violations = await _context.ViolationRecords
             .OrderByDescending(v => v.DetectedAtUtc)
             .Take(100)
+            .Select(v => new
+            {
+                v.Id,
+                v.TrackingId,
+                v.EmployeeCode,
+                v.EmployeeName,
+                v.ViolationType,
+                v.CameraLocation,
+                v.DetectedAtUtc,
+                v.Severity,
+                v.Status,
+                v.ReviewedBy,
+                v.ReviewedAtUtc,
+                v.ReviewChannel,
+                v.ReviewNote
+            })
             .ToListAsync(cancellationToken);
         return Json(new { success = true, data = violations });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReviewViolation(Guid id, string status, string? note, CancellationToken cancellationToken)
+    {
+        var reviewer = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Manager";
+        var success = await _violationService.ReviewViolationAsync(
+            id,
+            status,
+            reviewer,
+            "ManagerDashboard",
+            note,
+            cancellationToken);
+
+        if (!success)
+        {
+            return Json(new { success = false, message = "Khong tim thay vi pham can cap nhat." });
+        }
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Username = reviewer,
+            Action = "Duyệt vi phạm",
+            Details = $"Quản lý cập nhật vi phạm {id} sang trạng thái {status}. Ghi chú: {note ?? string.Empty}",
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Status = "Thành công"
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Json(new { success = true, message = "Da cap nhat trang thai vi pham." });
     }
 
     [HttpGet]
@@ -172,6 +262,19 @@ public class ManagerController : Controller
         return Json(new { success = true, data = requests });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> UpdateRequestStatus(int id, string status, CancellationToken cancellationToken)
+    {
+        var req = await _context.ApprovalRequests.FindAsync(new object[] { id }, cancellationToken);
+        if (req != null)
+        {
+            req.Status = status;
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllMessages(CancellationToken cancellationToken)
     {
@@ -180,6 +283,19 @@ public class ManagerController : Controller
             .Take(100)
             .ToListAsync(cancellationToken);
         return Json(new { success = true, data = msgs });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateMessageStatus(int id, CancellationToken cancellationToken)
+    {
+        var msg = await _context.EmployeeMessages.FindAsync(new object[] { id }, cancellationToken);
+        if (msg != null)
+        {
+            msg.IsRead = true;
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false });
     }
 
     [HttpGet]
@@ -315,4 +431,17 @@ public class ManagerController : Controller
             new ClaimsPrincipal(claimsIdentity),
             authProperties);
     }
+
+    [HttpPost]
+    public async Task<IActionResult> UploadTestVideo(IFormFile file)
+    {
+        if (file == null || file.Length == 0) return Json(new { success = false, message = "Không có file" });
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "ML", "samples", "test_video.mp4");
+        using (var stream = new FileStream(path, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+        return Json(new { success = true, message = "Video test đã được cập nhật!" });
+    }
+
 }
