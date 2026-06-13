@@ -149,9 +149,36 @@ public class AdminController : Controller
     }
 
     [HttpGet("/Admin/Settings")]
-    public IActionResult Settings()
+    public async Task<IActionResult> Settings(CancellationToken cancellationToken)
     {
-        return View();
+        ViewData["ActivePage"] = "SettingsSystem";
+        return View(await _modelSettingService.GetActiveSettingAsync(cancellationToken));
+    }
+
+    [HttpPost("/Admin/Settings/DeepFace")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateDeepFaceSettings(
+        string? deepfaceDetectorBackend,
+        bool deepfaceAlign,
+        bool deepfaceEnforceDetection,
+        CancellationToken cancellationToken)
+    {
+        var active = await _modelSettingService.GetActiveSettingAsync(cancellationToken);
+        var updated = new ModelSetting
+        {
+            YoloModelPath = active.YoloModelPath,
+            YoloConfThreshold = active.YoloConfThreshold,
+            YoloIouThreshold = active.YoloIouThreshold,
+            DeepfaceConfThreshold = active.DeepfaceConfThreshold,
+            DeepfaceDetectorBackend = string.IsNullOrWhiteSpace(deepfaceDetectorBackend) ? active.DeepfaceDetectorBackend : deepfaceDetectorBackend,
+            DeepfaceAlign = deepfaceAlign,
+            DeepfaceEnforceDetection = deepfaceEnforceDetection,
+            IsActive = active.IsActive
+        };
+
+        await _modelSettingService.UpdateSettingAsync(updated, cancellationToken);
+        TempData["SuccessMessage"] = "Đã cập nhật cấu hình DeepFace cho đăng ký, đăng nhập và cập nhật khuôn mặt.";
+        return RedirectToAction(nameof(Settings));
     }
 
     [HttpGet("/Admin/ProfileSettings")]
