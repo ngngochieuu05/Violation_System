@@ -348,9 +348,9 @@ public class TelegramAlertService : ITelegramAlertService
             Timestamp = DateTime.UtcNow,
             Username = reviewer,
             Action = "Review violation",
-            Details = $"Telegram cap nhat {trackingId} sang trạng thái {status}. Ghi chu: {reviewNote}",
+            Details = $"Telegram cập nhật {trackingId} sang trạng thái {status}. Ghi chú: {reviewNote}",
             IpAddress = "Telegram",
-            Status = "Thanh cong"
+            Status = "Thành công"
         });
         await dbContext.SaveChangesAsync(cancellationToken);
 

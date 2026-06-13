@@ -199,7 +199,7 @@
                         <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeName || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-700">
                             <div class="font-bold">${r.requestType}</div>
-                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/\n/g, '<br>')}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/\r?\n/g, '<br>')}</div>
                         </td>
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
                         <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>

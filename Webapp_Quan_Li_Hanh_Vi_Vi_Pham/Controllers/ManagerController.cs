@@ -202,10 +202,10 @@ public partial class ManagerController : Controller
             Id = Guid.NewGuid(),
             Timestamp = DateTime.UtcNow,
             Username = reviewer,
-            Action = "Review violation",
-            Details = $"Manager cap nhat vi pham {id} sang trang thai {status}. Ghi chu: {note ?? string.Empty}",
+            Action = "Duyệt vi phạm",
+            Details = $"Quản lý cập nhật vi phạm {id} sang trạng thái {status}. Ghi chú: {note ?? string.Empty}",
             IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-            Status = "Thanh cong"
+            Status = "Thành công"
         });
         await _context.SaveChangesAsync(cancellationToken);
 
