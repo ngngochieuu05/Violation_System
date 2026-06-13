@@ -8,6 +8,9 @@ public class PayrollRecord
     public Guid EmployeeId { get; set; }
     public int Month { get; set; }
     public int Year { get; set; }
+    public int StandardWorkingDays { get; set; } = 22;
+    public int ActualWorkingDays { get; set; }
+    public decimal SalaryPerDay { get; set; }
     public decimal BaseSalary { get; set; }
     public decimal KpiBonus { get; set; }
     public decimal ViolationDeduction { get; set; }

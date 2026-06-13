@@ -99,7 +99,8 @@ public class AccountController : Controller
             Username = username,
             FullName = fullName,
             Role = role,
-            ManagerKey = managerKey ?? "hieudeptraivcl"
+            ManagerKey = managerKey ?? "hieudeptraivcl",
+            Email = username.Contains("@") ? username : string.Empty
         };
 
         try

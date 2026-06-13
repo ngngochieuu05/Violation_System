@@ -12,8 +12,8 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 {
     [DbContext(typeof(ViolationDbContext))]
-    [Migration("20260612095409_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260613094441_AddPayrollFields")]
+    partial class AddPayrollFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -212,8 +212,18 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("DeepfaceAlign")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("DeepfaceConfThreshold")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DeepfaceDetectorBackend")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("DeepfaceEnforceDetection")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -239,6 +249,9 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("ActualWorkingDays")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("BaseSalary")
                         .HasColumnType("decimal(18,2)");
 
@@ -259,6 +272,12 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("SalaryPerDay")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("StandardWorkingDays")
+                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()

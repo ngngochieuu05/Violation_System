@@ -83,15 +83,77 @@
                         <td class="p-4 py-3 text-slate-700">${e.fullName}</td>
                         <td class="p-4 py-3 text-slate-500">${e.department || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-500">${e.username}</td>
-                        <td class="p-4 py-3 text-center">
-                            <button onclick="window.openCameraModal('${e.employeeCode}')" class="text-slate-400 hover:text-red-500 transition">
-                                <i class="fa-solid fa-video text-lg"></i>
+                        <td class="p-4 py-3 text-center flex items-center justify-center gap-2">
+                            <button onclick="window.openCameraModal('${e.employeeCode}')" class="px-2 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded text-xs transition" title="Xem Camera">
+                                <i class="fa-solid fa-video"></i>
+                            </button>
+                            <button onclick="window.resetEmployeePassword('${e.username}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-xs transition font-semibold" title="Cấp lại mật khẩu mặc định (123)">
+                                <i class="fa-solid fa-key mr-1"></i>Reset MK
                             </button>
                         </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
+    };
+
+    window.submitNewEmployee = async () => {
+        const code = document.getElementById('newEmpCode').value;
+        const name = document.getElementById('newEmpName').value;
+        const email = document.getElementById('newEmpEmail').value;
+        const dept = document.getElementById('newEmpDept').value;
+
+        if (!name || !email) {
+            alert('Vui lòng nhập Họ & Tên và Tài khoản (Email)!');
+            return;
+        }
+
+        try {
+            const res = await fetch('/Manager/CreateEmployee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Username: email, FullName: name, Department: dept, EmployeeCode: code })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Thêm nhân viên thành công!\nMật khẩu mặc định: ${data.defaultPassword}\nNhân viên sẽ được yêu cầu cập nhật lại trong lần đăng nhập đầu.`);
+                document.getElementById('addEmployeeModal').classList.add('hidden');
+                document.getElementById('addEmployeeModal').classList.remove('flex');
+                
+                document.getElementById('newEmpCode').value = '';
+                document.getElementById('newEmpName').value = '';
+                document.getElementById('newEmpEmail').value = '';
+                document.getElementById('newEmpDept').value = '';
+                
+                loadEmployees();
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Không thể kết nối đến máy chủ');
+        }
+    };
+
+    window.resetEmployeePassword = async (username) => {
+        if (!confirm(`Bạn có chắc muốn cấp lại mật khẩu cho tài khoản ${username}?\nMật khẩu mới sẽ là "123" và nhân viên phải đổi mật khẩu khi đăng nhập.`)) return;
+
+        try {
+            const res = await fetch('/Manager/ResetEmployeePassword', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Username: username })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Cấp lại mật khẩu thành công!\nMật khẩu mới: ${data.newPassword}`);
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Không thể kết nối đến máy chủ');
+        }
     };
 
     const loadWorkSessions = async () => {
@@ -204,8 +266,10 @@
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
                         <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>
                         <td class="p-4 py-3 text-right">
-                            ${r.status === 'Chá» duyá»‡t' || r.status === 'Pending' ? `
-                            <button onclick="openRequestDetailModal(${r.id})" class="px-3 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600 mr-1"><i class="fa-solid fa-eye"></i> Chi tiết</button>
+                            ${r.status === 'Chờ duyệt' || r.status === 'Pending' || r.status.includes('Chờ') ? `
+                            <button onclick="updateRequestStatus(${r.id}, 'Đã duyệt')" class="px-2 py-1.5 bg-green-500 text-white rounded shadow text-xs hover:bg-green-600 mr-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
+                            <button onclick="updateRequestStatus(${r.id}, 'Từ chối')" class="px-2 py-1.5 bg-red-500 text-white rounded shadow text-xs hover:bg-red-600 mr-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>
+                            <button onclick="openRequestDetailModal(${r.id})" class="px-2 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600" title="Chi tiết"><i class="fa-solid fa-eye"></i></button>
                             ` : `
                             <button onclick="openRequestDetailModal(${r.id})" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50"><i class="fa-solid fa-eye"></i> Chi tiết</button>
                             `}
@@ -393,7 +457,7 @@
                     <div class="flex flex-col items-end">
                         <div class="flex items-center gap-2 mb-1 flex-row-reverse">
                             <span class="text-xs font-semibold text-slate-700">Bạn</span>
-                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt).toLocaleTimeString('vi-VN')}</span>
+                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt + (!m.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN')}</span>
                             ${m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic">(đã chỉnh sửa)</span>' : ''}
                         </div>
                         <div class="flex items-center gap-2">
@@ -416,7 +480,7 @@
                     <div class="flex flex-col items-start">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-xs font-semibold text-slate-700">${m.senderName}</span>
-                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt).toLocaleTimeString('vi-VN')}</span>
+                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt + (!m.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN')}</span>
                             ${m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic">(đã chỉnh sửa)</span>' : ''}
                         </div>
                         <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-sm text-slate-700 max-w-md ${m.isRevoked ? 'opacity-50 italic' : ''}">
@@ -569,19 +633,22 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">Chưa có dữ liệu lương tháng ${month}/${year}. Hãy bấm "Tính lương tháng này".</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400">Chưa có dữ liệu lương tháng ${month}/${year}. Hãy bấm "Tính lương tháng này".</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(p => `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-medium">${p.employeeName}</td>
                         <td class="p-4 py-3 text-slate-700 text-right">${p.baseSalary.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-slate-700 text-right">${p.actualWorkingDays}/${p.standardWorkingDays}</td>
+                        <td class="p-4 py-3 text-slate-700 text-right">${p.salaryPerDay.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-emerald-600 font-medium text-right">+${p.kpiBonus.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-red-600 font-medium text-right">-${p.violationDeduction.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-slate-900 font-bold text-right">${p.netSalary.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-center"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${p.status === 'Đã thanh toán' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}">${p.status}</span></td>
-                        <td class="p-4 py-3 text-center">
-                            ${p.status !== 'Đã thanh toán' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'Đã thanh toán')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm">Thanh toán</button>` : ''}
+                        <td class="p-4 py-3 text-center flex flex-col gap-1 items-center justify-center">
+                            ${p.status !== 'Đã thanh toán' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'Đã thanh toán')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm w-full">Thanh toán</button>` : ''}
+                            <button onclick="window.openEditPayrollModal('${p.id}', ${p.baseSalary}, ${p.standardWorkingDays}, ${p.actualWorkingDays}, ${p.kpiBonus})" class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300 transition shadow-sm w-full">Chỉnh sửa</button>
                         </td>
                     </tr>
                 `).join('');
@@ -602,6 +669,53 @@
         try {
             await fetch(`/Manager/UpdatePayrollStatus?id=${id}&status=${status}`, { method: 'POST' });
             loadPayrolls();
+        } catch(err) { console.error(err); }
+    };
+
+    window.openEditPayrollModal = (id, baseSalary, standardDays, actualDays, kpiBonus) => {
+        document.getElementById('editPayrollId').value = id;
+        document.getElementById('editPayrollBase').value = baseSalary;
+        document.getElementById('editPayrollStandardDays').value = standardDays;
+        document.getElementById('editPayrollActualDays').value = actualDays;
+        document.getElementById('editPayrollKpi').value = kpiBonus;
+        
+        const modal = document.getElementById('editPayrollModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closeEditPayrollModal = () => {
+        const modal = document.getElementById('editPayrollModal');
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    };
+
+    window.submitEditPayroll = async () => {
+        const id = document.getElementById('editPayrollId').value;
+        const baseSalary = parseFloat(document.getElementById('editPayrollBase').value) || 0;
+        const standardDays = parseInt(document.getElementById('editPayrollStandardDays').value) || 0;
+        const actualDays = parseInt(document.getElementById('editPayrollActualDays').value) || 0;
+        const kpiBonus = parseFloat(document.getElementById('editPayrollKpi').value) || 0;
+
+        try {
+            const res = await fetch('/Manager/EditPayrollRecord', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    Id: id,
+                    BaseSalary: baseSalary,
+                    StandardWorkingDays: standardDays,
+                    ActualWorkingDays: actualDays,
+                    KpiBonus: kpiBonus
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeEditPayrollModal();
+                loadPayrolls();
+            } else {
+                alert(data.message);
+            }
         } catch(err) { console.error(err); }
     };
 
@@ -941,6 +1055,8 @@
             }
         }
     });
+
+
 
     loadProfile();
 

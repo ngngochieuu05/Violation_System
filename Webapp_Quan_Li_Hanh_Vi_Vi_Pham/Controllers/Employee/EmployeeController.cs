@@ -697,7 +697,10 @@ public class EmployeeController : Controller
                 fullName = u.FullName ?? u.Username,
                 role = u.Role ?? "Employee",
                 avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
-                unreadCount = _context.EmployeeMessages.Count(m => m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee" && !m.IsRead)
+                unreadCount = _context.EmployeeMessages.Count(m => !m.IsRead && (
+                    (m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee") ||
+                    (m.EmployeeUserId == u.Id && (m.Channel == user.Username || m.Channel == user.Id.ToString()))
+                ))
             })
             .ToListAsync(cancellationToken);
 
@@ -984,10 +987,10 @@ public class EmployeeController : Controller
         }
 
         var unreadMessages = await _context.EmployeeMessages
-            .Where(m => m.EmployeeUserId == user.Id 
-                     && m.Channel == req.Channel 
-                     && m.SenderRole != "Employee" 
-                     && !m.IsRead)
+            .Where(m => !m.IsRead && (
+                (m.EmployeeUserId == user.Id && m.Channel == req.Channel && m.SenderRole != "Employee") || 
+                (m.EmployeeUsername == req.Channel && (m.Channel == user.Username || m.Channel == user.Id.ToString()) && m.SenderRole == "Employee")
+            ))
             .ToListAsync(cancellationToken);
 
         if (unreadMessages.Any())
@@ -1003,6 +1006,7 @@ public class EmployeeController : Controller
     }
 
 }
+
 
 
 

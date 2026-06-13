@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
@@ -11,9 +12,11 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 {
     [DbContext(typeof(ViolationDbContext))]
-    partial class ViolationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613062942_TenMigration")]
+    partial class TenMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -246,9 +249,6 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ActualWorkingDays")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("BaseSalary")
                         .HasColumnType("decimal(18,2)");
 
@@ -269,12 +269,6 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 
                     b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<decimal>("SalaryPerDay")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("StandardWorkingDays")
-                        .HasColumnType("int");
 
                     b.Property<string>("Status")
                         .IsRequired()

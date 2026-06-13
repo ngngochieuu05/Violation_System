@@ -38,6 +38,8 @@
                     <tr>
                         <th class="p-4 py-3 font-bold">Nhân viên</th>
                         <th class="p-4 py-3 font-bold text-right">Lương cơ bản</th>
+                        <th class="p-4 py-3 font-bold text-right">Ngày công</th>
+                        <th class="p-4 py-3 font-bold text-right">Lương NC</th>
                         <th class="p-4 py-3 font-bold text-right">Thưởng KPI</th>
                         <th class="p-4 py-3 font-bold text-right">Trừ vi phạm</th>
                         <th class="p-4 py-3 font-bold text-right">Thực nhận</th>
@@ -49,6 +51,42 @@
                     <tr><td colspan="7" class="p-8 text-center text-slate-400">Chọn tháng và bấm "Tính lương tháng này" để bắt đầu</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Payroll Modal -->
+<div id="editPayrollModal" class="fixed inset-0 z-[1200] hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md overflow-hidden rounded-[24px] bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+            <h3 class="font-outfit text-lg font-bold text-slate-900">Chỉnh sửa Lương</h3>
+            <button type="button" onclick="closeEditPayrollModal()" class="text-slate-400 hover:text-slate-600 transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <input type="hidden" id="editPayrollId" />
+            <div>
+                <label class="mb-1 block text-sm font-bold text-slate-700">Lương cơ bản (VNĐ)</label>
+                <input type="number" id="editPayrollBase" class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none" />
+            </div>
+            <div>
+                <label class="mb-1 block text-sm font-bold text-slate-700">Ngày công chuẩn (Ngày)</label>
+                <input type="number" id="editPayrollStandardDays" class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none" />
+            </div>
+            <div>
+                <label class="mb-1 block text-sm font-bold text-slate-700">Ngày công thực tế (Ngày)</label>
+                <input type="number" id="editPayrollActualDays" class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none" />
+            </div>
+            <div>
+                <label class="mb-1 block text-sm font-bold text-slate-700">Thưởng KPI (VNĐ)</label>
+                <input type="number" id="editPayrollKpi" class="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none" />
+            </div>
+            <p class="text-xs text-slate-500">Lương Thực nhận sẽ được tự động tính toán lại theo công thức mới.</p>
+        </div>
+        <div class="border-t border-slate-100 bg-slate-50 px-6 py-4 flex justify-end gap-3">
+            <button type="button" onclick="closeEditPayrollModal()" class="rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 transition">Hủy</button>
+            <button type="button" onclick="submitEditPayroll()" class="rounded-xl bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-900 transition">Lưu thay đổi</button>
         </div>
     </div>
 </div>

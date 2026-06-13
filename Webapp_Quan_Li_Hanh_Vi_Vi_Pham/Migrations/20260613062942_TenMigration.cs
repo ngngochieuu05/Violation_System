@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class TenMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -170,6 +170,9 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Migrations
                     YoloConfThreshold = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     YoloIouThreshold = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     DeepfaceConfThreshold = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DeepfaceDetectorBackend = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DeepfaceAlign = table.Column<bool>(type: "bit", nullable: false),
+                    DeepfaceEnforceDetection = table.Column<bool>(type: "bit", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>

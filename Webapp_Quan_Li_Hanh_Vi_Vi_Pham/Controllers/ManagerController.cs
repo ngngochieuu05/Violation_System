@@ -144,6 +144,65 @@ public partial class ManagerController : Controller
         return Json(new { success = true, data = employees });
     }
 
+    public class CreateEmployeeDto
+    {
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Department { get; set; } = string.Empty;
+        public string EmployeeCode { get; set; } = string.Empty;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto dto, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.FullName))
+            return Json(new { success = false, message = "Vui lòng nhập Username và Họ Tên." });
+            
+        var exists = await _context.Users.AnyAsync(u => u.Username == dto.Username, cancellationToken);
+        if (exists) return Json(new { success = false, message = "Tên đăng nhập đã tồn tại." });
+
+        var defaultPassword = "123";
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = dto.Username,
+            FullName = dto.FullName,
+            Role = "Employee",
+            Department = dto.Department,
+            EmployeeCode = dto.EmployeeCode,
+            PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword(defaultPassword),
+            FaceImagePath = string.Empty,
+            ManagerKey = string.Empty,
+            MustChangePassword = true,
+            RequiresInitialSecuritySetup = true,
+            IsKeyActivated = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Json(new { success = true, defaultPassword });
+    }
+
+    public class ResetPasswordDto
+    {
+        public string Username { get; set; } = string.Empty;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResetEmployeePassword([FromBody] ResetPasswordDto dto, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username && u.Role == "Employee", cancellationToken);
+        if (user == null) return Json(new { success = false, message = "Không tìm thấy nhân viên." });
+        
+        var newPassword = "123";
+        user.PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword(newPassword);
+        user.MustChangePassword = true;
+        user.RequiresInitialSecuritySetup = true;
+        await _context.SaveChangesAsync(cancellationToken);
+        
+        return Json(new { success = true, newPassword });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllWorkSessions(CancellationToken cancellationToken)
     {
@@ -295,6 +354,11 @@ public partial class ManagerController : Controller
     [HttpPost]
     public async Task<IActionResult> AssignTask([FromBody] EmployeeTask task, CancellationToken cancellationToken)
     {
+        if (task == null)
+        {
+            return Json(new { success = false, message = "Dữ liệu nhiệm vụ không hợp lệ." });
+        }
+
         task.Id = Guid.NewGuid();
         task.CreatedAt = DateTime.Now;
         task.Status = "Pending";
@@ -317,6 +381,9 @@ public partial class ManagerController : Controller
             EmployeeName = users.ContainsKey(p.EmployeeId) ? users[p.EmployeeId] : "Unknown",
             p.Month,
             p.Year,
+            p.StandardWorkingDays,
+            p.ActualWorkingDays,
+            p.SalaryPerDay,
             p.BaseSalary,
             p.KpiBonus,
             p.ViolationDeduction,
@@ -324,6 +391,36 @@ public partial class ManagerController : Controller
             p.Status
         });
         return Json(new { success = true, data = result });
+    }
+
+    public sealed class EditPayrollRequest
+    {
+        public Guid Id { get; set; }
+        public decimal BaseSalary { get; set; }
+        public decimal KpiBonus { get; set; }
+        public int StandardWorkingDays { get; set; }
+        public int ActualWorkingDays { get; set; }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> EditPayrollRecord([FromBody] EditPayrollRequest request, CancellationToken cancellationToken)
+    {
+        var payroll = await _context.PayrollRecords.FindAsync(new object[] { request.Id }, cancellationToken);
+        if (payroll == null) return Json(new { success = false, message = "Không tìm thấy bản ghi lương." });
+
+        payroll.BaseSalary = request.BaseSalary;
+        payroll.KpiBonus = request.KpiBonus;
+        payroll.StandardWorkingDays = request.StandardWorkingDays;
+        payroll.ActualWorkingDays = request.ActualWorkingDays;
+
+        // Recalculate
+        payroll.SalaryPerDay = payroll.StandardWorkingDays > 0 ? (payroll.BaseSalary / payroll.StandardWorkingDays) * payroll.ActualWorkingDays : 0;
+        decimal gross = payroll.SalaryPerDay + payroll.KpiBonus;
+        decimal net = gross - payroll.ViolationDeduction;
+        payroll.NetSalary = net < 0 ? 0 : net;
+
+        await _context.SaveChangesAsync(cancellationToken);
+        return Json(new { success = true, message = "Cập nhật thành công." });
     }
 
     [HttpPost]
@@ -341,9 +438,20 @@ public partial class ManagerController : Controller
             var violations = await _context.ViolationRecords
                 .Where(v => v.EmployeeCode == emp.EmployeeCode && v.DetectedAtUtc.Month == month && v.DetectedAtUtc.Year == year)
                 .ToListAsync(cancellationToken);
+            var actualDays = await _context.WorkSessions
+                .Where(w => w.EmployeeUserId == emp.Id && w.Date.Month == month && w.Date.Year == year)
+                .Select(w => w.Date.Date)
+                .Distinct()
+                .CountAsync(cancellationToken);
+
+            int standardDays = 22;
+            decimal salaryPerDay = standardDays > 0 ? (emp.BaseSalary / standardDays) * actualDays : 0;
             
             decimal deduction = violations.Count * 50000; // Mỗi vi phạm trừ 50k
             decimal kpiBonus = 1000000; // Mặc định thưởng 1M, Manager có thể sửa sau
+
+            decimal gross = salaryPerDay + kpiBonus;
+            decimal net = gross - deduction;
 
             var payroll = new PayrollRecord
             {
@@ -351,10 +459,13 @@ public partial class ManagerController : Controller
                 EmployeeId = emp.Id,
                 Month = month,
                 Year = year,
+                StandardWorkingDays = standardDays,
+                ActualWorkingDays = actualDays,
+                SalaryPerDay = salaryPerDay,
                 BaseSalary = emp.BaseSalary,
                 KpiBonus = kpiBonus,
                 ViolationDeduction = deduction,
-                NetSalary = emp.BaseSalary + kpiBonus - deduction,
+                NetSalary = net < 0 ? 0 : net,
                 Status = "Chưa thanh toán",
                 CreatedAt = DateTime.Now
             };

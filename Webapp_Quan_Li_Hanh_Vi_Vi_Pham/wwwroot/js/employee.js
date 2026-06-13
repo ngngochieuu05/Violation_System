@@ -749,9 +749,14 @@ const loadChatContacts = async () => {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ channel: contact.username })
                             }).then(() => {
-                                // Reload contacts to clear the badge
+                                // Reload contacts softly to stay synced
                                 loadChatContacts();
+                                if (typeof loadNotifications === 'function') loadNotifications();
                             });
+                            // Optimistically clear the badge
+                            contact.unreadCount = 0;
+                            const badge = el.querySelector('.bg-red-500.absolute');
+                            if (badge) badge.remove();
                         } catch(e) {}
                     }
                     
@@ -780,11 +785,29 @@ const loadMessages = async () => {
         if (result.success && Array.isArray(result.data)) {
             chats = {}; // Reset toàn bộ
             result.data.forEach(m => {
-                const ch = m.channel || "manager";
+                let ch = m.channel || "manager";
+                let author = "other";
+
+                if (m.senderRole === "Employee") {
+                    if (m.employeeUsername === currentUsername) {
+                        // I sent this message
+                        ch = m.channel;
+                        author = "self";
+                    } else {
+                        // Someone else sent this to me
+                        ch = m.employeeUsername;
+                        author = "other";
+                    }
+                } else if (m.senderRole === "Manager") {
+                    // Manager sent this
+                    ch = m.channel || "manager";
+                    author = "other";
+                }
+
                 if (!chats[ch]) chats[ch] = [];
                 chats[ch].push({
                     id: m.id,
-                    author: m.senderRole === "Employee" ? "self" : "other",
+                    author: author,
                     text: m.content,
                     revoked: m.isRevoked
                 });
@@ -1124,6 +1147,12 @@ const loadMessages = async () => {
                 document.getElementById('empNetSalaryTop').textContent = latest.netSalary.toLocaleString('vi-VN') + ' ₫';
                 
                 document.getElementById('empBaseSalary').textContent = latest.baseSalary.toLocaleString('vi-VN') + ' ₫';
+                if (document.getElementById('empWorkingDays')) {
+                    document.getElementById('empWorkingDays').textContent = `${latest.actualWorkingDays} / ${latest.standardWorkingDays}`;
+                }
+                if (document.getElementById('empSalaryPerDay')) {
+                    document.getElementById('empSalaryPerDay').textContent = latest.salaryPerDay.toLocaleString('vi-VN') + ' ₫';
+                }
                 document.getElementById('empKpiBonus').textContent = '+' + latest.kpiBonus.toLocaleString('vi-VN') + ' ₫';
                 document.getElementById('empDeduction').textContent = '-' + latest.violationDeduction.toLocaleString('vi-VN') + ' ₫';
 
@@ -1670,19 +1699,61 @@ const loadMessages = async () => {
         renderRequests();
     });
 
-    document.querySelector("[data-profile-save]")?.addEventListener("click", () => {
-        profile = {
-            ...profile,
+    document.querySelector("[data-profile-save]")?.addEventListener("click", async () => {
+        const btn = document.querySelector("[data-profile-save]");
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang lưu...';
+        btn.disabled = true;
+
+        const updatedProfile = {
             name: document.querySelector("[data-profile-input='name']")?.value.trim() || profile.name,
             department: document.querySelector("[data-profile-input='department']")?.value.trim() || profile.department,
             email: document.querySelector("[data-profile-input='email']")?.value.trim() || profile.email,
             phone: document.querySelector("[data-profile-input='phone']")?.value.trim() || profile.phone
         };
-        writeStore(storageKeys.profile, profile);
-        renderProfile();
-        const msg = document.querySelector("[data-profile-message]");
-        if (msg) {
-            msg.textContent = "Đã cập nhật thông tin hiển thị trong khu vực nhân viên.";
+
+        try {
+            const res = await fetch("/Employee/UpdateProfile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    Name: updatedProfile.name,
+                    Department: updatedProfile.department,
+                    Email: updatedProfile.email,
+                    Phone: updatedProfile.phone
+                })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                profile = { ...profile, ...updatedProfile };
+                writeStore(storageKeys.profile, profile);
+                renderProfile();
+                const msg = document.querySelector("[data-profile-message]");
+                if (msg) {
+                    msg.textContent = "Đã lưu thành công. Email này có thể dùng để Đăng nhập Google.";
+                    msg.classList.remove("text-slate-500", "text-red-600");
+                    msg.classList.add("text-emerald-600");
+                }
+            } else {
+                const msg = document.querySelector("[data-profile-message]");
+                if (msg) {
+                    msg.textContent = "Lỗi: " + (data.message || "Không thể cập nhật.");
+                    msg.classList.remove("text-slate-500", "text-emerald-600");
+                    msg.classList.add("text-red-600");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            const msg = document.querySelector("[data-profile-message]");
+            if (msg) {
+                msg.textContent = "Lỗi kết nối máy chủ.";
+                msg.classList.remove("text-slate-500", "text-emerald-600");
+                msg.classList.add("text-red-600");
+            }
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
         }
     });
 
@@ -1946,39 +2017,7 @@ const loadMessages = async () => {
 
     addTaskCloseBtn?.addEventListener("click", closeAddTaskModal);
 
-    submitNewTaskBtn?.addEventListener("click", async () => {
-        const title = document.getElementById("newTaskTitle")?.value;
-        const desc = document.getElementById("newTaskDesc")?.value;
-        const date = document.getElementById("newTaskDate")?.value;
-
-        if (!title) {
-            alert("Vui lòng nhập tiêu đề công việc.");
-            return;
-        }
-
-        const payload = {
-            Title: title,
-            Description: desc,
-            DueDate: date ? new Date(date).toISOString() : new Date().toISOString()
-        };
-
-        try {
-            const res = await fetch("/Employee/AddTask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            const result = await res.json();
-            if (result.success) {
-                closeAddTaskModal();
-                if (typeof loadMyTasks === "function") loadMyTasks();
-            } else {
-                alert(result.message || "Không thể thêm công việc");
-            }
-        } catch (e) {
-            console.error("Error adding task:", e);
-        }
-    });
+    // The task creation event listener has been consolidated below at line 2090.
 
     // --- Task Event Listeners ---
     document.addEventListener("change", (e) => {
@@ -2457,8 +2496,7 @@ const loadMessages = async () => {
                         listEl.innerHTML = data.data.map(n => `
                             <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}">
                                 <p class="text-sm font-semibold text-slate-900">${n.title}</p>
-                                <p class="text-xs text-slate-500 mt-0.5 line-clamp-2">${n.body}</p>
-                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt).toLocaleString('vi-VN')}</p>
+                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
                             </div>
                         `).join('');
                     }
@@ -2488,6 +2526,63 @@ const loadMessages = async () => {
             loadNotifications();
         } catch (e) { console.error(e); }
     });
+
+    // --- Security Setup Check ---
+    const checkSecuritySetup = async () => {
+        try {
+            const res = await fetch('/Account/OnboardingStatus');
+            const data = await res.json();
+            if (data.success && (data.requiresInitialSecuritySetup || data.mustChangePassword || !data.hasBiometricRegistration)) {
+                // Force switch to profile tab
+                const profileBtn = document.querySelector('[data-tab-trigger="profile"]') || document.querySelector('[data-tab-trigger="ho-so"]');
+                if (profileBtn) profileBtn.click();
+                
+                // Show blocking overlay over everything except the profile content
+                let overlay = document.getElementById('securitySetupOverlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'securitySetupOverlay';
+                    overlay.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center';
+                    overlay.style.zIndex = '9999';
+                    overlay.innerHTML = `
+                        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border border-red-100">
+                            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </div>
+                            <h2 class="text-xl font-bold text-slate-800 mb-2 font-outfit">Yêu cầu bảo mật</h2>
+                            <p class="text-sm text-slate-600 mb-6">Bạn cần cập nhật mật khẩu và thiết lập nhận diện khuôn mặt để sử dụng các tính năng của hệ thống.</p>
+                            <button onclick="document.getElementById('securitySetupOverlay').style.display='none'; const profileBtn = document.querySelector('[data-tab-trigger=\\'profile\\']'); if (profileBtn) profileBtn.click();" class="px-6 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition">
+                                <i class="fa-solid fa-arrow-right mr-2"></i>Đến trang Cài đặt hồ sơ
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(overlay);
+                }
+                
+                // Disable clicking on other sidebar items
+                const sidebarLinks = document.querySelectorAll('.sidebar-link, [data-tab-trigger]');
+                sidebarLinks.forEach(link => {
+                    if (link.dataset.target !== 'ho-so' && link.dataset.target !== 'profile' && link.dataset.tabTrigger !== 'profile' && link.dataset.tabTrigger !== 'ho-so') {
+                        link.style.pointerEvents = 'none';
+                        link.style.opacity = '0.5';
+                    }
+                });
+            } else if (data.success && !data.requiresInitialSecuritySetup && !data.mustChangePassword && data.hasBiometricRegistration) {
+                const overlay = document.getElementById('securitySetupOverlay');
+                if (overlay) overlay.remove();
+                
+                // Re-enable sidebar links
+                const sidebarLinks = document.querySelectorAll('.sidebar-link, [data-tab-trigger]');
+                sidebarLinks.forEach(link => {
+                    link.style.pointerEvents = 'auto';
+                    link.style.opacity = '1';
+                });
+            }
+        } catch (e) { console.error(e); }
+    };
+    
+    checkSecuritySetup();
+    setInterval(checkSecuritySetup, 10000); // Check every 10s
 
 })();
 

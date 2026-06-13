@@ -72,6 +72,11 @@ public class UserService : IUserService
         else
         {
             user.IsKeyActivated = true;
+            if (user.Role.Equals("Employee", StringComparison.OrdinalIgnoreCase))
+            {
+                var employeeCount = await _context.Users.CountAsync(u => u.Role == "Employee", cancellationToken);
+                user.EmployeeCode = $"NV-{employeeCount + 1:D3}";
+            }
         }
 
         if (string.IsNullOrWhiteSpace(faceImageBase64))
@@ -212,6 +217,7 @@ public class UserService : IUserService
             }
 
             user.FaceImagePath = savedFiles.Count > 0 ? savedFiles[0] : "embeddings_saved";
+            await FinalizeInitialSecuritySetupIfReadyAsync(user, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
