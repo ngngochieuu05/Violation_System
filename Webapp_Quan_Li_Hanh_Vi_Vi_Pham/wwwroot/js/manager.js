@@ -451,9 +451,6 @@
             if (isSelf) {
                 return `
                 <div class="flex gap-4 flex-row-reverse">
-                    <div class="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 font-bold overflow-hidden shadow-sm border border-slate-200">
-                        <i class="fa-solid fa-user-tie text-xs"></i>
-                    </div>
                     <div class="flex flex-col items-end">
                         <div class="flex items-center gap-2 mb-1 flex-row-reverse">
                             <span class="text-xs font-semibold text-slate-700">Bạn</span>
@@ -474,9 +471,6 @@
             } else {
                 return `
                 <div class="flex gap-4">
-                    <div class="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center text-slate-500 font-bold overflow-hidden shadow-sm border border-slate-200">
-                        <i class="fa-solid fa-user text-xs"></i>
-                    </div>
                     <div class="flex flex-col items-start">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-xs font-semibold text-slate-700">${m.senderName}</span>

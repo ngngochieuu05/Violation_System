@@ -809,7 +809,9 @@ const loadMessages = async () => {
                     id: m.id,
                     author: author,
                     text: m.content,
-                    revoked: m.isRevoked
+                    revoked: m.isRevoked,
+                    sentAt: m.sentAt,
+                    editedAtUtc: m.editedAtUtc
                 });
             });
             await loadChatContacts(); // Load danh bạ thực tế thay vì hardcode
@@ -871,8 +873,30 @@ const loadMessages = async () => {
             } else {
                 bubble.className = message.author === "self"
                     ? "max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white"
-                    : "max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700";
+                    : "max-w-md rounded-2xl bg-white px-4 py-3 text-sm text-slate-700 shadow-sm border border-slate-100";
                 bubble.textContent = message.text;
+                
+                // Add timestamp row
+                const timeStr = message.sentAt ? new Date(message.sentAt + (!message.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN') : '';
+                const editLabel = message.editedAtUtc ? '<span class="text-[10px] text-slate-400 italic ml-1">(đã chỉnh sửa)</span>' : '';
+                
+                const metaRow = document.createElement("div");
+                metaRow.className = "flex items-center gap-2 mb-1 px-1 " + (message.author === "self" ? "flex-row-reverse" : "flex-row");
+                
+                const timeSpan = document.createElement("span");
+                timeSpan.className = "text-[10px] text-slate-400";
+                timeSpan.innerHTML = timeStr + editLabel;
+                
+                const authorSpan = document.createElement("span");
+                authorSpan.className = "text-xs font-semibold text-slate-700";
+                authorSpan.textContent = message.author === "self" ? "Bạn" : (document.querySelector("[data-chat-title]")?.textContent || "Khách");
+                
+                metaRow.appendChild(authorSpan);
+                if(timeStr) metaRow.appendChild(timeSpan);
+
+                const contentWrapper = document.createElement("div");
+                contentWrapper.className = "flex flex-col " + (message.author === "self" ? "items-end" : "items-start");
+                contentWrapper.appendChild(metaRow);
                 
                 if (message.author === "self") {
                     const row = document.createElement("div");
@@ -920,10 +944,15 @@ const loadMessages = async () => {
                     row.appendChild(editBtn);
                     row.appendChild(revokeBtn);
                     row.appendChild(bubble);
-                    bubbleWrapper.appendChild(row);
+                    contentWrapper.appendChild(row);
                 } else {
-                    bubbleWrapper.appendChild(bubble);
+                    const row = document.createElement("div");
+                    row.className = "flex items-center gap-2";
+                    row.appendChild(bubble);
+                    contentWrapper.appendChild(row);
                 }
+                
+                bubbleWrapper.appendChild(contentWrapper);
             }
             
             thread.appendChild(bubbleWrapper);
