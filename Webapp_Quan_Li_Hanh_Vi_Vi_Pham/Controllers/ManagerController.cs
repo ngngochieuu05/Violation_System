@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
@@ -21,12 +23,14 @@ public partial class ManagerController : Controller
     private readonly IUserService _userService;
     private readonly IViolationService _violationService;
     private readonly ViolationDbContext _context;
+    private readonly IHubContext<InternalChatHub> _hubContext;
 
-    public ManagerController(IUserService userService, IViolationService violationService, ViolationDbContext context)
+    public ManagerController(IUserService userService, IViolationService violationService, ViolationDbContext context, IHubContext<InternalChatHub> hubContext)
     {
         _userService = userService;
         _violationService = violationService;
         _context = context;
+        _hubContext = hubContext;
     }
 
     [AllowAnonymous]
@@ -129,7 +133,7 @@ public partial class ManagerController : Controller
     public async Task<IActionResult> GetAllEmployees(CancellationToken cancellationToken)
     {
         var employees = await _context.Users
-            .Where(u => u.Role == "Employee")
+            .Where(u => u.Role == "Employee" && u.FaceImagePath != null && u.FaceImagePath != "")
             .Select(u => new {
                 u.Id,
                 u.EmployeeCode,
@@ -214,6 +218,32 @@ public partial class ManagerController : Controller
     }
 
     [HttpGet]
+    public async Task<IActionResult> ExportWorkSessionsCsv(CancellationToken cancellationToken)
+    {
+        var sessions = await _context.WorkSessions
+            .OrderByDescending(w => w.Date)
+            .ToListAsync(cancellationToken);
+
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("Ma Nhan Vien,Ngay,Gio Vao,Gio Ra,Trang Thai");
+
+        foreach (var s in sessions)
+        {
+            var date = s.Date.ToString("dd/MM/yyyy");
+            var checkIn = s.CheckInTime.ToString(@"hh\:mm\:ss");
+            var checkOut = s.CheckOutTime?.ToString(@"hh\:mm\:ss") ?? "";
+            builder.AppendLine($"{s.EmployeeUserId},{date},{checkIn},{checkOut},{s.Status}");
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetBytes(builder.ToString());
+        var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+        var fileBytes = bom.Concat(bytes).ToArray();
+
+        return File(fileBytes, "text/csv", $"ChamCong_{DateTime.Now:yyyyMMddHHmmss}.csv");
+    }
+
+
+    [HttpGet]
     public async Task<IActionResult> GetAllViolations(CancellationToken cancellationToken)
     {
         var violations = await _context.ViolationRecords
@@ -289,6 +319,16 @@ public partial class ManagerController : Controller
         {
             req.Status = status;
             await _context.SaveChangesAsync(cancellationToken);
+            
+            var employeeGroup = InternalChatHub.BuildUserIdGroup(req.EmployeeUserId.ToString());
+            await _hubContext.Clients.Group(employeeGroup).SendAsync("ReceiveNotification", new
+            {
+                title = "Cập nhật đơn từ",
+                message = $"Đơn từ '{req.RequestType}' của bạn đã chuyển sang trạng thái: {status}.",
+                type = "request",
+                url = "?tab=requests"
+            }, cancellationToken);
+
             return Json(new { success = true });
         }
         return Json(new { success = false });

@@ -30,7 +30,7 @@ public class ApiController : ControllerBase
     public async Task<IActionResult> GetEmployees(CancellationToken cancellationToken)
     {
         var employees = await _context.Users
-            .Where(u => u.Role == "Employee")
+            .Where(u => u.Role == "Employee" && u.FaceImagePath != null && u.FaceImagePath != "")
             .Select(u => new { u.Id, u.Username, u.FullName, u.Role })
             .ToListAsync(cancellationToken);
             

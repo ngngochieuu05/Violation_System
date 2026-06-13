@@ -169,7 +169,7 @@
                         <td class="p-4 py-3 text-slate-500">${new Date(ws.date).toLocaleDateString('vi-VN')}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(ws.checkInTime).toLocaleTimeString('vi-VN')}</td>
                         <td class="p-4 py-3 text-slate-500">${ws.checkOutTime ? new Date(ws.checkOutTime).toLocaleTimeString('vi-VN') : 'Äang lÃ m viá»‡c'}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${ws.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${ws.status}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${ws.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${ws.status === 'Late' ? 'Đi muộn' : (ws.status === 'On-time' || ws.status === 'On time' ? 'Đúng giờ' : ws.status)}</span></td>
                     </tr>
                 `).join('');
             }
@@ -188,17 +188,38 @@
                     return;
                 }
 
-                tbody.innerHTML = data.data.map(v => `
+                tbody.innerHTML = data.data.map(v => {
+                    const violationTypes = {
+                        "Khong deo the": "Không đeo thẻ",
+                        "Hut thuoc": "Hút thuốc",
+                        "Ngu gat": "Ngủ gật",
+                        "Roi vi tri": "Rời vị trí",
+                        "Di muon": "Đi muộn",
+                        "Ve som": "Về sớm"
+                    };
+                    const typeDisplay = violationTypes[v.violationType] || v.violationType;
+                    
+                    const statuses = {
+                        "Pending": "Chờ xử lý",
+                        "Approved": "Đã duyệt",
+                        "Rejected": "Từ chối"
+                    };
+                    const statusDisplay = statuses[v.status] || v.status;
+                    
+                    return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-semibold">${v.trackingId || 'N/A'}</td>
-                        <td class="p-4 py-3 text-slate-900 font-medium">${v.employeeCode}</td>
-                        <td class="p-4 py-3 text-slate-700">${v.violationType}</td>
+                        <td class="p-4 py-3 text-slate-900 font-medium">
+                            ${v.employeeCode}
+                            <div class="text-[10px] text-slate-500 font-normal mt-0.5">${v.employeeName || 'Không xác định'}</div>
+                        </td>
+                        <td class="p-4 py-3 text-slate-700">${typeDisplay}</td>
                         <td class="p-4 py-3 text-slate-500">${v.cameraLocation}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</td>
                         <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700">${v.severity}</span></td>
                         <td class="p-4 py-3">
                             <div class="flex flex-col gap-1">
-                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${statusDisplay}</span>
                                 ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' • ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
                             </div>
                         </td>
@@ -210,7 +231,7 @@
                             </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Đã xử lý'}</span>`}
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             }
         } catch(err) { console.error(err); }
     };
@@ -237,8 +258,8 @@
         }
     };
 
-        window.managerRequestsList = [];
-        const loadRequests = async () => {
+    window.managerRequestsList = [];
+    const loadRequests = async () => {
         const tbody = document.getElementById("requestTbody");
         if (!tbody) return;
         try {
@@ -251,27 +272,40 @@
                     return;
                 }
                 tbody.innerHTML = data.data.map(r => {
-                    let tone = 'bg-slate-100 text-slate-700';
-                    if (r.status === 'ÄÃ£ duyá»‡t' || r.status === 'Approved') tone = 'bg-green-100 text-green-700';
-                    else if (r.status === 'Từ chối' || r.status === 'Rejected') tone = 'bg-red-100 text-red-700';
-                    else tone = 'bg-amber-100 text-amber-700';
+                    let rawStatus = r.status || '';
+                    let displayStatus = 'Chờ duyệt';
+                    let tone = 'bg-amber-100 text-amber-700';
+                    const lowerStatus = rawStatus.toLowerCase();
+                    if (lowerStatus.includes('chờ') || lowerStatus.includes('chá»') || lowerStatus.includes('pending') || lowerStatus.includes('đợi')) {
+                        displayStatus = 'Chờ duyệt';
+                        tone = 'bg-amber-100 text-amber-700';
+                    } else if (lowerStatus.includes('đã duyệt') || lowerStatus.includes('đã') || lowerStatus.includes('approved') || lowerStatus.includes('ã£ duy')) {
+                        displayStatus = 'Đã duyệt';
+                        tone = 'bg-green-100 text-green-700';
+                    } else if (lowerStatus.includes('chối') || lowerStatus.includes('rejected') || lowerStatus.includes('chá»‘i')) {
+                        displayStatus = 'Từ chối';
+                        tone = 'bg-red-100 text-red-700';
+                    } else if (lowerStatus.includes('duyệt') || lowerStatus.includes('duyá»‡t')) {
+                        displayStatus = 'Đã duyệt';
+                        tone = 'bg-green-100 text-green-700';
+                    }
                     
                     return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeName || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-700">
                             <div class="font-bold">${r.requestType}</div>
-                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/\r?\n/g, '<br>')}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${(r.content || '').replace(/\r?\n/g, '<br>')}</div>
                         </td>
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${displayStatus}</span></td>
                         <td class="p-4 py-3 text-right">
-                            ${r.status === 'Chờ duyệt' || r.status === 'Pending' || r.status.includes('Chờ') ? `
-                            <button onclick="updateRequestStatus(${r.id}, 'Đã duyệt')" class="px-2 py-1.5 bg-green-500 text-white rounded shadow text-xs hover:bg-green-600 mr-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
-                            <button onclick="updateRequestStatus(${r.id}, 'Từ chối')" class="px-2 py-1.5 bg-red-500 text-white rounded shadow text-xs hover:bg-red-600 mr-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>
-                            <button onclick="openRequestDetailModal(${r.id})" class="px-2 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600" title="Chi tiết"><i class="fa-solid fa-eye"></i></button>
+                            ${displayStatus === 'Chờ duyệt' ? `
+                            <button onclick="updateRequestStatus('${r.id}', 'Đã duyệt')" class="px-2 py-1.5 bg-green-500 text-white rounded shadow text-xs hover:bg-green-600 mr-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
+                            <button onclick="updateRequestStatus('${r.id}', 'Từ chối')" class="px-2 py-1.5 bg-red-500 text-white rounded shadow text-xs hover:bg-red-600 mr-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>
+                            <button onclick="openRequestDetailModal('${r.id}')" class="px-2 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600" title="Chi tiết"><i class="fa-solid fa-eye"></i></button>
                             ` : `
-                            <button onclick="openRequestDetailModal(${r.id})" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50"><i class="fa-solid fa-eye"></i> Chi tiết</button>
+                            <button onclick="openRequestDetailModal('${r.id}')" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50"><i class="fa-solid fa-eye"></i> Chi tiết</button>
                             `}
                         </td>
                     </tr>
@@ -280,38 +314,179 @@
         } catch(err) { console.error(err); }
     };
     
+    const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
+        const now = new Date();
+        const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
+        const locationDate = `Ngày ${d} tháng ${m} năm ${y}`;
+
+        const bodyHtml = bodyLines
+            .map(line => {
+                const filled = line
+                    .replace(/\{name\}/g, `<strong>${name}</strong>`)
+                    .replace(/\{department\}/g, `<strong>${department}</strong>`)
+                    .replace(/\{date\}/g, `<strong>${date}</strong>`)
+                    .replace(/\{reason\}/g, reason);
+                return `<p style="text-align:justify;text-indent:2em;margin:4px 0;">${filled}</p>`;
+            })
+            .join("");
+
+        return `
+<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.8;color:#111;padding:4px 8px;min-height:400px;">
+  <div style="text-align:center;margin-bottom:2px;">
+    <strong style="font-size:13px;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
+    <span style="font-size:12px;">Độc lập – Tự do – Hạnh phúc</span><br>
+    <span style="display:inline-block;width:140px;border-top:1.5px solid #111;margin-top:3px;"></span>
+  </div>
+
+  <div style="text-align:center;margin:14px 0 10px;">
+    <strong style="font-size:14px;text-transform:uppercase;letter-spacing:0.04em;">${tieuDe}</strong>
+  </div>
+
+  <p style="margin:6px 0;"><em>Kính gửi:</em> ${kinhGui}</p>
+
+  ${bodyHtml}
+
+  <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+    <div style="text-align:center;min-width:180px;">
+      <p style="margin:0;"><em>${locationDate}</em></p>
+      <p style="margin:2px 0;">Người làm đơn</p>
+      <p style="margin:0;font-style:italic;font-size:11px;color:#555;">(Ký và ghi rõ họ tên)</p>
+      <p style="margin:40px 0 0;"><strong>${name}</strong></p>
+    </div>
+  </div>
+</div>`;
+    };
+
+    const buildDoc = {
+        "Nghỉ phép": (name, department, date, reason) => buildDocHtml(
+            "Đơn xin nghỉ phép",
+            "Ban Giám đốc và Quản lý bộ phận",
+            [
+                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
+                "Tôi làm đơn này kính xin phép được nghỉ vào ngày {date}.",
+                "Lý do: {reason}",
+                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận cho tôi được nghỉ theo thời gian trên.",
+                "Tôi cam kết bàn giao công việc đầy đủ trước khi nghỉ và trở lại làm việc đúng lịch.",
+                "Trân trọng cảm ơn!"
+            ],
+            name, department, date, reason
+        ),
+        "Đi muộn": (name, department, date, reason) => buildDocHtml(
+            "Đơn xin đi muộn / về sớm",
+            "Ban Giám đốc và Quản lý bộ phận",
+            [
+                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
+                "Tôi làm đơn này kính xin phép được đi muộn / về sớm vào ngày {date}.",
+                "Lý do: {reason}",
+                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét và chấp thuận.",
+                "Trân trọng cảm ơn!"
+            ],
+            name, department, date, reason
+        ),
+        "Tăng ca": (name, department, date, reason) => buildDocHtml(
+            "Đơn xin làm thêm giờ (tăng ca)",
+            "Ban Giám đốc và Quản lý bộ phận",
+            [
+                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
+                "Tôi làm đơn này kính xin phép được làm thêm giờ vào ngày {date}.",
+                "Nội dung công việc / Lý do: {reason}",
+                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, phê duyệt để tôi có thể hoàn thành nhiệm vụ được giao.",
+                "Trân trọng cảm ơn!"
+            ],
+            name, department, date, reason
+        ),
+        "Điều chỉnh ca": (name, department, date, reason) => buildDocHtml(
+            "Đơn xin điều chỉnh ca làm việc",
+            "Ban Giám đốc và Quản lý bộ phận",
+            [
+                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
+                "Tôi làm đơn này kính xin phép được điều chỉnh ca làm việc vào ngày {date}.",
+                "Lý do: {reason}",
+                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận và sắp xếp ca phù hợp.",
+                "Trân trọng cảm ơn!"
+            ],
+            name, department, date, reason
+        )
+    };
+
     window.openRequestDetailModal = (id) => {
-        const req = window.managerRequestsList.find(x => x.id === id);
+        const req = window.managerRequestsList.find(x => x.id == id);
         if(!req) return;
         
-        document.getElementById("managerReqDetailEmployeeName").textContent = req.employeeName;
-        document.getElementById("managerReqDetailDate").textContent = new Date(req.submittedAt).toLocaleDateString('vi-VN');
-        document.getElementById("managerReqDetailTitle").textContent = req.requestType.toUpperCase();
-        document.getElementById("managerReqDetailContent").innerHTML = req.content.replace(/\n/g, '<br>');
-        document.getElementById("managerReqDetailSignName").textContent = req.employeeName;
+        const contentContainer = document.getElementById("managerReqDetailContent");
         
-        const statusEl = document.getElementById("managerReqDetailStatus");
-        statusEl.textContent = req.status;
-        if(req.status === 'ÄÃ£ duyá»‡t' || req.status === 'Approved') {
-            statusEl.className = "absolute top-8 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-green-500 text-green-500";
-        } else if (req.status === 'Từ chối' || req.status === 'Rejected') {
-            statusEl.className = "absolute top-8 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-red-500 text-red-500";
+        let typeStr = req.requestType || "Nghỉ phép";
+        let builderKey = "Nghỉ phép";
+        if (typeStr.toLowerCase().includes("đi muộn") || typeStr.toLowerCase().includes("về sớm")) builderKey = "Đi muộn";
+        else if (typeStr.toLowerCase().includes("tăng ca") || typeStr.toLowerCase().includes("thêm giờ")) builderKey = "Tăng ca";
+        else if (typeStr.toLowerCase().includes("điều chỉnh ca")) builderKey = "Điều chỉnh ca";
+
+        let extractedDate = "[Ngày/Tháng/Năm]";
+        let extractedReason = "";
+        const lines = (req.content || '').split('\n').map(l => l.trim());
+        lines.forEach(line => {
+            if (line.startsWith("Ngày áp dụng:")) extractedDate = line.substring(13).trim();
+            else if (line.startsWith("Lý do:")) extractedReason = line.substring(6).trim();
+        });
+
+        if (!extractedReason) extractedReason = "[Nhập lý do chi tiết...]";
+
+        let name = req.employeeName || "Nhân viên";
+        let department = "Khối vận hành";
+
+        contentContainer.innerHTML = buildDoc[builderKey](name, department, extractedDate, extractedReason);
+        
+        let rawStatus = req.status || '';
+        let statusText = 'Chờ duyệt';
+        const lowerStatus = rawStatus.toLowerCase();
+        if (lowerStatus.includes('chờ') || lowerStatus.includes('chá»') || lowerStatus.includes('pending') || lowerStatus.includes('đợi')) {
+            statusText = 'Chờ duyệt';
+        } else if (lowerStatus.includes('đã duyệt') || lowerStatus.includes('đã') || lowerStatus.includes('approved') || lowerStatus.includes('ã£ duy')) {
+            statusText = 'Đã duyệt';
+        } else if (lowerStatus.includes('chối') || lowerStatus.includes('rejected') || lowerStatus.includes('chá»‘i')) {
+            statusText = 'Từ chối';
+        } else if (lowerStatus.includes('duyệt') || lowerStatus.includes('duyá»‡t')) {
+            statusText = 'Đã duyệt';
+        }
+
+        let statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-amber-500 text-amber-500 pointer-events-none";
+        if(statusText === 'Đã duyệt') {
+            statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-green-500 text-green-500 pointer-events-none";
+        } else if (statusText === 'Từ chối') {
+            statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-red-500 text-red-500 pointer-events-none";
+        }
+        
+        const statusDiv = document.createElement("div");
+        statusDiv.className = statusClass;
+        statusDiv.textContent = statusText;
+        
+        contentContainer.classList.add("relative");
+        contentContainer.appendChild(statusDiv);
+        
+        const rejectBtn = document.querySelector("button[onclick='rejectCurrentRequest()']");
+        const approveBtn = document.querySelector("button[onclick='approveCurrentRequest()']");
+        if (statusText === 'Chờ duyệt') {
+            if (rejectBtn) rejectBtn.classList.remove('hidden');
+            if (approveBtn) approveBtn.classList.remove('hidden');
         } else {
-            statusEl.className = "absolute top-8 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-amber-500 text-amber-500";
+            if (rejectBtn) rejectBtn.classList.add('hidden');
+            if (approveBtn) approveBtn.classList.add('hidden');
         }
         
         document.getElementById("managerRequestDetailModal").dataset.currentId = id;
         document.getElementById("managerRequestDetailModal").classList.remove("hidden");
+        document.getElementById("managerRequestDetailModal").classList.add("flex");
     };
 
     window.closeManagerRequestModal = () => {
         document.getElementById("managerRequestDetailModal").classList.add("hidden");
+        document.getElementById("managerRequestDetailModal").classList.remove("flex");
     };
 
     window.approveCurrentRequest = () => {
         const id = document.getElementById("managerRequestDetailModal").dataset.currentId;
         if(id) {
-            updateRequestStatus(id, 'ÄÃ£ duyá»‡t');
+            updateRequestStatus(id, 'Đã duyệt');
             closeManagerRequestModal();
         }
     };
@@ -408,6 +583,7 @@
             if (contact) {
                 contact.unreadCount = 0;
                 renderManagerChatContacts();
+                if (typeof loadNotifications === 'function') loadNotifications();
             }
         } catch (e) { console.error(e); }
     };
@@ -501,6 +677,7 @@
                 });
                 clearManagerMessageEditing();
                 loadManagerConversation();
+                loadChatContacts();
             } catch (e) { console.error(e); }
         } else {
             try {
@@ -511,6 +688,7 @@
                 });
                 input.value = "";
                 loadManagerConversation();
+                loadChatContacts();
             } catch (e) { console.error(e); }
         }
     });
@@ -555,6 +733,7 @@
                 body: JSON.stringify({ Id: id })
             });
             loadManagerConversation();
+            loadChatContacts();
         } catch (e) { console.error(e); }
     };
 
@@ -592,6 +771,65 @@
                 document.getElementById('statAttendance').innerText = data.data.attendance;
                 document.getElementById('statViolations').innerText = data.data.violations;
                 document.getElementById('statRequests').innerText = data.data.requests;
+            }
+
+            // Load recent requests
+            const reqRes = await fetch('/Manager/GetAllRequests');
+            const reqData = await reqRes.json();
+            const reqTbody = document.getElementById("homeRecentRequestsTbody");
+            if (reqTbody && reqData.success) {
+                const pending = reqData.data.filter(r => r.status === 'Pending').slice(0, 5);
+                if (pending.length === 0) {
+                    reqTbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-400">Không có đơn từ chờ duyệt.</td></tr>';
+                } else {
+                    reqTbody.innerHTML = pending.map(r => `
+                        <tr class="hover:bg-slate-50 border-b border-slate-50">
+                            <td class="p-3">
+                                <p class="font-semibold text-slate-900">${r.employeeName}</p>
+                                <p class="text-[10px] text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</p>
+                            </td>
+                            <td class="p-3 text-slate-700">${r.requestType}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="document.querySelector('[data-tab-trigger=\\\'requests\\\']').click()" class="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-medium hover:bg-red-100">Duyệt ngay</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // Load recent violations
+            const vioRes = await fetch('/Manager/GetAllViolations');
+            const vioData = await vioRes.json();
+            const vioTbody = document.getElementById("homeRecentViolationsTbody");
+            if (vioTbody && vioData.success) {
+                const recents = vioData.data.slice(0, 5);
+                if (recents.length === 0) {
+                    vioTbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-400">Không có vi phạm nào.</td></tr>';
+                } else {
+                    vioTbody.innerHTML = recents.map(v => {
+                        const violationTypes = {
+                            "Khong deo the": "Không đeo thẻ",
+                            "Hut thuoc": "Hút thuốc",
+                            "Ngu gat": "Ngủ gật",
+                            "Roi vi tri": "Rời vị trí",
+                            "Di muon": "Đi muộn",
+                            "Ve som": "Về sớm"
+                        };
+                        const typeDisplay = violationTypes[v.violationType] || v.violationType;
+                        return `
+                        <tr class="hover:bg-slate-50 border-b border-slate-50">
+                            <td class="p-3">
+                                <p class="font-semibold text-slate-900">${v.employeeCode} - ${v.employeeName || 'Không xác định'}</p>
+                                <p class="text-[10px] text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</p>
+                            </td>
+                            <td class="p-3 text-slate-700">${typeDisplay}</td>
+                            <td class="p-3 text-right">
+                                <span class="px-2 py-1 text-[10px] font-bold rounded-full ${v.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.severity}</span>
+                            </td>
+                        </tr>
+                        `;
+                    }).join('');
+                }
             }
         } catch (err) { console.error(err); }
     };
@@ -1080,3 +1318,80 @@ window.handleTestVideoSelect = async (event) => {
     }
 };
 
+    const loadNotifications = async () => {
+        try {
+            const res = await fetch("/Manager/GetNotifications");
+            const data = await res.json();
+            if (data.success && data.data) {
+                const listEl = document.querySelector("#dashboardNotificationMenu .max-h-64");
+                const unreadBadge = document.querySelector("#dashboardNotificationTrigger .bg-red-500");
+                const ping = document.querySelector("#dashboardNotificationTrigger .bg-red-400");
+                const notifTrigger = document.getElementById("dashboardNotificationTrigger");
+                
+                if (listEl) {
+                    if (data.data.length === 0) {
+                        listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
+                    } else {
+                        listEl.innerHTML = data.data.map(n => `
+                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="window.location.href='?tab=${n.tab}'">
+                                <p class="text-sm font-semibold text-slate-900">${n.title}</p>
+                                <p class="text-xs text-slate-500 line-clamp-1">${n.body || ''}</p>
+                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
+                            </div>
+                        `).join('');
+                    }
+                }
+                
+                if (unreadBadge && ping && notifTrigger) {
+                    const hasUnread = data.data.some(n => !n.isRead);
+                    if (hasUnread) {
+                        unreadBadge.classList.remove("hidden");
+                        ping.classList.remove("hidden");
+                        notifTrigger.classList.add("text-red-600");
+                    } else {
+                        unreadBadge.classList.add("hidden");
+                        ping.classList.add("hidden");
+                        notifTrigger.classList.remove("text-red-600");
+                    }
+                }
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    loadNotifications();
+    setInterval(loadNotifications, 10000); // 10 seconds
+
+    document.querySelector("[data-notification-mark-all]")?.addEventListener("click", async () => {
+        try {
+            await fetch('/Manager/MarkAllNotificationsRead', { method: 'POST' });
+            loadNotifications();
+        } catch (e) { console.error(e); }
+    });
+
+// --- SIGNALR REAL-TIME NOTIFICATIONS ---
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof signalR !== 'undefined') {
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chatHub")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("ReceiveNotification", (data) => {
+            if (typeof loadNotifications === 'function') {
+                loadNotifications();
+            }
+        });
+
+        connection.on("MessagesChanged", (data) => {
+            // Nạp lại danh sách chat nếu đang ở tab messages
+            if (typeof loadChatContacts === 'function' && !document.querySelector("[data-tab-panel='messages']").classList.contains("hidden")) {
+                loadChatContacts();
+            }
+            if (typeof loadManagerConversation === 'function' && managerActiveEmployeeId) {
+                loadManagerConversation();
+            }
+        });
+
+        connection.start().catch(err => console.error("SignalR Connection Error: ", err));
+    }
+});

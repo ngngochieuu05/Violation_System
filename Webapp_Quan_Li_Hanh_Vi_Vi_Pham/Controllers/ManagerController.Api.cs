@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
@@ -179,6 +181,18 @@ public partial class ManagerController
         _context.EmployeeMessages.Add(msg);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Phát sự kiện tới nhóm Employee (để báo có tin nhắn mới)
+        var employeeGroup = InternalChatHub.BuildUserIdGroup(employee.Id.ToString());
+        await _hubContext.Clients.Group(employeeGroup).SendAsync("ReceiveNotification", new
+        {
+            title = "Tin nhắn từ Quản lý",
+            message = $"{manager.FullName} vừa gửi tin nhắn cho bạn.",
+            type = "message",
+            url = "?tab=messages"
+        }, cancellationToken);
+
+        await NotifyConversationChangedAsync(manager, employee);
+
         return Json(new { success = true, message = "Đã gửi thông báo thành công." });
     }
 
@@ -204,7 +218,13 @@ public partial class ManagerController
         msg.EditedAtUtc = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
-        return Json(new { success = true, message = "ÄÃ£ cập nhật tin nháº¯n." });
+        var employee = await _context.Users.FindAsync(new object[] { msg.EmployeeUserId }, cancellationToken);
+        if (employee != null)
+        {
+            await NotifyConversationChangedAsync(manager, employee);
+        }
+
+        return Json(new { success = true, message = "Ä Ã£ cập nhật tin nháº¯n." });
     }
 
     [HttpPost]
@@ -226,8 +246,32 @@ public partial class ManagerController
         msg.Content = "[Tin nhắn đã thu hồi]";
         await _context.SaveChangesAsync(cancellationToken);
 
+        var employee = await _context.Users.FindAsync(new object[] { msg.EmployeeUserId }, cancellationToken);
+        if (employee != null)
+        {
+            await NotifyConversationChangedAsync(manager, employee);
+        }
+
         return Json(new { success = true });
     }
+
+    private async Task NotifyConversationChangedAsync(User manager, User employee)
+    {
+        var groups = new[]
+        {
+            InternalChatHub.BuildUsernameGroup(employee.Username),
+            InternalChatHub.BuildUserIdGroup(employee.Id.ToString()),
+            InternalChatHub.BuildUsernameGroup(manager.Username)
+        };
+
+        await _hubContext.Clients.Groups(groups).SendAsync("MessagesChanged", new
+        {
+            employeeUserId = employee.Id,
+            employeeUsername = employee.Username,
+            channel = manager.Username
+        });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetChatContacts(CancellationToken cancellationToken)
     {
@@ -235,7 +279,7 @@ public partial class ManagerController
         if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
 
         var employees = await _context.Users
-            .Where(u => u.Role == "Employee")
+            .Where(u => u.Role == "Employee" && u.FaceImagePath != null && u.FaceImagePath != "")
             .Select(u => new
             {
                 userId = u.Id,
@@ -266,6 +310,14 @@ public partial class ManagerController
             .OrderBy(m => m.SentAt)
             .ToListAsync(cancellationToken);
 
+        foreach (var msg in messages)
+        {
+            if (msg.IsRevoked)
+            {
+                msg.Content = "Tin nhắn đã thu hồi";
+            }
+        }
+
         return Json(new { success = true, data = messages });
     }
 
@@ -284,6 +336,96 @@ public partial class ManagerController
             foreach (var m in unreadMessages)
             {
                 m.IsRead = true;
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return Json(new { success = true });
+    }
+    [HttpGet]
+    public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        var messages = await _context.EmployeeMessages
+            .Where(m => m.Channel == manager.Username && m.SenderRole == "Employee")
+            .OrderByDescending(m => m.SentAt)
+            .Take(10)
+            .Select(m => new
+            {
+                source = "message",
+                id = m.Id,
+                title = string.IsNullOrWhiteSpace(m.Title) ? $"Tin nhắn từ {m.SenderName}" : m.Title,
+                body = m.Content,
+                createdAt = m.SentAt,
+                isRead = m.IsRead,
+                tab = "messages"
+            })
+            .ToListAsync(cancellationToken);
+
+        var requestUpdates = await _context.ApprovalRequests
+            .Where(r => r.Status == "Chờ duyệt" || r.Status == "Pending")
+            .OrderByDescending(r => r.SubmittedAt)
+            .Take(10)
+            .Select(r => new
+            {
+                source = "request",
+                id = r.Id,
+                title = $"Đơn từ mới: {r.RequestType}",
+                body = $"Từ nhân viên: {r.EmployeeName}",
+                createdAt = r.SubmittedAt,
+                isRead = false, // Manager notifications for requests are inherently unread if pending
+                tab = "requests"
+            })
+            .ToListAsync(cancellationToken);
+
+        var combined = messages
+            .Concat(requestUpdates)
+            .OrderByDescending(item => item.createdAt)
+            .Take(12)
+            .ToList();
+
+        return Json(new
+        {
+            success = true,
+            data = combined,
+            unreadCount = messages.Count(m => !m.isRead) + requestUpdates.Count()
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkNotificationRead(int id, CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        var message = await _context.EmployeeMessages
+            .FirstOrDefaultAsync(m => m.Id == id && m.Channel == manager.Username, cancellationToken);
+
+        if (message != null)
+        {
+            message.IsRead = true;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkAllNotificationsRead(CancellationToken cancellationToken)
+    {
+        var manager = await GetCurrentUserAsync(cancellationToken);
+        if (manager == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        var unreadMessages = await _context.EmployeeMessages
+            .Where(m => m.Channel == manager.Username && m.SenderRole == "Employee" && !m.IsRead)
+            .ToListAsync(cancellationToken);
+
+        if (unreadMessages.Count > 0)
+        {
+            foreach (var message in unreadMessages)
+            {
+                message.IsRead = true;
             }
             await _context.SaveChangesAsync(cancellationToken);
         }

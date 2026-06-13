@@ -21,6 +21,12 @@ public class InternalChatHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserIdGroup(userId));
         }
 
+        var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+        if (!string.IsNullOrWhiteSpace(role))
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"role:{role.ToLowerInvariant()}");
+        }
+
         await base.OnConnectedAsync();
     }
 

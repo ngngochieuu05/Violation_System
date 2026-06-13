@@ -154,7 +154,7 @@
                         <div class="relative ml-2" id="dashboardNotificationDropdown">
                             <button type="button" class="relative text-zinc-600 hover:bg-zinc-100 p-2 rounded-md focus:outline-none transition-all duration-200 hover:-translate-y-0.5 active:scale-95" id="dashboardNotificationTrigger">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                                <span class="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full"></span>
+                                <span class="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full hidden"></span>
                             </button>
                             
                             <div id="dashboardNotificationMenu" class="absolute mt-2 w-80 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
@@ -225,10 +225,47 @@
     <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     
-    <!-- Sidebar and Dropdowns Logic -->
+    <!-- Sidebar, Dropdowns, and SignalR Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // SignalR Notification Setup
+            if (typeof signalR !== 'undefined') {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/chatHub")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("ReceiveNotification", (data) => {
+                    const notifTrigger = document.getElementById("dashboardNotificationTrigger");
+                    if (notifTrigger) {
+                        const badge = notifTrigger.querySelector(".bg-red-600");
+                        if (badge) badge.classList.remove("hidden");
+                        notifTrigger.classList.add("text-red-600");
+                    }
+
+                    const notifMenu = document.getElementById("dashboardNotificationMenu");
+                    if (notifMenu) {
+                        const container = notifMenu.querySelector(".max-h-64");
+                        if (container) {
+                            const div = document.createElement("div");
+                            div.className = "px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0";
+                            div.innerHTML = `
+                                <p class="text-sm text-slate-800 font-medium">${data.message}</p>
+                                <p class="text-xs text-slate-500 mt-1">Vừa xong</p>
+                            `;
+                            div.addEventListener("click", () => {
+                                window.location.href = data.url || "#";
+                            });
+                            container.insertBefore(div, container.firstChild);
+                        }
+                    }
+                });
+
+                connection.start().catch(err => console.error("SignalR Connection Error: ", err));
+            }
+
             // Sidebar Mobile Toggle
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const sidebar = document.getElementById('admin-sidebar');

@@ -57,6 +57,40 @@
                     <p class="text-xs text-slate-500 mt-1">Chờ xét duyệt</p>
                 </div>
             </div>
+        </div> <!-- Close p-8 -->
+
+        <div class="p-8 pt-0">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Đơn từ chờ duyệt gần đây -->
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col h-[400px]">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h4 class="font-bold text-slate-800"><i class="fa-solid fa-file-signature text-amber-500 mr-2"></i>Đơn từ chờ duyệt</h4>
+                        <button onclick="document.querySelector('[data-tab-trigger=\'requests\']').click()" class="text-xs text-blue-600 hover:underline">Xem tất cả</button>
+                    </div>
+                    <div class="overflow-y-auto flex-1">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <tbody id="homeRecentRequestsTbody">
+                                <tr><td class="p-4 text-center text-slate-400">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Vi phạm mới nhất -->
+                <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col h-[400px]">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h4 class="font-bold text-slate-800"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i>Vi phạm mới nhất</h4>
+                        <button onclick="document.querySelector('[data-tab-trigger=\'violations\']').click()" class="text-xs text-blue-600 hover:underline">Xem tất cả</button>
+                    </div>
+                    <div class="overflow-y-auto flex-1">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <tbody id="homeRecentViolationsTbody">
+                                <tr><td class="p-4 text-center text-slate-400">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

@@ -223,6 +223,18 @@ public class AccountController : Controller
         var isRegisterFlow = string.Equals(mode, "register", StringComparison.OrdinalIgnoreCase);
         var createdNow = string.Equals(User.FindFirst("GoogleAccountCreated")?.Value, "true", StringComparison.OrdinalIgnoreCase);
 
+        if (!isRegisterFlow && createdNow)
+        {
+            // Nếu người dùng nhấn "Đăng nhập" nhưng tài khoản lại chưa tồn tại (vừa được tạo ngầm),
+            // ta hủy bỏ việc tạo tài khoản này, đăng xuất và yêu cầu họ sang trang Đăng ký.
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            _dbContext.Users.Remove(user);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            TempData["ErrorMessage"] = "Tài khoản Google này chưa được đăng ký. Vui lòng đăng ký trước.";
+            return RedirectToAction(nameof(Register));
+        }
+
         if (isRegisterFlow)
         {
             if (createdNow)

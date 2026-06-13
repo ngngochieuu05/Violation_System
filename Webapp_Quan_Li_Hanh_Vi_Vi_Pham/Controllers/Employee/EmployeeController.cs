@@ -690,7 +690,7 @@ public class EmployeeController : Controller
         }
 
         var contacts = await _context.Users
-            .Where(u => u.Id != user.Id)
+            .Where(u => u.Id != user.Id && (u.Role != "Employee" || (u.FaceImagePath != null && u.FaceImagePath != "")))
             .Select(u => new
             {
                 username = u.Username,
@@ -722,6 +722,14 @@ public class EmployeeController : Controller
                      || m.Channel == user.Username)
             .OrderBy(m => m.SentAt)
             .ToListAsync(cancellationToken);
+
+        foreach (var msg in messages)
+        {
+            if (msg.IsRevoked)
+            {
+                msg.Content = "Tin nhắn đã thu hồi";
+            }
+        }
 
         return Json(new { success = true, data = messages });
     }
@@ -868,6 +876,21 @@ public class EmployeeController : Controller
             employeeUserId = employee.Id,
             employeeUsername = employee.Username,
             channel = managerUsername
+        });
+
+        // Bắn thông báo Realtime cho Manager và Admin
+        var notificationGroups = new[]
+        {
+            InternalChatHub.BuildUsernameGroup(managerUsername),
+            "role:admin",
+            "role:manager"
+        };
+        await _chatHub.Clients.Groups(notificationGroups).SendAsync("ReceiveNotification", new
+        {
+            title = "Tin nhắn từ Nhân viên",
+            message = $"{employee.FullName} vừa gửi tin nhắn mới.",
+            type = "message",
+            url = "?tab=messages"
         });
     }
 

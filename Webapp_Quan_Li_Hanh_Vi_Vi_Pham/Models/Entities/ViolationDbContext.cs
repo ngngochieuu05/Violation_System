@@ -1,13 +1,19 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Configuration;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
 public class ViolationDbContext : DbContext
 {
-    public ViolationDbContext(DbContextOptions<ViolationDbContext> options)
+    private readonly IConfiguration? _configuration;
+
+    public ViolationDbContext(DbContextOptions<ViolationDbContext> options, IConfiguration? configuration = null)
         : base(options)
     {
+        _configuration = configuration;
     }
 
     public DbSet<User> Users { get; set; } = null!;
@@ -28,6 +34,19 @@ public class ViolationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        var encryptionKey = _configuration?["Security:EncryptionKey"] ?? "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234";
+
+        var encryptionConverter = new ValueConverter<string, string>(
+            v => EncryptionHelper.Encrypt(v, encryptionKey),
+            v => EncryptionHelper.Decrypt(v, encryptionKey)
+        );
+
+        modelBuilder.Entity<EmployeeMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).HasConversion(encryptionConverter);
+        });
 
         modelBuilder.Entity<AuditLog>(entity =>
         {

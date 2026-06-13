@@ -629,12 +629,17 @@
         const res = await fetch('/Employee/GetMyRequests');
         const data = await res.json();
         if (data.success) {
-            requests = data.data.map(r => ({
-                type: r.requestType,
-                date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
-                content: r.content,
-                status: r.status
-            }));
+            requests = data.data.map(r => {
+                let s = r.status;
+                if (s === 'Ä Ã£ duyá»‡t' || s === 'Approved') s = 'Đã duyệt';
+                if (s === 'TÃ¬nh tráº¡ng' || s === 'Rejected') s = 'Từ chối'; // Just in case
+                return {
+                    type: r.requestType,
+                    date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
+                    content: r.content,
+                    status: s
+                };
+            });
             
             list.innerHTML = '';
             if (!requests.length) {
@@ -661,7 +666,42 @@
                     const modal = document.getElementById("requestDetailModal");
                     const content = document.getElementById("requestDetailPreviewContent");
                     if (modal && content) {
-                        content.innerHTML = item.content;
+                        let typeStr = item.type || "Nghỉ phép";
+                        let builderKey = "Nghỉ phép";
+                        if (typeStr.toLowerCase().includes("đi muộn") || typeStr.toLowerCase().includes("về sớm")) builderKey = "Đi muộn";
+                        else if (typeStr.toLowerCase().includes("tăng ca") || typeStr.toLowerCase().includes("thêm giờ")) builderKey = "Tăng ca";
+                        else if (typeStr.toLowerCase().includes("điều chỉnh ca")) builderKey = "Điều chỉnh ca";
+
+                        let extractedDate = "[Ngày/Tháng/Năm]";
+                        let extractedReason = "";
+                        const lines = (item.content || '').split('\n').map(l => l.trim());
+                        lines.forEach(line => {
+                            if (line.startsWith("Ngày áp dụng:")) extractedDate = line.substring(13).trim();
+                            else if (line.startsWith("Lý do:")) extractedReason = line.substring(6).trim();
+                        });
+                        if (!extractedReason) extractedReason = "[Nhập lý do chi tiết...]";
+
+                        let name = profile.name || "[Tên nhân viên]";
+                        let department = profile.department || "[Bộ phận]";
+
+                        try {
+                            content.innerHTML = buildDoc[builderKey](name, department, extractedDate, extractedReason);
+                        } catch (e) {
+                            content.innerHTML = item.content.replace(/\r?\n/g, '<br>');
+                        }
+
+                        let statusText = item.status || 'Chờ duyệt';
+                        let statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-amber-500 text-amber-500 pointer-events-none";
+                        if (statusText === 'Đã duyệt') statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-green-500 text-green-500 pointer-events-none";
+                        else if (statusText === 'Từ chối') statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-red-500 text-red-500 pointer-events-none";
+
+                        const statusDiv = document.createElement("div");
+                        statusDiv.className = statusClass;
+                        statusDiv.textContent = statusText;
+                        
+                        content.classList.add("relative");
+                        content.appendChild(statusDiv);
+
                         modal.classList.remove("hidden");
                         modal.classList.add("flex");
                     } else {
@@ -2523,8 +2563,9 @@ const loadMessages = async () => {
                         listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
                     } else {
                         listEl.innerHTML = data.data.map(n => `
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}">
+                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="window.location.href='?tab=${n.tab}'">
                                 <p class="text-sm font-semibold text-slate-900">${n.title}</p>
+                                <p class="text-xs text-slate-500 line-clamp-1">${n.body || ''}</p>
                                 <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
                             </div>
                         `).join('');

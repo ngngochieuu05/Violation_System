@@ -28,4 +28,28 @@
             </table>
         </div>
     </div>
+
+    <!-- Request Detail Modal -->
+    <div id="managerRequestDetailModal" class="fixed inset-0 z-[1200] hidden items-center justify-center p-4 backdrop-blur-sm" style="background-color: rgba(15, 23, 42, 0.5);">
+        <div class="w-full max-w-2xl overflow-hidden rounded-[20px] bg-white shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50">
+                <h3 class="font-outfit text-lg font-bold text-slate-900">Chi tiết Đơn từ</h3>
+                <button type="button" onclick="closeManagerRequestModal()" class="text-slate-400 hover:text-slate-600 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-8 overflow-y-auto flex-1 bg-slate-100/50">
+                <div class="relative mx-auto w-full max-w-lg rounded-xl border border-slate-200 bg-white p-8 shadow-sm font-serif text-sm leading-relaxed text-slate-800 md:text-base" id="managerReqDetailContent">
+                    <!-- Nội dung sẽ được fill bằng JS -->
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 px-6 py-4 flex justify-end gap-3 bg-white">
+                <button type="button" onclick="rejectCurrentRequest()" class="rounded-xl border border-red-200 bg-red-50 text-red-600 px-6 py-2.5 text-sm font-semibold hover:bg-red-100 transition">Từ chối</button>
+                <button type="button" onclick="approveCurrentRequest()" class="rounded-xl bg-emerald-500 text-white px-6 py-2.5 text-sm font-semibold hover:bg-emerald-600 transition shadow-sm">Phê duyệt</button>
+                <button type="button" onclick="closeManagerRequestModal()" class="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition ml-2">Đóng</button>
+            </div>
+        </div>
+    </div>
 </div>
