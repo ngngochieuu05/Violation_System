@@ -15,6 +15,7 @@ public static class DbSeeder
 
         EnsureUserColumns(context);
         EnsureViolationColumns(context);
+        EnsureModelSettingColumns(context);
         EnsureEmployeeWorkspaceTables(context);
 
         if (!context.Users.Any())
@@ -87,6 +88,9 @@ public static class DbSeeder
                 YoloConfThreshold = 0.25m,
                 YoloIouThreshold = 0.45m,
                 DeepfaceConfThreshold = 0.40m,
+                DeepfaceDetectorBackend = "opencv",
+                DeepfaceAlign = true,
+                DeepfaceEnforceDetection = true,
                 IsActive = true
             });
         }
@@ -326,6 +330,33 @@ public static class DbSeeder
             IF COL_LENGTH('ViolationRecords', 'ReviewNote') IS NULL
             BEGIN
                 ALTER TABLE [ViolationRecords] ADD [ReviewNote] nvarchar(512) NULL;
+            END
+            """);
+    }
+
+    private static void EnsureModelSettingColumns(ViolationDbContext context)
+    {
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ModelSettings', 'DeepfaceDetectorBackend') IS NULL
+            BEGIN
+                ALTER TABLE [ModelSettings] ADD [DeepfaceDetectorBackend] nvarchar(64) NOT NULL CONSTRAINT [DF_ModelSettings_DeepfaceDetectorBackend] DEFAULT('opencv');
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ModelSettings', 'DeepfaceAlign') IS NULL
+            BEGIN
+                ALTER TABLE [ModelSettings] ADD [DeepfaceAlign] bit NOT NULL CONSTRAINT [DF_ModelSettings_DeepfaceAlign] DEFAULT(1);
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ModelSettings', 'DeepfaceEnforceDetection') IS NULL
+            BEGIN
+                ALTER TABLE [ModelSettings] ADD [DeepfaceEnforceDetection] bit NOT NULL CONSTRAINT [DF_ModelSettings_DeepfaceEnforceDetection] DEFAULT(1);
             END
             """);
     }

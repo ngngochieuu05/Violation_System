@@ -27,6 +27,9 @@ public class ModelSettingService : IModelSettingService
                 YoloConfThreshold = 0.25m,
                 YoloIouThreshold = 0.45m,
                 DeepfaceConfThreshold = 0.40m,
+                DeepfaceDetectorBackend = "opencv",
+                DeepfaceAlign = true,
+                DeepfaceEnforceDetection = true,
                 IsActive = true
             };
             _context.ModelSettings.Add(setting);
@@ -42,6 +45,11 @@ public class ModelSettingService : IModelSettingService
         active.YoloConfThreshold = setting.YoloConfThreshold;
         active.YoloIouThreshold = setting.YoloIouThreshold;
         active.DeepfaceConfThreshold = setting.DeepfaceConfThreshold;
+        active.DeepfaceDetectorBackend = string.IsNullOrWhiteSpace(setting.DeepfaceDetectorBackend)
+            ? active.DeepfaceDetectorBackend
+            : setting.DeepfaceDetectorBackend;
+        active.DeepfaceAlign = setting.DeepfaceAlign;
+        active.DeepfaceEnforceDetection = setting.DeepfaceEnforceDetection;
         
         _context.ModelSettings.Update(active);
         await _context.SaveChangesAsync(cancellationToken);

@@ -10,6 +10,7 @@ using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.AI;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Monitoring;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
@@ -131,12 +132,15 @@ builder.Services.Configure<ViolationMonitoringOptions>(
     builder.Configuration.GetSection(ViolationMonitoringOptions.SectionName));
 builder.Services.Configure<TelegramBotOptions>(
     builder.Configuration.GetSection(TelegramBotOptions.SectionName));
+builder.Services.Configure<GeminiChatOptions>(
+    builder.Configuration.GetSection(GeminiChatOptions.SectionName));
 
 // Scoped services registration
 builder.Services.AddScoped<IYoloInferenceService, LocalYoloInferenceService>();
 builder.Services.AddScoped<IViolationService, ViolationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IModelSettingService, ModelSettingService>();
+builder.Services.AddHttpClient<IInternalAiChatService, InternalAiChatService>();
 builder.Services.AddSingleton<TelegramBotState>();
 builder.Services.AddSingleton<IViolationMonitoringOrchestrator, ViolationMonitoringOrchestrator>();
 builder.Services.AddHttpClient<ITelegramAlertService, TelegramAlertService>();

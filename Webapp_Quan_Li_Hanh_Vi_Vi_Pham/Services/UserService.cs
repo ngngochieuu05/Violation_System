@@ -580,10 +580,13 @@ public class UserService : IUserService
     private async Task<string> BuildDeepFaceArgumentsAsync(string baseArguments)
     {
         var activeDeepfaceModel = await _context.AiModels.FirstOrDefaultAsync(m => m.Type == "Deepface" && m.IsActive);
+        var activeSetting = await _context.ModelSettings.FirstOrDefaultAsync(s => s.IsActive);
         var modelName = activeDeepfaceModel != null ? activeDeepfaceModel.ModelPath : (_configuration["DeepFace:ModelName"] ?? "ArcFace");
-        var detectorBackend = _configuration["DeepFace:DetectorBackend"] ?? "opencv";
-        var align = (_configuration["DeepFace:Align"] ?? "true").ToLowerInvariant();
-        var enforceDetection = (_configuration["DeepFace:EnforceDetection"] ?? "true").ToLowerInvariant();
+        var detectorBackend = !string.IsNullOrWhiteSpace(activeSetting?.DeepfaceDetectorBackend)
+            ? activeSetting.DeepfaceDetectorBackend
+            : (_configuration["DeepFace:DetectorBackend"] ?? "opencv");
+        var align = (activeSetting?.DeepfaceAlign.ToString() ?? (_configuration["DeepFace:Align"] ?? "true")).ToLowerInvariant();
+        var enforceDetection = (activeSetting?.DeepfaceEnforceDetection.ToString() ?? (_configuration["DeepFace:EnforceDetection"] ?? "true")).ToLowerInvariant();
 
         return $"{baseArguments} --model-name \"{modelName}\" --detector-backend \"{detectorBackend}\" --align {align} --enforce-detection {enforceDetection}";
     }
