@@ -35,7 +35,11 @@ public class ViolationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        var encryptionKey = _configuration?["Security:EncryptionKey"] ?? "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234";
+        var encryptionKey = _configuration?["Security:EncryptionKey"];
+        if (string.IsNullOrEmpty(encryptionKey))
+        {
+            encryptionKey = "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234";
+        }
 
         var encryptionConverter = new ValueConverter<string, string>(
             v => EncryptionHelper.Encrypt(v, encryptionKey),
