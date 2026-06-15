@@ -55,12 +55,39 @@
         </div>
     </aside>
 
-    <div class="flex-1 flex overflow-hidden">
-        <main class="flex-1 overflow-y-auto p-8 bg-slate-50">
-            <div class="max-w-[1440px] mx-auto">
-                @RenderBody()
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Navbar -->
+        <header class="h-14 bg-white border-b border-slate-200 flex items-center justify-end px-6 shrink-0 shadow-sm z-10">
+            <!-- Notification Bell -->
+            <div class="relative">
+                <button type="button" id="layoutNotificationTrigger" class="relative text-slate-500 hover:text-red-600 transition focus:outline-none mr-2">
+                    <i class="fa-regular fa-bell text-xl"></i>
+                    <!-- Chấm đỏ báo hiệu có thông báo mới -->
+                    <span data-notification-unread-badge class="hidden absolute top-0 right-0 flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div id="layoutNotificationMenu" class="hidden absolute right-0 mt-3 w-[350px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden origin-top-right transition-all">
+                    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-slate-800">Thông báo mới</h3>
+                        <button onclick="window.loadNotifications()" class="text-xs text-red-600 hover:underline">Làm mới</button>
+                    </div>
+                    <!-- Vùng chứa danh sách item sẽ được Render qua JS -->
+                    <div id="layoutNotificationList" class="max-h-[380px] overflow-y-auto">
+                        <div class="px-4 py-8 text-center text-sm text-slate-400">Đang tải...</div>
+                    </div>
+                </div>
             </div>
-        </main>
+        </header>
+        <div class="flex-1 flex overflow-hidden">
+            <main class="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <div class="max-w-[1440px] mx-auto">
+                    @RenderBody()
+                </div>
+            </main>
 
         <aside class="w-80 bg-white border-l border-slate-200 overflow-y-auto p-6 flex flex-col">
             <div class="text-center mb-6">
@@ -88,7 +115,10 @@
                 Lưu thông tin
             </button>
         </aside>
+        </div>
     </div>
     <script src="~/js/internal-ai-chat.js" asp-append-version="true"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="~/js/notification-signalr.js" asp-append-version="true"></script>
 </body>
 </html>

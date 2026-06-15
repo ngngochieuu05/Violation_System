@@ -33,6 +33,10 @@ var googleClientSecret =
     ?? Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET")
     ?? string.Empty;
 
+// Initialize Message Encryption Key from appsettings.json
+var encryptionKey = builder.Configuration["Encryption:MessageKey"] ?? string.Empty;
+Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Helpers.EncryptionHelper.Initialize(encryptionKey);
+
 // Add SQL Server DbContext
 builder.Services.AddDbContext<ViolationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -140,9 +144,12 @@ builder.Services.AddScoped<IYoloInferenceService, LocalYoloInferenceService>();
 builder.Services.AddScoped<IViolationService, ViolationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IModelSettingService, ModelSettingService>();
+builder.Services.AddScoped<IAiModelCatalogService, AiModelCatalogService>();
 builder.Services.AddHttpClient<IInternalAiChatService, InternalAiChatService>();
 builder.Services.AddSingleton<TelegramBotState>();
 builder.Services.AddSingleton<IViolationMonitoringOrchestrator, ViolationMonitoringOrchestrator>();
+builder.Services.AddSingleton<IManagerMonitoringSessionService, ManagerMonitoringSessionService>();
+builder.Services.AddSingleton<YoloPythonWorkerClient>();
 builder.Services.AddHttpClient<ITelegramAlertService, TelegramAlertService>();
 builder.Services.AddHostedService<ViolationMonitoringHostedService>();
 builder.Services.AddHostedService<TelegramCommandPollingHostedService>();
@@ -216,6 +223,16 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/evidence/monitoring", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 app.UseStaticFiles();
 
 app.UseRouting();

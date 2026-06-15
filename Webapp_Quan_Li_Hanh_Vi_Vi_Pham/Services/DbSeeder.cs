@@ -332,6 +332,54 @@ public static class DbSeeder
                 ALTER TABLE [ViolationRecords] ADD [ReviewNote] nvarchar(512) NULL;
             END
             """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramSent') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramSent] bit NOT NULL CONSTRAINT [DF_ViolationRecords_TelegramSent] DEFAULT(0);
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramSentAtUtc') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramSentAtUtc] datetime2 NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramPhotoSent') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramPhotoSent] bit NOT NULL CONSTRAINT [DF_ViolationRecords_TelegramPhotoSent] DEFAULT(0);
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramDeliveryMode') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramDeliveryMode] nvarchar(64) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramTargetChatIds') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramTargetChatIds] nvarchar(512) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'TelegramLastError') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [TelegramLastError] nvarchar(1024) NULL;
+            END
+            """);
     }
 
     private static void EnsureModelSettingColumns(ViolationDbContext context)

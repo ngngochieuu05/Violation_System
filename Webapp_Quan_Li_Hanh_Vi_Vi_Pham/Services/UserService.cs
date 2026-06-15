@@ -470,6 +470,8 @@ public class UserService : IUserService
             WorkingDirectory = _webHostEnvironment.ContentRootPath,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -531,6 +533,8 @@ public class UserService : IUserService
                 WorkingDirectory = _webHostEnvironment.ContentRootPath,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };

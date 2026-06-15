@@ -1,7 +1,9 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Utilities;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Monitoring;
 
@@ -9,65 +11,104 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
 {
     private static readonly HashSet<string> SmokeLabels = new(StringComparer.OrdinalIgnoreCase)
     {
+        "Cigarette",
         "smoke",
         "smoking"
     };
 
     private static readonly HashSet<string> EmptyChairLabels = new(StringComparer.OrdinalIgnoreCase)
     {
+        "un-occupied_desk",
         "empty-chair",
         "non-human",
         "empty_seat"
     };
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IWebHostEnvironment _environment;
     private readonly ViolationMonitoringOptions _options;
     private readonly ILogger<ViolationMonitoringOrchestrator> _logger;
     private readonly Dictionary<string, TrackedDetection> _smokeTracks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TrackedDetection> _emptyChairTracks = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TrackedDetection> _previewSmokeTracks = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TrackedDetection> _previewEmptyChairTracks = new(StringComparer.Ordinal);
     private readonly object _syncLock = new();
 
     public ViolationMonitoringOrchestrator(
         IServiceScopeFactory scopeFactory,
+        IWebHostEnvironment environment,
         IOptions<ViolationMonitoringOptions> options,
         ILogger<ViolationMonitoringOrchestrator> logger)
     {
         _scopeFactory = scopeFactory;
+        _environment = environment;
         _options = options.Value;
         _logger = logger;
     }
 
-    public async Task<IReadOnlyCollection<ViolationAlertResult>> ProcessDetectionsAsync(
+    public Task<IReadOnlyCollection<ViolationAlertResult>> ProcessDetectionsAsync(
         IReadOnlyCollection<DetectionResult> detections,
         CancellationToken cancellationToken = default)
     {
+        return ProcessDetectionsInternalAsync(detections, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase), cancellationToken);
+    }
+
+    public Task<IReadOnlyCollection<ViolationAlertResult>> ProcessInferenceRunsAsync(
+        IReadOnlyCollection<YoloInferenceRunResult> runs,
+        CancellationToken cancellationToken = default)
+    {
+        var effectiveRuns = runs.Where(run => !run.IsMockResult).ToList();
+        var detections = effectiveRuns.SelectMany(run => run.Detections).ToList();
+        var evidenceByModelType = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var run in effectiveRuns)
+        {
+            if (string.IsNullOrWhiteSpace(run.AnnotatedImageBase64))
+            {
+                continue;
+            }
+
+            var relativeUrl = SaveEvidenceImage(run.AnnotatedImageBase64, run.AnnotatedImageMimeType, run.ModelType, DateTime.UtcNow);
+            if (!string.IsNullOrWhiteSpace(relativeUrl))
+            {
+                evidenceByModelType[run.ModelType] = relativeUrl;
+            }
+        }
+
+        return ProcessDetectionsInternalAsync(detections, evidenceByModelType, cancellationToken);
+    }
+
+    public IReadOnlyCollection<YoloInferenceRunResult> AttachPreviewTracking(IReadOnlyCollection<YoloInferenceRunResult> runs)
+    {
+        var effectiveRuns = runs.ToList();
         var nowUtc = DateTime.UtcNow;
-        List<PendingAlert> alertsToPublish;
 
         lock (_syncLock)
         {
-            var smokeDetections = detections
-                .Where(d => string.Equals(d.ModelType, "YoloSmoking", StringComparison.OrdinalIgnoreCase))
-                .Where(d => SmokeLabels.Contains(d.Label))
-                .ToList();
-
-            var emptyChairDetections = detections
-                .Where(d => string.Equals(d.ModelType, "YoloLeaving", StringComparison.OrdinalIgnoreCase))
-                .Where(d => EmptyChairLabels.Contains(d.Label))
-                .ToList();
-
-            alertsToPublish = [];
-            TrackDetections(_smokeTracks, smokeDetections, nowUtc, isSmokeTrack: true, alertsToPublish);
-            TrackDetections(_emptyChairTracks, emptyChairDetections, nowUtc, isSmokeTrack: false, alertsToPublish);
-            PruneStaleTracks(_smokeTracks, nowUtc);
-            PruneStaleTracks(_emptyChairTracks, nowUtc);
+            ApplyTrackingToRuns(
+                effectiveRuns,
+                _previewSmokeTracks,
+                nowUtc,
+                isSmokeTrack: true,
+                evidenceUrl: null,
+                alertsToPublish: null);
+            ApplyTrackingToRuns(
+                effectiveRuns,
+                _previewEmptyChairTracks,
+                nowUtc,
+                isSmokeTrack: false,
+                evidenceUrl: null,
+                alertsToPublish: null);
+            PruneStaleTracks(_previewSmokeTracks, nowUtc);
+            PruneStaleTracks(_previewEmptyChairTracks, nowUtc);
         }
 
-        return await PublishAlertsAsync(alertsToPublish, cancellationToken);
+        return effectiveRuns;
     }
 
     public Task<ViolationAlertResult> TriggerSmokeTestAsync(CancellationToken cancellationToken = default)
     {
+        var cameraLocation = VietnameseText.NormalizeMojibake(_options.CameraLocation);
         return PublishSingleManualAlertAsync(
             new PendingAlert(
                 $"SMK-TEST-{DateTime.UtcNow:HHmmss}",
@@ -75,12 +116,14 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 "High",
                 DateTime.UtcNow,
                 "/evidence/test-smoke.jpg",
-                $"[TESTCASE HÚT THUỐC] Track test mô phỏng vượt ngưỡng {_options.SmokeDetectionThresholdCount} lần tại {_options.CameraLocation}."),
+                $"[TESTCASE HÚT THUỐC] Track test mô phỏng vượt ngưỡng {_options.SmokeDetectionThresholdCount} lần tại {cameraLocation}."),
             cancellationToken);
     }
 
     public Task<ViolationAlertResult> TriggerLeavingPositionTestAsync(CancellationToken cancellationToken = default)
     {
+        var threshold = _options.GetEmptyChairThreshold();
+        var cameraLocation = VietnameseText.NormalizeMojibake(_options.CameraLocation);
         return PublishSingleManualAlertAsync(
             new PendingAlert(
                 $"LEAVE-TEST-{DateTime.UtcNow:HHmmss}",
@@ -88,8 +131,101 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 "Medium",
                 DateTime.UtcNow,
                 "/evidence/test-leaving.jpg",
-                $"[TESTCASE RỜI VỊ TRÍ] Ghế trống/non-human được mô phỏng duy trì quá {_options.EmptyChairThresholdMinutes} phút tại {_options.CameraLocation}."),
+                $"[TESTCASE RỜI VỊ TRÍ] Ghế trống/non-human được mô phỏng duy trì quá {threshold.TotalSeconds:0} giây tại {cameraLocation}."),
             cancellationToken);
+    }
+
+    public async Task<ViolationAlertResult> PublishInstantAlertAsync(
+        InstantViolationAlertPayload payload,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedLabel = payload.Label?.Trim() ?? string.Empty;
+        var detectedAtUtc = payload.DetectedAtUtc == default ? DateTime.UtcNow : payload.DetectedAtUtc;
+        var ruleType = payload.RuleType?.Trim() ?? string.Empty;
+        var isSmoke = string.Equals(ruleType, "smoke", StringComparison.OrdinalIgnoreCase)
+            || SmokeLabels.Contains(normalizedLabel);
+        var isLeaving = string.Equals(ruleType, "empty_desk", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(ruleType, "leave", StringComparison.OrdinalIgnoreCase)
+            || EmptyChairLabels.Contains(normalizedLabel);
+
+        if (!isSmoke && !isLeaving)
+        {
+            throw new InvalidOperationException($"Không hỗ trợ rule instant alert '{payload.RuleType}' với nhãn '{payload.Label}'.");
+        }
+
+        var evidenceUrl = SaveEvidenceImage(
+            payload.SnapshotBase64,
+            payload.SnapshotMimeType,
+            string.IsNullOrWhiteSpace(payload.ModelType) ? (isSmoke ? "YoloSmoking" : "YoloLeaving") : payload.ModelType,
+            detectedAtUtc) ?? (isSmoke ? "/evidence/monitoring-smoke.jpg" : "/evidence/monitoring-leave.jpg");
+
+        var trackId = string.IsNullOrWhiteSpace(payload.TrackId)
+            ? BuildTrackId(isSmoke)
+            : payload.TrackId;
+        var durationSeconds = Math.Round(Math.Max(0d, payload.DurationSeconds), 1);
+        var cameraLocation = VietnameseText.NormalizeMojibake(string.IsNullOrWhiteSpace(payload.CameraLocation) ? _options.CameraLocation : payload.CameraLocation);
+        var sourceLabel = string.IsNullOrWhiteSpace(payload.SourceLabel) ? payload.SourceType : payload.SourceLabel;
+
+        var alert = isSmoke
+            ? new PendingAlert(
+                trackId,
+                "Hút thuốc tại khu vực làm việc",
+                "High",
+                detectedAtUtc,
+                evidenceUrl,
+                $"[CẢNH BÁO HÚT THUỐC - VỪA PHÁT HIỆN]\nTrack ID: {trackId}\nNhãn phát hiện: {normalizedLabel}\nThời gian duy trì: {durationSeconds:0.#} giây\nCamera: {cameraLocation}\nNguồn: {sourceLabel}\nThời điểm phát hiện: {detectedAtUtc:dd/MM/yyyy HH:mm:ss}\nẢnh vi phạm được gửi kèm ngay bên dưới.")
+            : new PendingAlert(
+                trackId,
+                "Rời vị trí làm việc",
+                "Medium",
+                detectedAtUtc,
+                evidenceUrl,
+                $"[CẢNH BÁO RỜI VỊ TRÍ - VỪA PHÁT HIỆN]\nTrack ID: {trackId}\nNhãn phát hiện: {normalizedLabel}\nGhế trống kéo dài: {durationSeconds:0.#} giây\nCamera: {cameraLocation}\nNguồn: {sourceLabel}\nThời điểm phát hiện: {detectedAtUtc:dd/MM/yyyy HH:mm:ss}\nẢnh vi phạm được gửi kèm ngay bên dưới.");
+
+        var result = await PublishSingleManualAlertAsync(alert, cancellationToken);
+        result.TelegramAttempted = true;
+        return result;
+    }
+
+    private async Task<IReadOnlyCollection<ViolationAlertResult>> ProcessDetectionsInternalAsync(
+        IReadOnlyCollection<DetectionResult> detections,
+        IReadOnlyDictionary<string, string> evidenceByModelType,
+        CancellationToken cancellationToken)
+    {
+        var nowUtc = DateTime.UtcNow;
+        List<PendingAlert> alertsToPublish;
+
+        lock (_syncLock)
+        {
+            var effectiveRuns = detections
+                .GroupBy(detection => detection.ModelType, StringComparer.OrdinalIgnoreCase)
+                .Select(group => new YoloInferenceRunResult
+                {
+                    ModelType = group.Key,
+                    Detections = group.ToList()
+                })
+                .ToList();
+
+            alertsToPublish = [];
+            ApplyTrackingToRuns(
+                effectiveRuns,
+                _smokeTracks,
+                nowUtc,
+                isSmokeTrack: true,
+                evidenceUrl: evidenceByModelType.GetValueOrDefault("YoloSmoking"),
+                alertsToPublish);
+            ApplyTrackingToRuns(
+                effectiveRuns,
+                _emptyChairTracks,
+                nowUtc,
+                isSmokeTrack: false,
+                evidenceUrl: evidenceByModelType.GetValueOrDefault("YoloLeaving"),
+                alertsToPublish);
+            PruneStaleTracks(_smokeTracks, nowUtc);
+            PruneStaleTracks(_emptyChairTracks, nowUtc);
+        }
+
+        return await PublishAlertsAsync(alertsToPublish, cancellationToken);
     }
 
     private async Task<ViolationAlertResult> PublishSingleManualAlertAsync(PendingAlert alert, CancellationToken cancellationToken)
@@ -123,7 +259,7 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 ViolationType = alert.ViolationType,
                 Severity = alert.Severity,
                 DetectedAtUtc = alert.DetectedAtUtc,
-                CameraLocation = _options.CameraLocation,
+                CameraLocation = VietnameseText.NormalizeMojibake(_options.CameraLocation),
                 EvidenceUrl = alert.EvidenceUrl,
                 Status = "Pending"
             };
@@ -158,7 +294,17 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
             try
             {
                 var violation = await dbContext.ViolationRecords.FirstAsync(v => v.Id == result.ViolationId, cancellationToken);
-                await telegramService.SendViolationAlertAsync(violation, result.Message, cancellationToken);
+                var telegramResults = await telegramService.SendViolationAlertAsync(violation, result.Message, cancellationToken);
+                violation.TelegramSent = telegramResults.Any(item => item.Success);
+                violation.TelegramPhotoSent = telegramResults.Any(item => item.PhotoSent);
+                violation.TelegramSentAtUtc = violation.TelegramSent ? DateTime.UtcNow : null;
+                violation.TelegramDeliveryMode = string.Join(", ", telegramResults
+                    .Select(item => item.DeliveryMode)
+                    .Where(item => !string.IsNullOrWhiteSpace(item))
+                    .Distinct(StringComparer.Ordinal));
+                violation.TelegramTargetChatIds = string.Join(", ", telegramResults.Select(item => item.ChatId).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.Ordinal));
+                violation.TelegramLastError = telegramResults.FirstOrDefault(item => !item.Success)?.ResponseSummary;
+                await dbContext.SaveChangesAsync(cancellationToken);
                 result.TelegramAttempted = true;
             }
             catch (Exception ex)
@@ -170,69 +316,84 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         return results;
     }
 
-    private void TrackDetections(
+    private void ApplyTrackingToRuns(
+        IReadOnlyCollection<YoloInferenceRunResult> runs,
         Dictionary<string, TrackedDetection> tracks,
-        List<DetectionResult> detections,
         DateTime nowUtc,
         bool isSmokeTrack,
-        List<PendingAlert> alertsToPublish)
+        string? evidenceUrl,
+        List<PendingAlert>? alertsToPublish)
     {
+        var targetModelType = isSmokeTrack ? "YoloSmoking" : "YoloLeaving";
+        var targetLabels = isSmokeTrack ? SmokeLabels : EmptyChairLabels;
+        var targetRuns = runs
+            .Where(run => string.Equals(run.ModelType, targetModelType, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
         var matchedTrackIds = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var detection in detections)
+        foreach (var run in targetRuns)
         {
-            var box = BoundingBoxInfo.Parse(detection.BoundingBox);
-            var bestTrack = tracks.Values
-                .Where(track => !matchedTrackIds.Contains(track.TrackId))
-                .Select(track => new
+            foreach (var detection in run.Detections.Where(detection => targetLabels.Contains(detection.Label)))
+            {
+                var box = BoundingBoxInfo.Parse(detection.BoundingBox);
+                var bestTrack = tracks.Values
+                    .Where(track => !matchedTrackIds.Contains(track.TrackId))
+                    .Select(track => new
+                    {
+                        Track = track,
+                        Score = BoundingBoxInfo.CalculateIoU(track.BoundingBox, box)
+                    })
+                    .Where(item => item.Score >= _options.TrackMatchIouThreshold)
+                    .OrderByDescending(item => item.Score)
+                    .FirstOrDefault();
+
+                TrackedDetection track;
+                if (bestTrack is null)
                 {
-                    Track = track,
-                    Score = BoundingBoxInfo.CalculateIoU(track.BoundingBox, box)
-                })
-                .Where(item => item.Score >= _options.TrackMatchIouThreshold)
-                .OrderByDescending(item => item.Score)
-                .FirstOrDefault();
-
-            TrackedDetection track;
-            if (bestTrack is null)
-            {
-                track = new TrackedDetection
+                    track = new TrackedDetection
+                    {
+                        TrackId = BuildTrackId(isSmokeTrack),
+                        BoundingBox = box,
+                        FirstSeenUtc = nowUtc,
+                        LastSeenUtc = nowUtc,
+                        SeenCount = 1,
+                        Label = detection.Label,
+                        EvidenceUrl = evidenceUrl ?? string.Empty
+                    };
+                    tracks[track.TrackId] = track;
+                }
+                else
                 {
-                    TrackId = $"{(isSmokeTrack ? "SMK" : "LEAVE")}-{Guid.NewGuid():N}"[..16],
-                    BoundingBox = box,
-                    FirstSeenUtc = nowUtc,
-                    LastSeenUtc = nowUtc,
-                    SeenCount = 1,
-                    Label = detection.Label
-                };
-                tracks[track.TrackId] = track;
-            }
-            else
-            {
-                track = bestTrack.Track;
-                track.BoundingBox = box;
-                track.LastSeenUtc = nowUtc;
-                track.SeenCount++;
-                track.Label = detection.Label;
-            }
+                    track = bestTrack.Track;
+                    track.BoundingBox = box;
+                    track.LastSeenUtc = nowUtc;
+                    track.SeenCount++;
+                    track.Label = detection.Label;
+                    if (!string.IsNullOrWhiteSpace(evidenceUrl))
+                    {
+                        track.EvidenceUrl = evidenceUrl;
+                    }
+                }
 
-            detection.TrackId = track.TrackId;
-            matchedTrackIds.Add(track.TrackId);
+                detection.TrackId = track.TrackId;
+                matchedTrackIds.Add(track.TrackId);
 
-            if (track.AlertRaised)
-            {
-                continue;
-            }
+                if (alertsToPublish == null || track.AlertRaised)
+                {
+                    continue;
+                }
 
-            if (isSmokeTrack && track.SeenCount >= _options.SmokeDetectionThresholdCount)
-            {
-                track.AlertRaised = true;
-                alertsToPublish.Add(BuildSmokeAlert(track, nowUtc));
-            }
+                if (isSmokeTrack && track.SeenCount > _options.SmokeDetectionThresholdCount)
+                {
+                    track.AlertRaised = true;
+                    alertsToPublish.Add(BuildSmokeAlert(track, nowUtc));
+                }
 
-            if (!isSmokeTrack && nowUtc - track.FirstSeenUtc >= TimeSpan.FromMinutes(_options.EmptyChairThresholdMinutes))
-            {
-                track.AlertRaised = true;
-                alertsToPublish.Add(BuildLeavingAlert(track, nowUtc));
+                if (!isSmokeTrack && nowUtc - track.FirstSeenUtc >= _options.GetEmptyChairThreshold())
+                {
+                    track.AlertRaised = true;
+                    alertsToPublish.Add(BuildLeavingAlert(track, nowUtc));
+                }
             }
         }
     }
@@ -258,20 +419,52 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
             "Hút thuốc tại khu vực làm việc",
             "High",
             nowUtc,
-            "/evidence/monitoring-smoke.jpg",
-            $"[CẢNH BÁO HÚT THUỐC] Track {track.TrackId} bị phát hiện khói thuốc {track.SeenCount} lần tại {_options.CameraLocation} lúc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
+            string.IsNullOrWhiteSpace(track.EvidenceUrl) ? "/evidence/monitoring-smoke.jpg" : track.EvidenceUrl,
+            $"[CẢNH BÁO HÚT THUỐC - VỪA PHÁT HIỆN]\nTrack ID: {track.TrackId}\nNhãn phát hiện: {track.Label}\nSố lần phát hiện thuốc lá: {track.SeenCount}\nCamera: {VietnameseText.NormalizeMojibake(_options.CameraLocation)}\nThời điểm phát hiện: {nowUtc:dd/MM/yyyy HH:mm:ss}\nẢnh vi phạm được gửi kèm ngay bên dưới.");
     }
 
     private PendingAlert BuildLeavingAlert(TrackedDetection track, DateTime nowUtc)
     {
-        var minutes = Math.Floor((nowUtc - track.FirstSeenUtc).TotalMinutes);
+        var seconds = Math.Round((nowUtc - track.FirstSeenUtc).TotalSeconds, 1);
         return new PendingAlert(
             track.TrackId,
             "Rời vị trí làm việc",
             "Medium",
             nowUtc,
-            "/evidence/monitoring-leave.jpg",
-            $"[CẢNH BÁO RỜI VỊ TRÍ] Track {track.TrackId} chỉ phát hiện ghế trống/non-human trong {minutes} phút tại {_options.CameraLocation} lúc {nowUtc:yyyy-MM-dd HH:mm:ss}.");
+            string.IsNullOrWhiteSpace(track.EvidenceUrl) ? "/evidence/monitoring-leave.jpg" : track.EvidenceUrl,
+            $"[CẢNH BÁO RỜI VỊ TRÍ - VỪA PHÁT HIỆN]\nTrack ID: {track.TrackId}\nNhãn phát hiện: {track.Label}\nGhế trống / non-human kéo dài: {seconds:0.#} giây\nCamera: {VietnameseText.NormalizeMojibake(_options.CameraLocation)}\nThời điểm phát hiện: {nowUtc:dd/MM/yyyy HH:mm:ss}\nẢnh vi phạm được gửi kèm ngay bên dưới.");
+    }
+
+    private string? SaveEvidenceImage(string annotatedBase64, string mimeType, string modelType, DateTime nowUtc)
+    {
+        if (string.IsNullOrWhiteSpace(annotatedBase64))
+        {
+            return null;
+        }
+
+        try
+        {
+            var evidenceDirectory = Path.Combine(_environment.WebRootPath, "evidence", "monitoring");
+            Directory.CreateDirectory(evidenceDirectory);
+
+            var extension = string.Equals(mimeType, "image/png", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+            var fileName = $"{modelType.ToLowerInvariant()}_{nowUtc:yyyyMMdd_HHmmss_fff}{extension}";
+            var absolutePath = Path.Combine(evidenceDirectory, fileName);
+            File.WriteAllBytes(absolutePath, Convert.FromBase64String(annotatedBase64));
+
+            return $"/evidence/monitoring/{fileName}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không thể lưu ảnh evidence cho model {ModelType}", modelType);
+            return null;
+        }
+    }
+
+    private static string BuildTrackId(bool isSmokeTrack)
+    {
+        var prefix = isSmokeTrack ? "PER-SMK" : "PER-LVE";
+        return $"{prefix}-{Guid.NewGuid():N}"[..18];
     }
 
     private sealed class TrackedDetection
@@ -283,6 +476,7 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         public int SeenCount { get; set; }
         public bool AlertRaised { get; set; }
         public string Label { get; set; } = string.Empty;
+        public string EvidenceUrl { get; set; } = string.Empty;
     }
 
     private sealed record PendingAlert(

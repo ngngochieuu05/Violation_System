@@ -12,6 +12,12 @@ public class ViolationRecord
     public string CameraLocation { get; set; } = string.Empty;
     public string EvidenceUrl { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public bool TelegramSent { get; set; }
+    public bool TelegramPhotoSent { get; set; }
+    public DateTime? TelegramSentAtUtc { get; set; }
+    public string? TelegramDeliveryMode { get; set; }
+    public string? TelegramTargetChatIds { get; set; }
+    public string? TelegramLastError { get; set; }
     public string? ReviewedBy { get; set; }
     public DateTime? ReviewedAtUtc { get; set; }
     public string? ReviewChannel { get; set; }

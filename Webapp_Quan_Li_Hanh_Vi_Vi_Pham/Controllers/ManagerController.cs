@@ -1,3 +1,11 @@
+using Microsoft.AspNetCore.SignalR;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Monitoring;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
+using System.Text;
+
 using System;
 using System.Security.Claims;
 using System.Collections.Generic;
@@ -12,8 +20,8 @@ using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Interfaces;
-using Microsoft.AspNetCore.SignalR;
-using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Utilities;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers;
 
@@ -23,14 +31,34 @@ public partial class ManagerController : Controller
     private readonly IUserService _userService;
     private readonly IViolationService _violationService;
     private readonly ViolationDbContext _context;
-    private readonly IHubContext<InternalChatHub> _hubContext;
+    private readonly ITelegramAlertService _telegramAlertService;
 
-    public ManagerController(IUserService userService, IViolationService violationService, ViolationDbContext context, IHubContext<InternalChatHub> hubContext)
+    private readonly IHubContext<InternalChatHub> _chatHub;
+    private readonly IManagerMonitoringSessionService _monitoringSessionService;
+    private readonly IYoloInferenceService _yoloInferenceService;
+    private readonly IViolationMonitoringOrchestrator _monitoringOrchestrator;
+    private readonly IWebHostEnvironment _environment;
+
+    public ManagerController(
+        IUserService userService, 
+        IViolationService violationService, 
+        ViolationDbContext context,
+        ITelegramAlertService telegramAlertService,
+        IHubContext<InternalChatHub> chatHub,
+        IManagerMonitoringSessionService monitoringSessionService,
+        IYoloInferenceService yoloInferenceService,
+        IViolationMonitoringOrchestrator monitoringOrchestrator,
+        IWebHostEnvironment environment)
     {
         _userService = userService;
         _violationService = violationService;
         _context = context;
-        _hubContext = hubContext;
+        _telegramAlertService = telegramAlertService;
+        _chatHub = chatHub;
+        _monitoringSessionService = monitoringSessionService;
+        _yoloInferenceService = yoloInferenceService;
+        _monitoringOrchestrator = monitoringOrchestrator;
+        _environment = environment;
     }
 
     [AllowAnonymous]
@@ -113,7 +141,7 @@ public partial class ManagerController : Controller
     public async Task<IActionResult> GetHomeStats(CancellationToken cancellationToken)
     {
         var today = DateTime.UtcNow.Date;
-        var employeesCount = await _context.Users.CountAsync(u => u.Role == "Employee", cancellationToken);
+        var employeesCount = await _context.Users.CountAsync(u => u.Role == "Employee" && !string.IsNullOrEmpty(u.FaceImagePath), cancellationToken);
         var attendanceCount = await _context.WorkSessions.CountAsync(w => w.Date.Date == today, cancellationToken);
         var violationsCount = await _context.ViolationRecords.CountAsync(v => v.DetectedAtUtc.Date == today, cancellationToken);
         var requestsCount = await _context.ApprovalRequests.CountAsync(r => r.Status == "Pending", cancellationToken);
@@ -133,7 +161,7 @@ public partial class ManagerController : Controller
     public async Task<IActionResult> GetAllEmployees(CancellationToken cancellationToken)
     {
         var employees = await _context.Users
-            .Where(u => u.Role == "Employee" && u.FaceImagePath != null && u.FaceImagePath != "")
+            .Where(u => u.Role == "Employee" && !string.IsNullOrEmpty(u.FaceImagePath))
             .Select(u => new {
                 u.Id,
                 u.EmployeeCode,
@@ -148,63 +176,24 @@ public partial class ManagerController : Controller
         return Json(new { success = true, data = employees });
     }
 
-    public class CreateEmployeeDto
+    [HttpGet]
+    public async Task<IActionResult> GetViolationAssignees(CancellationToken cancellationToken)
     {
-        public string Username { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-        public string Department { get; set; } = string.Empty;
-        public string EmployeeCode { get; set; } = string.Empty;
-    }
+        var employees = await _context.Users
+            .Where(u => u.Role == "Employee")
+            .OrderBy(u => u.FullName)
+            .ThenBy(u => u.EmployeeCode)
+            .Select(u => new
+            {
+                u.Id,
+                u.EmployeeCode,
+                u.FullName,
+                u.Username,
+                u.Department
+            })
+            .ToListAsync(cancellationToken);
 
-    [HttpPost]
-    public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto dto, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.FullName))
-            return Json(new { success = false, message = "Vui lòng nhập Username và Họ Tên." });
-            
-        var exists = await _context.Users.AnyAsync(u => u.Username == dto.Username, cancellationToken);
-        if (exists) return Json(new { success = false, message = "Tên đăng nhập đã tồn tại." });
-
-        var defaultPassword = "123";
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Username = dto.Username,
-            FullName = dto.FullName,
-            Role = "Employee",
-            Department = dto.Department,
-            EmployeeCode = dto.EmployeeCode,
-            PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword(defaultPassword),
-            FaceImagePath = string.Empty,
-            ManagerKey = string.Empty,
-            MustChangePassword = true,
-            RequiresInitialSecuritySetup = true,
-            IsKeyActivated = true,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync(cancellationToken);
-        return Json(new { success = true, defaultPassword });
-    }
-
-    public class ResetPasswordDto
-    {
-        public string Username { get; set; } = string.Empty;
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ResetEmployeePassword([FromBody] ResetPasswordDto dto, CancellationToken cancellationToken)
-    {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username && u.Role == "Employee", cancellationToken);
-        if (user == null) return Json(new { success = false, message = "Không tìm thấy nhân viên." });
-        
-        var newPassword = "123";
-        user.PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword(newPassword);
-        user.MustChangePassword = true;
-        user.RequiresInitialSecuritySetup = true;
-        await _context.SaveChangesAsync(cancellationToken);
-        
-        return Json(new { success = true, newPassword });
+        return Json(new { success = true, data = employees });
     }
 
     [HttpGet]
@@ -218,37 +207,14 @@ public partial class ManagerController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> ExportWorkSessionsCsv(CancellationToken cancellationToken)
-    {
-        var sessions = await _context.WorkSessions
-            .OrderByDescending(w => w.Date)
-            .ToListAsync(cancellationToken);
-
-        var builder = new System.Text.StringBuilder();
-        builder.AppendLine("Ma Nhan Vien,Ngay,Gio Vao,Gio Ra,Trang Thai");
-
-        foreach (var s in sessions)
-        {
-            var date = s.Date.ToString("dd/MM/yyyy");
-            var checkIn = s.CheckInTime.ToString(@"hh\:mm\:ss");
-            var checkOut = s.CheckOutTime?.ToString(@"hh\:mm\:ss") ?? "";
-            builder.AppendLine($"{s.EmployeeUserId},{date},{checkIn},{checkOut},{s.Status}");
-        }
-
-        var bytes = System.Text.Encoding.UTF8.GetBytes(builder.ToString());
-        var bom = new byte[] { 0xEF, 0xBB, 0xBF };
-        var fileBytes = bom.Concat(bytes).ToArray();
-
-        return File(fileBytes, "text/csv", $"ChamCong_{DateTime.Now:yyyyMMddHHmmss}.csv");
-    }
-
-
-    [HttpGet]
     public async Task<IActionResult> GetAllViolations(CancellationToken cancellationToken)
     {
-        var violations = await _context.ViolationRecords
+        var violationRecords = await _context.ViolationRecords
             .OrderByDescending(v => v.DetectedAtUtc)
             .Take(100)
+            .ToListAsync(cancellationToken);
+
+        var violations = violationRecords
             .Select(v => new
             {
                 v.Id,
@@ -256,17 +222,124 @@ public partial class ManagerController : Controller
                 v.EmployeeCode,
                 v.EmployeeName,
                 v.ViolationType,
-                v.CameraLocation,
+                CameraLocation = VietnameseText.NormalizeMojibake(v.CameraLocation),
                 v.DetectedAtUtc,
                 v.Severity,
                 v.Status,
+                v.TelegramSent,
+                v.TelegramSentAtUtc,
+                v.TelegramTargetChatIds,
+                v.TelegramLastError,
+                HasEvidenceImage = !string.IsNullOrWhiteSpace(v.EvidenceUrl),
                 v.ReviewedBy,
                 v.ReviewedAtUtc,
                 v.ReviewChannel,
                 v.ReviewNote
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
+
         return Json(new { success = true, data = violations });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetViolationEvidence(Guid id, CancellationToken cancellationToken)
+    {
+        var violation = await _context.ViolationRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+
+        if (violation == null)
+        {
+            return Json(new { success = false, message = "Không tìm thấy vi phạm." });
+        }
+
+        var evidenceImageDataUrl = BuildEvidenceImageDataUrl(violation.EvidenceUrl);
+        if (string.IsNullOrWhiteSpace(evidenceImageDataUrl))
+        {
+            return Json(new { success = false, message = "Không tìm thấy ảnh minh chứng." });
+        }
+
+        return Json(new { success = true, data = new { evidenceImageDataUrl } });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendViolationTelegramTest(CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var message = $"[TESTCASE TELEGRAM OA]\nManager gửi thử cảnh báo HTTP API từ tab Lịch sử vi phạm.\nThời điểm: {now:yyyy-MM-dd HH:mm:ss}";
+        var result = await _telegramAlertService.SendTestMessageAsync(message, cancellationToken: cancellationToken);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = now,
+            Username = User.Identity?.Name ?? "Manager",
+            Action = "Telegram testcase",
+            Details = result.ResponseSummary,
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Status = result.Success ? "Thành công" : "Thất bại"
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Json(new
+        {
+            success = result.Success,
+            message = result.ResponseSummary,
+            chatId = result.ChatId
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResendViolationTelegram(Guid id, CancellationToken cancellationToken)
+    {
+        var violation = await _context.ViolationRecords.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+        if (violation == null)
+        {
+            return Json(new { success = false, message = "Không tìm thấy vi phạm để gửi lại Telegram." });
+        }
+
+        var message =
+            $"[ĐỒNG BỘ TỪ LỊCH SỬ VI PHẠM]\n" +
+            $"Mã vi phạm: {violation.TrackingId}\n" +
+            $"Loại: {violation.ViolationType}\n" +
+            $"Camera: {VietnameseText.NormalizeMojibake(violation.CameraLocation)}\n" +
+            $"Mức độ: {violation.Severity}\n" +
+            $"Ghi nhận: {violation.DetectedAtUtc:yyyy-MM-dd HH:mm:ss}";
+
+        var telegramResults = await _telegramAlertService.SendViolationAlertAsync(violation, message, cancellationToken);
+        violation.TelegramSent = telegramResults.Any(item => item.Success);
+        violation.TelegramPhotoSent = telegramResults.Any(item => item.PhotoSent);
+        violation.TelegramSentAtUtc = violation.TelegramSent ? DateTime.UtcNow : null;
+        violation.TelegramDeliveryMode = string.Join(", ", telegramResults
+            .Select(item => item.DeliveryMode)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.Ordinal));
+        violation.TelegramTargetChatIds = string.Join(", ", telegramResults.Select(item => item.ChatId).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.Ordinal));
+        violation.TelegramLastError = telegramResults.FirstOrDefault(item => !item.Success)?.ResponseSummary;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Username = User.Identity?.Name ?? "Manager",
+            Action = "Đồng bộ Telegram vi phạm",
+            Details = $"Gửi lại Telegram cho vi phạm {violation.TrackingId}. Kết quả: {violation.TelegramLastError ?? "OK"}",
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Status = violation.TelegramSent ? "Thành công" : "Thất bại"
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Json(new
+        {
+            success = violation.TelegramSent,
+            message = violation.TelegramSent
+                ? "Đã gửi lại thông báo Telegram."
+                : (violation.TelegramLastError ?? "Gửi Telegram thất bại."),
+            telegramSent = violation.TelegramSent,
+            telegramSentAtUtc = violation.TelegramSentAtUtc,
+            telegramTargetChatIds = violation.TelegramTargetChatIds,
+            telegramLastError = violation.TelegramLastError
+        });
     }
 
     [HttpPost]
@@ -301,6 +374,72 @@ public partial class ManagerController : Controller
         return Json(new { success = true, message = "Da cap nhat trang thai vi pham." });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> ReviewViolationAssignment(Guid id, string status, Guid? employeeId, string? note, CancellationToken cancellationToken)
+    {
+        var reviewer = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Manager";
+        var violation = await _context.ViolationRecords.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+        if (violation == null)
+        {
+            return Json(new { success = false, message = "Không tìm thấy vi phạm cần cập nhật." });
+        }
+
+        User? employee = null;
+        if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            if (employeeId is null || employeeId == Guid.Empty)
+            {
+                return Json(new { success = false, message = "Vui lòng chọn nhân viên vi phạm trước khi duyệt." });
+            }
+
+            employee = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == employeeId && u.Role == "Employee", cancellationToken);
+
+            if (employee == null)
+            {
+                return Json(new { success = false, message = "Nhân viên được chọn không tồn tại trong hệ thống." });
+            }
+
+            violation.EmployeeCode = !string.IsNullOrWhiteSpace(employee.EmployeeCode)
+                ? employee.EmployeeCode
+                : employee.Username;
+            violation.EmployeeName = !string.IsNullOrWhiteSpace(employee.FullName)
+                ? employee.FullName
+                : employee.Username;
+        }
+
+        violation.Status = status;
+        violation.ReviewedBy = reviewer;
+        violation.ReviewedAtUtc = DateTime.UtcNow;
+        violation.ReviewChannel = "ManagerDashboard";
+        violation.ReviewNote = note;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Username = reviewer,
+            Action = "Duyệt vi phạm",
+            Details = $"Quản lý cập nhật vi phạm {id} sang trạng thái {status}. Nhân viên: {violation.EmployeeName} ({violation.EmployeeCode}). Ghi chú: {note ?? string.Empty}",
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Status = "Thành công"
+        });
+
+        if (employee != null)
+        {
+            _context.EmployeeMessages.Add(BuildViolationNotificationMessage(employee, violation, reviewer));
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        if (employee != null)
+        {
+            await NotifyViolationReviewedAsync(employee, violation);
+        }
+
+        return Json(new { success = true, message = "Đã cập nhật trạng thái vi phạm." });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAllRequests(CancellationToken cancellationToken)
     {
@@ -319,16 +458,6 @@ public partial class ManagerController : Controller
         {
             req.Status = status;
             await _context.SaveChangesAsync(cancellationToken);
-            
-            var employeeGroup = InternalChatHub.BuildUserIdGroup(req.EmployeeUserId.ToString());
-            await _hubContext.Clients.Group(employeeGroup).SendAsync("ReceiveNotification", new
-            {
-                title = "Cập nhật đơn từ",
-                message = $"Đơn từ '{req.RequestType}' của bạn đã chuyển sang trạng thái: {status}.",
-                type = "request",
-                url = "?tab=requests"
-            }, cancellationToken);
-
             return Json(new { success = true });
         }
         return Json(new { success = false });
@@ -394,11 +523,6 @@ public partial class ManagerController : Controller
     [HttpPost]
     public async Task<IActionResult> AssignTask([FromBody] EmployeeTask task, CancellationToken cancellationToken)
     {
-        if (task == null)
-        {
-            return Json(new { success = false, message = "Dữ liệu nhiệm vụ không hợp lệ." });
-        }
-
         task.Id = Guid.NewGuid();
         task.CreatedAt = DateTime.Now;
         task.Status = "Pending";
@@ -421,9 +545,6 @@ public partial class ManagerController : Controller
             EmployeeName = users.ContainsKey(p.EmployeeId) ? users[p.EmployeeId] : "Unknown",
             p.Month,
             p.Year,
-            p.StandardWorkingDays,
-            p.ActualWorkingDays,
-            p.SalaryPerDay,
             p.BaseSalary,
             p.KpiBonus,
             p.ViolationDeduction,
@@ -433,40 +554,10 @@ public partial class ManagerController : Controller
         return Json(new { success = true, data = result });
     }
 
-    public sealed class EditPayrollRequest
-    {
-        public Guid Id { get; set; }
-        public decimal BaseSalary { get; set; }
-        public decimal KpiBonus { get; set; }
-        public int StandardWorkingDays { get; set; }
-        public int ActualWorkingDays { get; set; }
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> EditPayrollRecord([FromBody] EditPayrollRequest request, CancellationToken cancellationToken)
-    {
-        var payroll = await _context.PayrollRecords.FindAsync(new object[] { request.Id }, cancellationToken);
-        if (payroll == null) return Json(new { success = false, message = "Không tìm thấy bản ghi lương." });
-
-        payroll.BaseSalary = request.BaseSalary;
-        payroll.KpiBonus = request.KpiBonus;
-        payroll.StandardWorkingDays = request.StandardWorkingDays;
-        payroll.ActualWorkingDays = request.ActualWorkingDays;
-
-        // Recalculate
-        payroll.SalaryPerDay = payroll.StandardWorkingDays > 0 ? (payroll.BaseSalary / payroll.StandardWorkingDays) * payroll.ActualWorkingDays : 0;
-        decimal gross = payroll.SalaryPerDay + payroll.KpiBonus;
-        decimal net = gross - payroll.ViolationDeduction;
-        payroll.NetSalary = net < 0 ? 0 : net;
-
-        await _context.SaveChangesAsync(cancellationToken);
-        return Json(new { success = true, message = "Cập nhật thành công." });
-    }
-
     [HttpPost]
     public async Task<IActionResult> CalculateMonthlyPayroll(int month, int year, CancellationToken cancellationToken)
     {
-        var employees = await _context.Users.Where(u => u.Role == "Employee").ToListAsync(cancellationToken);
+        var employees = await _context.Users.Where(u => u.Role == "Employee" && !string.IsNullOrEmpty(u.FaceImagePath)).ToListAsync(cancellationToken);
         foreach (var emp in employees)
         {
             var existing = await _context.PayrollRecords
@@ -478,20 +569,9 @@ public partial class ManagerController : Controller
             var violations = await _context.ViolationRecords
                 .Where(v => v.EmployeeCode == emp.EmployeeCode && v.DetectedAtUtc.Month == month && v.DetectedAtUtc.Year == year)
                 .ToListAsync(cancellationToken);
-            var actualDays = await _context.WorkSessions
-                .Where(w => w.EmployeeUserId == emp.Id && w.Date.Month == month && w.Date.Year == year)
-                .Select(w => w.Date.Date)
-                .Distinct()
-                .CountAsync(cancellationToken);
-
-            int standardDays = 22;
-            decimal salaryPerDay = standardDays > 0 ? (emp.BaseSalary / standardDays) * actualDays : 0;
             
             decimal deduction = violations.Count * 50000; // Mỗi vi phạm trừ 50k
             decimal kpiBonus = 1000000; // Mặc định thưởng 1M, Manager có thể sửa sau
-
-            decimal gross = salaryPerDay + kpiBonus;
-            decimal net = gross - deduction;
 
             var payroll = new PayrollRecord
             {
@@ -499,13 +579,10 @@ public partial class ManagerController : Controller
                 EmployeeId = emp.Id,
                 Month = month,
                 Year = year,
-                StandardWorkingDays = standardDays,
-                ActualWorkingDays = actualDays,
-                SalaryPerDay = salaryPerDay,
                 BaseSalary = emp.BaseSalary,
                 KpiBonus = kpiBonus,
                 ViolationDeduction = deduction,
-                NetSalary = net < 0 ? 0 : net,
+                NetSalary = emp.BaseSalary + kpiBonus - deduction,
                 Status = "Chưa thanh toán",
                 CreatedAt = DateTime.Now
             };
@@ -527,6 +604,51 @@ public partial class ManagerController : Controller
             return Json(new { success = true });
         }
         return Json(new { success = false });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (user != null)
+        {
+            user.PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword("123456");
+            user.MustChangePassword = true;
+            await _context.SaveChangesAsync(cancellationToken);
+            return Json(new { success = true });
+        }
+        return Json(new { success = false, message = "Không tìm thấy nhân viên" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddEmployee([FromBody] AddEmployeeRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.EmployeeCode))
+        {
+            return Json(new { success = false, message = "Thiếu thông tin bắt buộc" });
+        }
+        var existing = await _context.Users.AnyAsync(u => u.Username == request.Username || u.EmployeeCode == request.EmployeeCode, cancellationToken);
+        if (existing)
+        {
+            return Json(new { success = false, message = "Username hoặc Mã NV đã tồn tại" });
+        }
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Username = request.Username,
+            FullName = request.FullName ?? string.Empty,
+            Department = request.Department ?? string.Empty,
+            EmployeeCode = request.EmployeeCode,
+            PasswordHash = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.PasswordHasher.HashPassword(string.IsNullOrEmpty(request.Password) ? "123456" : request.Password),
+            Role = "Employee",
+            CreatedAtUtc = DateTime.UtcNow,
+            MustChangePassword = true,
+            RequiresInitialSecuritySetup = true
+        };
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync(cancellationToken);
+        return Json(new { success = true });
     }
 
     private async Task SignInUserAsync(User user)
@@ -560,4 +682,596 @@ public partial class ManagerController : Controller
         return Json(new { success = true, message = "Video test đã được cập nhật!" });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetActiveAiModels(CancellationToken cancellationToken)
+    {
+        var models = await _context.AiModels
+            .Where(m => m.IsActive)
+            .Select(m => new
+            {
+                m.Id,
+                m.Name,
+                m.Type,
+                m.ModelPath,
+                m.ConfThreshold,
+                m.IouThreshold,
+                modelFormat = Path.GetExtension(m.ModelPath ?? string.Empty)
+            })
+            .ToListAsync(cancellationToken);
+
+        return Json(new
+        {
+            success = true,
+            data = models,
+            diagnostics = new
+            {
+                appsettingsFallback = "YoloModel chỉ là cấu hình dự phòng khi chưa có model YOLO active trong AiModels.",
+                supportsOnnx = true,
+                supportedFormats = new[] { ".pt", ".onnx" }
+            }
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> StartMonitoringSession(
+        string sourceType,
+        int? cameraIndex,
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        string? filePath = null;
+        if (!string.Equals(sourceType, "webcam", StringComparison.OrdinalIgnoreCase))
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Json(new { success = false, message = "Vui lòng chọn file video hoặc ảnh để khởi chạy giám sát." });
+            }
+
+            var sampleDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ML", "samples", "manager-tests");
+            Directory.CreateDirectory(sampleDirectory);
+            var extension = Path.GetExtension(file.FileName);
+            var fileName = $"manager_stream_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}{extension}";
+            filePath = Path.Combine(sampleDirectory, fileName);
+            await using var stream = new FileStream(filePath, FileMode.Create);
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        var ownerKey = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name ?? "manager";
+        var result = await _monitoringSessionService.StartSessionAsync(
+            ownerKey,
+            new ManagerMonitoringSessionRequest
+            {
+                SourceType = string.Equals(sourceType, "image", StringComparison.OrdinalIgnoreCase) ? "image" :
+                    string.Equals(sourceType, "video", StringComparison.OrdinalIgnoreCase) ? "video" : "webcam",
+                CameraIndex = Math.Max(0, cameraIndex ?? 0),
+                FilePath = filePath
+            },
+            cancellationToken);
+
+        return Json(new
+        {
+            success = result.Success,
+            message = result.Message,
+            sessionId = result.SessionId,
+            sourceType = result.SourceType
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMonitoringSessionStatus(string? sessionId, CancellationToken cancellationToken)
+    {
+        var ownerKey = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name ?? "manager";
+        var status = await _monitoringSessionService.GetSessionStatusAsync(ownerKey, sessionId, cancellationToken);
+        if (status == null)
+        {
+            return Json(new { success = false, message = "Chưa có phiên giám sát đang chạy." });
+        }
+
+        return Json(status);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> StopMonitoringSession(string? sessionId, CancellationToken cancellationToken)
+    {
+        var ownerKey = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name ?? "manager";
+        await _monitoringSessionService.StopSessionAsync(ownerKey, sessionId, cancellationToken);
+        return Json(new { success = true, message = "Đã dừng phiên giám sát." });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AnalyzeMonitoringFrame(
+        IFormFile frame,
+        string? modelType,
+        CancellationToken cancellationToken)
+    {
+        if (frame == null || frame.Length == 0)
+        {
+            return Json(new { success = false, message = "Không nhận được frame thật từ trình duyệt." });
+        }
+
+        if (!frame.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return Json(new { success = false, message = "Frame gửi lên phải là ảnh JPEG/PNG được capture từ camera hoặc video." });
+        }
+
+        var frameDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ML", "samples", "manager-frames");
+        Directory.CreateDirectory(frameDirectory);
+        CleanupOldMonitoringFrames(frameDirectory);
+
+        var extension = frame.ContentType.Contains("png", StringComparison.OrdinalIgnoreCase) ? ".png" : ".jpg";
+        var frameName = $"browser_frame_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid():N}{extension}";
+        var framePath = Path.Combine(frameDirectory, frameName);
+
+        await using (var stream = new FileStream(framePath, FileMode.Create))
+        {
+            await frame.CopyToAsync(stream, cancellationToken);
+        }
+
+        var requestedTypes = string.IsNullOrWhiteSpace(modelType) || string.Equals(modelType, "all", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : new[] { modelType };
+
+        IReadOnlyCollection<YoloInferenceRunResult> inferenceRuns;
+        try
+        {
+            inferenceRuns = await _yoloInferenceService.RunInferenceAsync(
+                sourcePath: framePath,
+                requestedModelTypes: requestedTypes,
+                maxFrames: 1,
+                confThreshold: null,
+                iouThreshold: null,
+                deviceMode: null,
+                imageSize: null,
+                useHalfPrecision: null,
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Response.StatusCode = StatusCodes.Status500InternalServerError;
+            return Json(new
+            {
+                success = false,
+                message = $"Lỗi runtime YOLO/Python: {ex.Message}",
+                frameName,
+                data = Array.Empty<object>()
+            });
+        }
+
+        var trackedRuns = _monitoringOrchestrator.AttachPreviewTracking(inferenceRuns);
+        var realRuns = trackedRuns.Where(run => !run.IsMockResult).ToList();
+        if (realRuns.Count == 0)
+        {
+            var diagnostic = trackedRuns.Select(run => run.StatusMessage).FirstOrDefault(message => !string.IsNullOrWhiteSpace(message));
+            return Json(new
+            {
+                success = false,
+                message = diagnostic ?? "Không chạy được model thật. Hãy kiểm tra model active do Admin cấu hình và runtime Python/CUDA.",
+                frameName,
+                diagnostics = trackedRuns.Select(run => new
+                {
+                    run.ModelName,
+                    run.ModelType,
+                    run.ModelPath,
+                    run.ModelFormat,
+                    run.StatusMessage,
+                    run.Engine,
+                    run.ElapsedMilliseconds
+                }),
+                data = Array.Empty<object>()
+            });
+        }
+
+        var alertResults = Array.Empty<ViolationAlertResult>();
+        try
+        {
+            alertResults = (await _monitoringOrchestrator.ProcessInferenceRunsAsync(realRuns, cancellationToken)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            HttpContext.RequestServices
+                .GetRequiredService<ILogger<ManagerController>>()
+                .LogWarning(ex, "Manager monitoring publish flow failed for frame {FrameName}", frameName);
+        }
+
+        return Json(new
+        {
+            success = true,
+            message = $"Đã phân tích frame thật từ trình duyệt bằng {realRuns.Count} model active.",
+            frameName,
+            alerts = alertResults.Select(result => new
+            {
+                result.ViolationId,
+                result.TrackId,
+                result.ViolationType,
+                result.Severity,
+                result.DetectedAtUtc,
+                result.TelegramAttempted
+            }),
+            data = realRuns.Select(MapRunResult)
+        });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetMonitoringSnapshot(string? modelType, int? maxFrames, int? cameraIndex, decimal? conf, decimal? iou, string? device, int? imgsz, bool? half, CancellationToken cancellationToken)
+    {
+        var requestedTypes = string.IsNullOrWhiteSpace(modelType) || string.Equals(modelType, "all", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : new[] { modelType };
+        var sourcePath = cameraIndex.HasValue ? $"camera:{Math.Max(0, cameraIndex.Value)}" : null;
+        var inferenceRuns = await _yoloInferenceService.RunInferenceAsync(
+            sourcePath: sourcePath,
+            requestedModelTypes: requestedTypes,
+            maxFrames: maxFrames,
+            confThreshold: conf,
+            iouThreshold: iou,
+            deviceMode: device,
+            imageSize: imgsz,
+            useHalfPrecision: half,
+            cancellationToken: cancellationToken);
+        var trackedRuns = _monitoringOrchestrator.AttachPreviewTracking(inferenceRuns);
+        var alertResults = Array.Empty<ViolationAlertResult>();
+        try
+        {
+            alertResults = (await _monitoringOrchestrator.ProcessInferenceRunsAsync(
+                trackedRuns.Where(run => !run.IsMockResult).ToList(),
+                cancellationToken)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            HttpContext.RequestServices
+                .GetRequiredService<ILogger<ManagerController>>()
+                .LogWarning(ex, "Manager snapshot publish flow failed.");
+        }
+
+        return Json(new
+        {
+            success = true,
+            message = "Đã tải ảnh giám sát có bounding box và tracking ID từ model active.",
+            alerts = alertResults.Select(result => new
+            {
+                result.ViolationId,
+                result.TrackId,
+                result.ViolationType,
+                result.Severity,
+                result.DetectedAtUtc,
+                result.TelegramAttempted
+            }),
+            data = trackedRuns.Select(MapRunResult)
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RunVideoTest(IFormFile file, string? modelType, int? maxFrames, decimal? conf, decimal? iou, string? device, int? imgsz, bool? half, CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return Json(new { success = false, message = "Không có file đầu vào để test." });
+        }
+
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mp4", ".avi", ".mov", ".mkv", ".webm", ".jpg", ".jpeg", ".png", ".bmp", ".webp"
+        };
+
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
+        {
+            return Json(new { success = false, message = "Chỉ hỗ trợ video hoặc ảnh phổ biến để test." });
+        }
+
+        var sampleDirectory = Path.Combine(Directory.GetCurrentDirectory(), "ML", "samples", "manager-tests");
+        Directory.CreateDirectory(sampleDirectory);
+
+        var fileName = $"manager_test_{DateTime.UtcNow:yyyyMMdd_HHmmss}_{Guid.NewGuid():N}{extension}";
+        var path = Path.Combine(sampleDirectory, fileName);
+
+        await using (var stream = new FileStream(path, FileMode.Create))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        var requestedTypes = string.IsNullOrWhiteSpace(modelType) || string.Equals(modelType, "all", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : new[] { modelType };
+        var inferenceRuns = await _yoloInferenceService.RunInferenceAsync(
+            path,
+            requestedTypes,
+            maxFrames,
+            conf,
+            iou,
+            device,
+            imgsz,
+            half,
+            cancellationToken);
+        var trackedRuns = _monitoringOrchestrator.AttachPreviewTracking(inferenceRuns);
+        var alertResults = Array.Empty<ViolationAlertResult>();
+        try
+        {
+            alertResults = (await _monitoringOrchestrator.ProcessInferenceRunsAsync(
+                trackedRuns.Where(run => !run.IsMockResult).ToList(),
+                cancellationToken)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            HttpContext.RequestServices
+                .GetRequiredService<ILogger<ManagerController>>()
+                .LogWarning(ex, "Manager video test publish flow failed for {FileName}", file.FileName);
+        }
+
+        return Json(new
+        {
+            success = true,
+            message = "Đã chạy test đồng thời các model active trên nguồn đầu vào đã chọn.",
+            source = $"/ML/samples/manager-tests/{fileName}",
+            fileName = file.FileName,
+            alerts = alertResults.Select(result => new
+            {
+                result.ViolationId,
+                result.TrackId,
+                result.ViolationType,
+                result.Severity,
+                result.DetectedAtUtc,
+                result.TelegramAttempted
+            }),
+            data = trackedRuns.Select(MapRunResult)
+        });
+    }
+
+    private object MapRunResult(YoloInferenceRunResult run)
+    {
+        var annotatedImageUrl = PersistMonitoringImage(run);
+
+        return new
+        {
+            run.ModelName,
+            run.ModelType,
+            run.ModelPath,
+            run.ModelFormat,
+            run.ConfThreshold,
+            run.IouThreshold,
+            run.SourcePath,
+            run.RuntimeSource,
+            run.Engine,
+            run.IsMockResult,
+            run.StatusMessage,
+            run.FrameIndex,
+            run.FramesExamined,
+            run.ElapsedMilliseconds,
+            run.AnnotatedImageBase64,
+            run.AnnotatedImageMimeType,
+            annotatedImageUrl,
+            imageUrl = annotatedImageUrl,
+            detectionCount = run.Detections.Count,
+            detections = run.Detections.Select(detection => new
+            {
+                detection.ModelType,
+                detection.Label,
+                detection.DisplayLabel,
+                detection.Confidence,
+                detection.BoundingBox,
+                detection.TrackId,
+                processedAtUtc = detection.ProcessedAtUtc
+            })
+        };
+    }
+
+    private string? PersistMonitoringImage(YoloInferenceRunResult run)
+    {
+        if (string.IsNullOrWhiteSpace(run.AnnotatedImageBase64))
+        {
+            return null;
+        }
+
+        try
+        {
+            var extension = run.AnnotatedImageMimeType.Contains("svg", StringComparison.OrdinalIgnoreCase)
+                ? ".svg"
+                : ".jpg";
+            var directory = Path.Combine(_environment.WebRootPath, "evidence", "monitoring");
+            Directory.CreateDirectory(directory);
+
+            var safeModelType = string.IsNullOrWhiteSpace(run.ModelType) ? "yolo" : run.ModelType.ToLowerInvariant();
+            var fileName = $"{safeModelType}_{DateTime.UtcNow:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}{extension}";
+            var physicalPath = Path.Combine(directory, fileName);
+
+            if (extension == ".svg")
+            {
+                var svgContent = Encoding.UTF8.GetString(Convert.FromBase64String(run.AnnotatedImageBase64));
+                System.IO.File.WriteAllText(physicalPath, svgContent, Encoding.UTF8);
+            }
+            else
+            {
+                var bytes = Convert.FromBase64String(run.AnnotatedImageBase64);
+                System.IO.File.WriteAllBytes(physicalPath, bytes);
+            }
+
+            CleanupOldMonitoringImages(directory);
+            return $"/evidence/monitoring/{fileName}";
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void CleanupOldMonitoringFrames(string directory)
+    {
+        try
+        {
+            var expirationUtc = DateTime.UtcNow.AddMinutes(-10);
+            foreach (var file in new DirectoryInfo(directory).GetFiles().Where(file => file.LastWriteTimeUtc < expirationUtc))
+            {
+                file.Delete();
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private static void CleanupOldMonitoringImages(string directory)
+    {
+        try
+        {
+            var expirationUtc = DateTime.UtcNow.AddMinutes(-30);
+            foreach (var file in new DirectoryInfo(directory).GetFiles().Where(file => file.LastWriteTimeUtc < expirationUtc))
+            {
+                file.Delete();
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private string ResolveMonitoringModelPath(AiModel model)
+    {
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(model.ModelPath))
+        {
+            candidates.Add(model.ModelPath);
+            candidates.Add(model.ModelPath.Replace("/", "\\", StringComparison.Ordinal));
+        }
+
+        var knownFallback = model.Type switch
+        {
+            "YoloSmoking" => @"D:\WEB\model_trained\ML\Model_trained\smoke_v1_yolov8\train_yolov8n_200ep\weights\best.pt",
+            "YoloLeaving" => @"D:\WEB\model_trained\ML\Model_trained\rc_v1_yolov8\train_yolov8n_200ep\weights\best.pt",
+            _ => string.Empty
+        };
+
+        if (!string.IsNullOrWhiteSpace(knownFallback))
+        {
+            candidates.Add(knownFallback);
+        }
+
+        foreach (var candidate in candidates)
+        {
+            var normalized = NormalizeMonitoringWindowsPath(candidate);
+            var absolutePath = Path.IsPathRooted(normalized)
+                ? normalized
+                : Path.Combine(_environment.ContentRootPath, normalized);
+            if (System.IO.File.Exists(absolutePath))
+            {
+                return absolutePath;
+            }
+        }
+
+        var fallbackPath = model.ModelPath ?? string.Empty;
+        return Path.IsPathRooted(fallbackPath)
+            ? fallbackPath
+            : Path.Combine(_environment.ContentRootPath, fallbackPath);
+    }
+
+    private static bool IsYoloRuntimeModel(AiModel model)
+    {
+        var extension = Path.GetExtension(model.ModelPath ?? string.Empty);
+        return model.Type.StartsWith("Yolo", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".pt", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".onnx", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeMonitoringWindowsPath(string rawPath)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = rawPath.Trim();
+        cleaned = cleaned.Replace("/", "\\", StringComparison.Ordinal);
+        cleaned = cleaned.Replace("\t", "\\t", StringComparison.Ordinal);
+        cleaned = cleaned.Replace("\b", "\\b", StringComparison.Ordinal);
+        if (cleaned.StartsWith("D:WEB", StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned.Insert(2, "\\");
+        }
+
+        return cleaned;
+    }
+
+    private string BuildEvidenceImageDataUrl(string? evidenceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(evidenceUrl) || string.IsNullOrWhiteSpace(_environment.WebRootPath))
+        {
+            return string.Empty;
+        }
+
+        var relativePath = evidenceUrl.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(_environment.WebRootPath, relativePath));
+        var webRoot = Path.GetFullPath(_environment.WebRootPath);
+        if (!fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(fullPath))
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(fullPath).ToLowerInvariant();
+        var contentType = extension switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
+
+        var bytes = System.IO.File.ReadAllBytes(fullPath);
+        return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+    }
+
+    private static EmployeeMessage BuildViolationNotificationMessage(User employee, ViolationRecord violation, string reviewer)
+    {
+        var evidenceLine = string.IsNullOrWhiteSpace(violation.EvidenceUrl)
+            ? "Ảnh minh chứng: chưa có dữ liệu ảnh."
+            : "Ảnh minh chứng: đã được mã hóa, chỉ xem trong tab Lịch sử vi phạm.";
+
+        return new EmployeeMessage
+        {
+            EmployeeUserId = employee.Id,
+            EmployeeUsername = employee.Username,
+            EmployeeName = string.IsNullOrWhiteSpace(employee.FullName) ? employee.Username : employee.FullName,
+            Channel = string.IsNullOrWhiteSpace(reviewer) ? "manager" : reviewer,
+            SenderRole = "Manager",
+            SenderName = reviewer,
+            Title = $"Thông báo vi phạm: {violation.ViolationType}",
+            Content =
+                $"Mã vi phạm: {violation.TrackingId}\n" +
+                $"Loại vi phạm: {violation.ViolationType}\n" +
+                $"Mức độ: {violation.Severity}\n" +
+                $"Camera: {VietnameseText.NormalizeMojibake(violation.CameraLocation)}\n" +
+                $"Thời gian ghi nhận: {violation.DetectedAtUtc:dd/MM/yyyy HH:mm:ss}\n" +
+                $"Trạng thái: {violation.Status}\n" +
+                $"{evidenceLine}\n" +
+                $"Ghi chú quản lý: {violation.ReviewNote ?? "Không có"}",
+            SentAt = DateTime.UtcNow.AddHours(7),
+            IsRead = false
+        };
+    }
+
+    private async Task NotifyViolationReviewedAsync(User employee, ViolationRecord violation)
+    {
+        var message = $"Bạn vừa nhận thông báo vi phạm {violation.TrackingId}. Mở Lịch sử vi phạm để xem nội dung và ảnh minh chứng.";
+        var groups = new[]
+        {
+            InternalChatHub.BuildUsernameGroup(employee.Username),
+            InternalChatHub.BuildUserIdGroup(employee.Id.ToString())
+        };
+
+        await _chatHub.Clients.Groups(groups).SendAsync("ReceiveNotification", message);
+        await _chatHub.Clients.Groups(groups).SendAsync("MessagesChanged", new
+        {
+            employeeUserId = employee.Id,
+            employeeUsername = employee.Username,
+            channel = "violations",
+            violationId = violation.Id,
+            trackingId = violation.TrackingId
+        });
+    }
+}
+
+public class AddEmployeeRequest
+{
+    public string? FullName { get; set; }
+    public string? Department { get; set; }
+    public string? EmployeeCode { get; set; }
+    public string? Username { get; set; }
+    public string? Password { get; set; }
 }

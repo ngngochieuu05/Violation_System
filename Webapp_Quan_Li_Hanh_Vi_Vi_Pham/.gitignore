@@ -17,6 +17,7 @@ obj/
 
 # Custom ignores
 .venv/
+node_modules/
 *.pt
 *.onnx
 *.mp4
@@ -26,3 +27,7 @@ fix_*.py
 __pycache__/
 build_verify_tmp/
 .run-monitoring.*
+wwwroot/evidence/monitoring/
+wwwroot/uploads/attendance/
+wwwroot/uploads/avatars/
+tmp_*.json

@@ -1,0 +1,169 @@
+<div data-tab-panel="monitoring" class="hidden space-y-6">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="font-outfit text-2xl font-bold text-slate-900">Giám sát mô phỏng</h2>
+            <p class="mt-1 text-sm text-slate-500">
+                Manager chỉ chọn nguồn camera, video hoặc ảnh để xem kết quả. Model, ngưỡng và engine do Admin cấu hình.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <div id="cameraRealtimeIndicator" class="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-600">
+                <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
+            </div>
+            <a asp-controller="Manager" asp-action="Monitoring" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-red-200 hover:text-red-600">
+                <i class="fa-solid fa-arrow-up-right-from-square mr-2"></i>Mở route riêng
+            </a>
+            <button id="cameraFullscreenBtn" type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 hover:text-slate-900">
+                <i class="fa-solid fa-expand mr-1.5 text-[10px]"></i>Fullscreen
+            </button>
+        </div>
+    </div>
+
+    <div id="cameraModal" class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
+        <div class="col-span-1 lg:col-span-4 flex flex-col gap-4 min-w-0">
+            <div class="hidden">
+                <h3 id="cameraModalTitle">Workspace giám sát</h3>
+                <select id="cameraModelSelect"><option value="all">Tất cả model YOLO active</option></select>
+                <select id="cameraDeviceSelect"><option value="" selected>Admin runtime</option></select>
+                <select id="cameraImgSizeSelect"><option value="" selected>Admin image size</option></select>
+                <input id="cameraHalfPrecisionCheckbox" type="checkbox" />
+                <input id="cameraSaveResultCheckbox" type="checkbox" />
+                <input id="cameraConfSlider" type="range" min="0.05" max="0.95" step="0.05" value="0.25" />
+                <input id="cameraIouSlider" type="range" min="0.1" max="0.9" step="0.05" value="0.45" />
+                <input id="cameraFrameSlider" type="range" min="1" max="1" step="1" value="1" />
+                <span id="cameraConfSliderValue">0.25</span>
+                <span id="cameraIouSliderValue">0.45</span>
+                <span id="cameraFrameSliderValue">1</span>
+                <button id="cameraRunTestBtn" type="button">Chạy</button>
+                <p id="cameraRuntimeHint">Website mở camera...</p>
+                <div id="cameraOutputGrid"></div>
+                <div id="cameraTestResult"></div>
+                <span id="cameraPrimaryMeta"></span>
+                <div id="cameraPrimaryViewerWrap"></div>
+                <img id="cameraPrimaryViewerImage" />
+                <div id="cameraPrimaryViewerPlaceholder"></div>
+            </div>
+
+            <div class="saas-card bg-white p-5">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Cài đặt đầu vào</h3>
+
+                <div class="grid gap-3">
+                    <div>
+                        <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Nguồn đầu vào</label>
+                        <select id="cameraSourceTypeSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none shadow-sm transition focus:border-red-400 focus:ring focus:ring-red-200">
+                            <option value="webcam">Webcam</option>
+                            <option value="video">Video</option>
+                            <option value="image">Ảnh</option>
+                        </select>
+                    </div>
+
+                    <div id="cameraIndexWrap">
+                        <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-slate-500">Camera index</label>
+                        <select id="cameraIndexSelect" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none shadow-sm transition focus:border-red-400 focus:ring focus:ring-red-200">
+                            <option value="0">Camera 0</option>
+                            <option value="1">Camera 1</option>
+                            <option value="2">Camera 2</option>
+                            <option value="3">Camera 3</option>
+                        </select>
+                    </div>
+
+                    <div id="cameraInputFileWrap" class="hidden space-y-2">
+                        <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-500">File đầu vào</label>
+                        <input type="file" id="cameraTestVideoInput" accept="video/mp4,video/avi,video/mov,video/mkv,video/webm,image/png,image/jpeg,image/webp,image/bmp" class="hidden" />
+                        <button type="button" id="cameraChooseFileBtn" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-red-200 hover:text-red-600 hover:bg-slate-50">
+                            <i class="fa-solid fa-folder-open mr-1.5 text-[10px]"></i>Chọn file
+                        </button>
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-inner overflow-hidden max-w-full">
+                            <span id="cameraSelectedVideoLabel" class="block break-all whitespace-normal w-full text-sm text-slate-500" title="Chưa chọn file đầu vào.">Chưa chọn file đầu vào.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="camRealtimeActions" class="grid grid-cols-2 gap-2 mt-4">
+                    <button id="cameraStartLiveBtn" type="button" class="col-span-2 rounded-xl bg-emerald-500 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-600 whitespace-nowrap">
+                        <i class="fa-solid fa-play mr-1.5 text-[10px]"></i>Bắt đầu
+                    </button>
+                    <button id="cameraPauseBtn" type="button" class="col-span-1 rounded-xl bg-amber-500 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 whitespace-nowrap">
+                        <i class="fa-solid fa-pause mr-1.5 text-[10px]"></i>Tạm dừng
+                    </button>
+                    <button id="cameraStopLiveBtn" type="button" class="col-span-1 rounded-xl bg-red-100 px-3 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-200 border border-red-200 whitespace-nowrap">
+                        <i class="fa-solid fa-stop mr-1.5 text-[10px]"></i>Dừng
+                    </button>
+                    <button id="cameraRefreshBtn" type="button" class="col-span-2 rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-200 whitespace-nowrap">
+                        <i class="fa-solid fa-rotate-right mr-1.5 text-[10px]"></i>Làm mới nguồn
+                    </button>
+                </div>
+            </div>
+
+            <div id="cameraStatusBar" class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+                <div class="flex items-start gap-2">
+                    <i class="fa-solid fa-circle-info mt-0.5 text-[10px] text-blue-500"></i>
+                    <span id="cameraStatusText">Nhấn <strong>Bắt đầu</strong> để mở webcam hoặc chọn video, ảnh rồi bắt đầu phân tích.</span>
+                </div>
+            </div>
+
+            <div id="cameraNoModelBanner" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm font-bold text-amber-800">Chưa có model YOLO active</p>
+                        <p class="mt-1 text-xs text-amber-700">Vào <code>/Admin/Models</code> để thêm hoặc kích hoạt model trước khi chạy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-xl p-4 mt-6 shadow-sm flex-1 flex flex-col min-h-[250px]">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Nhật ký runtime</p>
+                <div id="cameraLogBox" class="flex-1 overflow-y-auto whitespace-pre-wrap font-mono text-xs leading-5 text-emerald-400"></div>
+            </div>
+        </div>
+
+        <div class="col-span-1 lg:col-span-8 flex flex-col gap-0 min-w-0 w-full overflow-hidden">
+            <div class="saas-card bg-white p-4 w-full overflow-hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase">Nguồn vào thật (input)</h3>
+                    <span id="cameraSourcePreviewMeta" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[10px] font-semibold text-slate-600">Chưa có nguồn vào</span>
+                </div>
+                <div class="border-2 border-dashed border-slate-200 bg-slate-50 rounded-lg w-full aspect-video flex flex-col items-center justify-center overflow-hidden relative">
+                    <video id="cameraSourcePreviewVideo" class="hidden absolute inset-0 w-full h-full object-contain" autoplay muted playsinline controls></video>
+                    <img id="cameraSourcePreviewImage" class="hidden absolute inset-0 w-full h-full object-contain" alt="Source preview" />
+
+                    <div id="cameraSourcePreviewPlaceholder" class="text-center z-10">
+                        <div class="mb-3 flex h-16 w-16 mx-auto items-center justify-center rounded-full bg-slate-200 text-slate-400">
+                            <i class="fa-solid fa-camera text-2xl"></i>
+                        </div>
+                        <p class="text-sm text-slate-400 font-medium">Đang chờ luồng dữ liệu...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                <div class="saas-card bg-white p-4">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase mb-3">Output: Hút thuốc</h3>
+                    <div class="bg-slate-50 rounded-lg w-full aspect-video flex flex-col items-center justify-center border border-slate-100 overflow-hidden relative">
+                        <canvas id="canvasSmoking" class="hidden absolute inset-0 w-full h-full object-contain"></canvas>
+                        <div id="placeholderSmoking" class="text-center z-10">
+                            <div class="mb-3 flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-slate-200 text-slate-400">
+                                <i class="fa-solid fa-fire text-xl"></i>
+                            </div>
+                            <p class="text-xs text-slate-400">Đang chờ luồng dữ liệu...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="saas-card bg-white p-4">
+                    <h3 class="text-sm font-bold text-slate-700 uppercase mb-3">Output: Rời vị trí</h3>
+                    <div class="bg-slate-50 rounded-lg w-full aspect-video flex flex-col items-center justify-center border border-slate-100 overflow-hidden relative">
+                        <canvas id="canvasLeaving" class="hidden absolute inset-0 w-full h-full object-contain"></canvas>
+                        <div id="placeholderLeaving" class="text-center z-10">
+                            <div class="mb-3 flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-slate-200 text-slate-400">
+                                <i class="fa-solid fa-person-walking-arrow-right text-xl"></i>
+                            </div>
+                            <p class="text-xs text-slate-400">Đang chờ luồng dữ liệu...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
