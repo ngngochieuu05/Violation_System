@@ -1,19 +1,15 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Microsoft.Extensions.Configuration;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
-using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Helpers;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 
 public class ViolationDbContext : DbContext
 {
-    private readonly IConfiguration? _configuration;
-
-    public ViolationDbContext(DbContextOptions<ViolationDbContext> options, IConfiguration? configuration = null)
+    public ViolationDbContext(DbContextOptions<ViolationDbContext> options)
         : base(options)
     {
-        _configuration = configuration;
     }
 
     public DbSet<User> Users { get; set; } = null!;
@@ -34,19 +30,6 @@ public class ViolationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        var encryptionKey = _configuration?["Security:EncryptionKey"] ?? "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234";
-
-        var encryptionConverter = new ValueConverter<string, string>(
-            v => EncryptionHelper.Encrypt(v, encryptionKey),
-            v => EncryptionHelper.Decrypt(v, encryptionKey)
-        );
-
-        modelBuilder.Entity<EmployeeMessage>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Content).HasConversion(encryptionConverter);
-        });
 
         modelBuilder.Entity<AuditLog>(entity =>
         {
@@ -87,6 +70,17 @@ public class ViolationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.UserId).IsUnique();
+        });
+
+        var encryptionConverter = new ValueConverter<string, string>(
+            v => EncryptionHelper.Encrypt(v),
+            v => EncryptionHelper.Decrypt(v)
+        );
+
+        modelBuilder.Entity<EmployeeMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Content).HasConversion(encryptionConverter);
         });
 
         modelBuilder.Entity<KnowledgeBaseItem>(entity =>

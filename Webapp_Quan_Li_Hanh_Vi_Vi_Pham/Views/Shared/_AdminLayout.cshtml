@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
+    <link rel="icon" type="image/png" href="/images/logo/logo.png" />
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,32 +153,26 @@
 
                         <!-- Notifications Dropdown -->
                         <div class="relative ml-2" id="dashboardNotificationDropdown">
-                            <button type="button" class="relative text-zinc-600 hover:bg-zinc-100 p-2 rounded-md focus:outline-none transition-all duration-200 hover:-translate-y-0.5 active:scale-95" id="dashboardNotificationTrigger">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                                <span class="absolute top-1 right-1 w-2 h-2 bg-red-600 rounded-full hidden"></span>
-                            </button>
-                            
-                            <div id="dashboardNotificationMenu" class="absolute mt-2 w-80 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
-                                <div class="px-4 py-3 border-b border-slate-100 flex justify-between items-center gap-2">
-                                    <p class="text-sm font-semibold text-slate-900 whitespace-nowrap">Thông báo Quản trị</p>
-                                    <span class="text-xs text-red-600 cursor-pointer hover:underline whitespace-nowrap text-right">Đánh dấu đã đọc</span>
-                                </div>
-                                <div class="py-2 max-h-64 overflow-y-auto">
-                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                        <p class="text-sm text-slate-800 font-medium">Manager <span class="font-semibold">mgrtest</span> đã gửi yêu cầu kích hoạt khóa thiết bị</p>
-                                        <p class="text-xs text-slate-500 mt-1">10 phút trước</p>
+                            <!-- Notification Bell -->
+                            <div class="relative">
+                                <button type="button" id="layoutNotificationTrigger" class="relative text-zinc-500 hover:text-red-600 transition focus:outline-none mr-2 p-2 rounded-md hover:-translate-y-0.5 active:scale-95">
+                                    <i class="fa-regular fa-bell text-xl"></i>
+                                    <!-- Chấm đỏ báo hiệu có thông báo mới -->
+                                    <span data-notification-unread-badge class="hidden absolute top-0 right-0 flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                    </span>
+                                </button>
+
+                                <!-- Dropdown Menu -->
+                                <div id="layoutNotificationMenu" class="hidden absolute right-0 mt-3 w-[350px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden origin-top-right transition-all">
+                                    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                        <h3 class="text-sm font-bold text-slate-800">Thông báo mới</h3>
+                                        <button onclick="window.loadNotifications()" class="text-xs text-red-600 hover:underline">Làm mới</button>
                                     </div>
-                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                        <p class="text-sm text-slate-800 font-medium">Manager <span class="font-semibold">nguyen_tung_duong</span> đã cập nhật thông tin cá nhân</p>
-                                        <p class="text-xs text-slate-500 mt-1">1 giờ trước</p>
-                                    </div>
-                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                        <p class="text-sm text-slate-800 font-medium">Thiết bị của Manager <span class="font-semibold">tran_van_a</span> đã được reset kích hoạt</p>
-                                        <p class="text-xs text-slate-500 mt-1">3 giờ trước</p>
-                                    </div>
-                                    <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0">
-                                        <p class="text-sm text-slate-800 font-medium">Đã cấp lại khóa kích hoạt mới cho Manager <span class="font-semibold">le_thi_b</span></p>
-                                        <p class="text-xs text-slate-500 mt-1">5 giờ trước</p>
+                                    <!-- Vùng chứa danh sách item sẽ được Render qua JS -->
+                                    <div id="layoutNotificationList" class="max-h-[380px] overflow-y-auto">
+                                        <div class="px-4 py-8 text-center text-sm text-slate-400">Đang tải...</div>
                                     </div>
                                 </div>
                             </div>
@@ -225,47 +220,10 @@
     <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
     
-    <!-- Sidebar, Dropdowns, and SignalR Logic -->
+    <!-- Sidebar and Dropdowns Logic -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // SignalR Notification Setup
-            if (typeof signalR !== 'undefined') {
-                const connection = new signalR.HubConnectionBuilder()
-                    .withUrl("/chatHub")
-                    .withAutomaticReconnect()
-                    .build();
-
-                connection.on("ReceiveNotification", (data) => {
-                    const notifTrigger = document.getElementById("dashboardNotificationTrigger");
-                    if (notifTrigger) {
-                        const badge = notifTrigger.querySelector(".bg-red-600");
-                        if (badge) badge.classList.remove("hidden");
-                        notifTrigger.classList.add("text-red-600");
-                    }
-
-                    const notifMenu = document.getElementById("dashboardNotificationMenu");
-                    if (notifMenu) {
-                        const container = notifMenu.querySelector(".max-h-64");
-                        if (container) {
-                            const div = document.createElement("div");
-                            div.className = "px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0";
-                            div.innerHTML = `
-                                <p class="text-sm text-slate-800 font-medium">${data.message}</p>
-                                <p class="text-xs text-slate-500 mt-1">Vừa xong</p>
-                            `;
-                            div.addEventListener("click", () => {
-                                window.location.href = data.url || "#";
-                            });
-                            container.insertBefore(div, container.firstChild);
-                        }
-                    }
-                });
-
-                connection.start().catch(err => console.error("SignalR Connection Error: ", err));
-            }
-
             // Sidebar Mobile Toggle
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const sidebar = document.getElementById('admin-sidebar');
@@ -452,5 +410,7 @@
         </div>
     </div>
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script src="~/js/notification-signalr.js" asp-append-version="true"></script>
 </body>
 </html>

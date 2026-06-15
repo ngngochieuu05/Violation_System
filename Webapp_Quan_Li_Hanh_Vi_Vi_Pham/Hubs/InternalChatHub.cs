@@ -21,10 +21,10 @@ public class InternalChatHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, BuildUserIdGroup(userId));
         }
 
-        var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
+        var role = Context.User?.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
         if (!string.IsNullOrWhiteSpace(role))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"role:{role.ToLowerInvariant()}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, BuildRoleGroup(role));
         }
 
         await base.OnConnectedAsync();
@@ -33,4 +33,6 @@ public class InternalChatHub : Hub
     public static string BuildUsernameGroup(string username) => $"user:{username.Trim().ToLowerInvariant()}";
 
     public static string BuildUserIdGroup(string userId) => $"userid:{userId.Trim().ToLowerInvariant()}";
+    
+    public static string BuildRoleGroup(string role) => $"role:{role.Trim()}";
 }

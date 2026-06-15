@@ -6,4 +6,7 @@ public class TelegramSendResult
     public string ChatId { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string ResponseSummary { get; set; } = string.Empty;
+    public bool PhotoSent { get; set; }
+    public bool ActionButtonsSent { get; set; }
+    public string DeliveryMode { get; set; } = "message";
 }

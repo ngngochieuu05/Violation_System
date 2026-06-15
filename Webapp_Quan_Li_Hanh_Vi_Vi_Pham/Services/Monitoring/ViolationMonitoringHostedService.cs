@@ -64,7 +64,7 @@ public class ViolationMonitoringHostedService : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var inferenceService = scope.ServiceProvider.GetRequiredService<IYoloInferenceService>();
-        var detections = await inferenceService.GetLatestDetectionsAsync(cancellationToken);
-        await _orchestrator.ProcessDetectionsAsync(detections, cancellationToken);
+        var runs = await inferenceService.RunInferenceAsync(cancellationToken: cancellationToken);
+        await _orchestrator.ProcessInferenceRunsAsync(runs, cancellationToken);
     }
 }

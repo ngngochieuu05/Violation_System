@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -13,6 +13,8 @@
     <Content Remove="Models\emloyee\**" />
     <EmbeddedResource Remove="Models\emloyee\**" />
     <None Remove="Models\emloyee\**" />
+    <Content Remove="wwwroot\evidence\**" />
+    <None Remove="wwwroot\evidence\**" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Hệ Thống Quản Lý Vi Phạm & Nhân Sự</title>
+    <link rel="icon" type="image/png" href="/images/logo/logo.png" />
     
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -71,13 +72,28 @@
                                 </a>
                             }
                             <!-- Notification Bell -->
-                            <button type="button" class="relative text-slate-500 hover:text-red-600 transition focus:outline-none">
-                                <i class="fa-regular fa-bell text-xl"></i>
-                                <span class="absolute top-0 right-0 flex h-2 w-2">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                                </span>
-                            </button>
+                            <div class="relative ml-2">
+                                <button type="button" id="layoutNotificationTrigger" class="relative text-slate-500 hover:text-red-600 transition focus:outline-none p-2 rounded-md hover:-translate-y-0.5 active:scale-95">
+                                    <i class="fa-regular fa-bell text-xl"></i>
+                                    <!-- Chấm đỏ báo hiệu có thông báo mới -->
+                                    <span data-notification-unread-badge class="hidden absolute top-0 right-0 flex h-2 w-2">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                    </span>
+                                </button>
+
+                                <!-- Dropdown Menu -->
+                                <div id="layoutNotificationMenu" class="hidden absolute mt-2 w-[350px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden origin-top-right transition-all" style="right: 0;">
+                                    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                        <h3 class="text-sm font-bold text-slate-800">Thông báo mới</h3>
+                                        <button onclick="window.loadNotifications()" class="text-xs text-red-600 hover:underline">Làm mới</button>
+                                    </div>
+                                    <!-- Vùng chứa danh sách item sẽ được Render qua JS -->
+                                    <div id="layoutNotificationList" class="max-h-[380px] overflow-y-auto">
+                                        <div class="px-4 py-8 text-center text-sm text-slate-400">Đang tải...</div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- User Avatar Dropdown -->
                             <div class="relative ml-4 border-l border-slate-200 pl-4" data-user-dropdown>

@@ -25,6 +25,7 @@ public class AdminController : Controller
     private readonly ViolationDbContext _context;
     private readonly ITelegramAlertService _telegramAlertService;
     private readonly IViolationMonitoringOrchestrator _monitoringOrchestrator;
+    private readonly IAiModelCatalogService _aiModelCatalogService;
     private readonly ViolationMonitoringOptions _monitoringOptions;
     private readonly TelegramBotOptions _telegramOptions;
 
@@ -33,6 +34,7 @@ public class AdminController : Controller
         ViolationDbContext context,
         ITelegramAlertService telegramAlertService,
         IViolationMonitoringOrchestrator monitoringOrchestrator,
+        IAiModelCatalogService aiModelCatalogService,
         IOptions<ViolationMonitoringOptions> monitoringOptions,
         IOptions<TelegramBotOptions> telegramOptions)
     {
@@ -40,8 +42,85 @@ public class AdminController : Controller
         _context = context;
         _telegramAlertService = telegramAlertService;
         _monitoringOrchestrator = monitoringOrchestrator;
+        _aiModelCatalogService = aiModelCatalogService;
         _monitoringOptions = monitoringOptions.Value;
         _telegramOptions = telegramOptions.Value;
+    }
+
+    private async Task<User?> GetCurrentUserAsync(CancellationToken cancellationToken)
+    {
+        var username = User.Identity?.Name;
+        if (string.IsNullOrEmpty(username)) return null;
+        return await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
+    }
+
+    [HttpGet("/Admin/GetNotifications")]
+    public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken)
+    {
+        var admin = await GetCurrentUserAsync(cancellationToken);
+        if (admin == null) return Json(new { success = false, message = "Không xác định được tài khoản quản lý." });
+
+        // Messages SENT TO admin
+        var messages = await _context.EmployeeMessages
+            .Where(m => m.Channel == admin.Username && m.SenderRole == "Employee")
+            .OrderByDescending(m => m.SentAt)
+            .Take(10)
+            .Select(m => new
+            {
+                source = "message",
+                id = m.Id,
+                title = string.IsNullOrWhiteSpace(m.Title) ? $"Tin nhắn từ {m.SenderName}" : m.Title,
+                body = m.Content,
+                createdAt = m.SentAt,
+                isRead = m.IsRead,
+                tab = "messages"
+            })
+            .ToListAsync(cancellationToken);
+
+        // Approval Requests for Admin
+        var requestUpdates = await _context.ApprovalRequests
+            .Where(r => r.Status == "Chờ duyệt" || r.Status == "Pending")
+            .OrderByDescending(r => r.SubmittedAt)
+            .Take(10)
+            .Select(r => new
+            {
+                source = "request",
+                id = r.Id,
+                title = $"Đơn xin {r.RequestType} mới",
+                body = $"Từ: {r.EmployeeName}",
+                createdAt = r.SubmittedAt,
+                isRead = false,
+                tab = "requests"
+            })
+            .ToListAsync(cancellationToken);
+
+        var combined = messages
+            .Concat(requestUpdates)
+            .OrderByDescending(item => item.createdAt)
+            .Take(12)
+            .ToList();
+
+        return Json(new
+        {
+            success = true,
+            data = combined,
+            unreadCount = combined.Count(m => !m.isRead)
+        });
+    }
+
+    [HttpPost("/Admin/MarkNotificationRead")]
+    public async Task<IActionResult> MarkNotificationRead(int id, CancellationToken cancellationToken)
+    {
+        var admin = await GetCurrentUserAsync(cancellationToken);
+        if (admin == null) return Json(new { success = false });
+
+        var msg = await _context.EmployeeMessages.FindAsync(new object[] { id }, cancellationToken);
+        if (msg != null && msg.Channel == admin.Username)
+        {
+            msg.IsRead = true;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        return Json(new { success = true });
     }
 
     private async Task WriteLogAsync(string action, string details, string status = "Thành công")
@@ -75,6 +154,7 @@ public class AdminController : Controller
         var activeSetting = await _modelSettingService.GetActiveSettingAsync(cancellationToken);
         var managers = await _context.Users.Where(u => u.Role == "Manager").OrderByDescending(u => u.CreatedAtUtc).ToListAsync(cancellationToken);
         var aiModels = await _context.AiModels.OrderByDescending(m => m.CreatedAtUtc).ToListAsync(cancellationToken);
+        await NormalizePersistedAiModelThresholdsAsync(aiModels, cancellationToken);
 
         // Calculate actual statistics from the database
         var totalEmployees = await _context.Users.CountAsync(u => u.Role == "Manager" || u.Role == "Employee", cancellationToken);
@@ -114,7 +194,9 @@ public class AdminController : Controller
         var models = await _context.AiModels
             .OrderByDescending(m => m.CreatedAtUtc)
             .ToListAsync(cancellationToken);
-        return View(models);
+        await NormalizePersistedAiModelThresholdsAsync(models, cancellationToken);
+        var viewModel = await _aiModelCatalogService.BuildPageViewModelAsync(models, cancellationToken);
+        return View(viewModel);
     }
 
     [HttpGet("/Admin/Personnel")]
@@ -383,9 +465,9 @@ public class AdminController : Controller
         var setting = new ModelSetting
         {
             YoloModelPath = yoloModelPath,
-            YoloConfThreshold = yoloConfThreshold,
-            YoloIouThreshold = yoloIouThreshold,
-            DeepfaceConfThreshold = deepfaceConfThreshold
+            YoloConfThreshold = NormalizeYoloThreshold(yoloConfThreshold, 0.25m),
+            YoloIouThreshold = NormalizeYoloThreshold(yoloIouThreshold, 0.45m),
+            DeepfaceConfThreshold = NormalizeThresholdRange(deepfaceConfThreshold, 0.40m)
         };
         await _modelSettingService.UpdateSettingAsync(setting, cancellationToken);
         TempData["SuccessMessage"] = "Cập nhật cấu hình mô hình AI thành công!";
@@ -434,8 +516,17 @@ public class AdminController : Controller
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(type) || string.IsNullOrEmpty(modelPath))
         {
             TempData["ErrorMessage"] = "Vui lòng nhập đầy đủ thông tin mô hình.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
+
+        // Chuẩn hóa về thang 0-1: nếu user nhập > 1.0 (thang 100) thì chia 100
+        var isYoloModel = IsYoloModel(type, modelPath);
+        var normalizedConf = isYoloModel
+            ? NormalizeYoloThreshold(confThreshold, 0.25m)
+            : NormalizeThresholdRange(confThreshold, 0.40m);
+        var normalizedIou = isYoloModel
+            ? NormalizeYoloThreshold(iouThreshold, 0.45m)
+            : 0m;
 
         var newModel = new AiModel
         {
@@ -443,8 +534,8 @@ public class AdminController : Controller
             Name = name,
             Type = type,
             ModelPath = modelPath,
-            ConfThreshold = confThreshold,
-            IouThreshold = iouThreshold,
+            ConfThreshold = normalizedConf,
+            IouThreshold = normalizedIou,
             IsActive = false, // starts as inactive, user can toggle active
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -454,7 +545,7 @@ public class AdminController : Controller
         await WriteLogAsync("Thêm Model AI", $"Đã thêm mô hình {name} ({type})");
 
         TempData["SuccessMessage"] = $"Đã thêm mô hình {name} thành công!";
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Models));
     }
 
     [HttpPost]
@@ -470,22 +561,31 @@ public class AdminController : Controller
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
 
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(modelPath))
         {
             TempData["ErrorMessage"] = "Vui lòng điền đầy đủ tên và đường dẫn mô hình.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
+
+        // Chuẩn hóa về thang 0-1: nếu user nhập > 1.0 (thang 100) thì chia 100
+        var isYoloModel = IsYoloModel(model.Type, modelPath);
+        var normalizedConf = isYoloModel
+            ? NormalizeYoloThreshold(confThreshold, 0.25m)
+            : NormalizeThresholdRange(confThreshold, 0.40m);
+        var normalizedIou = isYoloModel
+            ? NormalizeYoloThreshold(iouThreshold, 0.45m)
+            : 0m;
 
         model.Name = name;
         model.ModelPath = modelPath;
-        model.ConfThreshold = confThreshold;
-        model.IouThreshold = iouThreshold;
+        model.ConfThreshold = normalizedConf;
+        model.IouThreshold = normalizedIou;
         await _context.SaveChangesAsync(cancellationToken);
         TempData["SuccessMessage"] = $"Đã cập nhật thông số mô hình {name} thành công!";
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Models));
     }
 
     [HttpPost]
@@ -495,7 +595,7 @@ public class AdminController : Controller
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
 
         // Toggle active status
@@ -520,7 +620,7 @@ public class AdminController : Controller
             TempData["SuccessMessage"] = $"Đã tắt mô hình {model.Name}!";
         }
         await _context.SaveChangesAsync(cancellationToken);
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Models));
     }
 
     [HttpPost]
@@ -530,20 +630,83 @@ public class AdminController : Controller
         if (model == null)
         {
             TempData["ErrorMessage"] = "Không tìm thấy mô hình AI.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
 
         if (model.IsActive)
         {
             TempData["ErrorMessage"] = "Không thể xóa mô hình đang ở trạng thái kích hoạt.";
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Models));
         }
 
         _context.AiModels.Remove(model);
         await _context.SaveChangesAsync(cancellationToken);
 
         TempData["SuccessMessage"] = $"Đã xóa mô hình {model.Name} thành công!";
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Models));
+    }
+
+    private async Task NormalizePersistedAiModelThresholdsAsync(List<AiModel> models, CancellationToken cancellationToken)
+    {
+        var changed = false;
+        foreach (var model in models)
+        {
+            var isYoloModel = IsYoloModel(model.Type, model.ModelPath);
+            var normalizedConf = isYoloModel
+                ? NormalizeYoloThreshold(model.ConfThreshold, 0.25m)
+                : NormalizeThresholdRange(model.ConfThreshold, 0.40m);
+            var normalizedIou = isYoloModel
+                ? NormalizeYoloThreshold(model.IouThreshold, 0.45m)
+                : 0m;
+
+            if (model.ConfThreshold == normalizedConf && model.IouThreshold == normalizedIou)
+            {
+                continue;
+            }
+
+            model.ConfThreshold = normalizedConf;
+            model.IouThreshold = normalizedIou;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static bool IsYoloModel(string? type, string? modelPath)
+    {
+        if (!string.IsNullOrWhiteSpace(type)
+            && type.StartsWith("Yolo", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(modelPath ?? string.Empty);
+        return extension.Equals(".pt", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".onnx", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static decimal NormalizeYoloThreshold(decimal value, decimal fallback)
+    {
+        return NormalizeThresholdRange(value, fallback, min: 0.05m, max: 1.00m);
+    }
+
+    private static decimal NormalizeThresholdRange(decimal value, decimal fallback, decimal min = 0.05m, decimal max = 1.00m)
+    {
+        var normalized = value;
+        if (normalized <= 0m)
+        {
+            normalized = fallback;
+        }
+        else if (normalized > 1m)
+        {
+            normalized /= 100m;
+        }
+
+        normalized = Math.Clamp(normalized, min, max);
+        return Math.Round(normalized, 2, MidpointRounding.AwayFromZero);
     }
 
     private async Task<MonitoringCenterViewModel> BuildMonitoringViewModelAsync(CancellationToken cancellationToken)

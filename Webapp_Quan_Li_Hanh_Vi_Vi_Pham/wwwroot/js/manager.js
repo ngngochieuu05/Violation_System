@@ -70,6 +70,32 @@
         }
     };
 
+    window.managerEmployeeList = [];
+    window.managerViolationAssignees = [];
+
+    const escapeHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+    const loadViolationAssignees = async () => {
+        if (Array.isArray(window.managerViolationAssignees) && window.managerViolationAssignees.length > 0) {
+            return window.managerViolationAssignees;
+        }
+
+        try {
+            const res = await fetch('/Manager/GetViolationAssignees');
+            const data = await res.json();
+            window.managerViolationAssignees = data.success && Array.isArray(data.data) ? data.data : [];
+        } catch (err) {
+            console.error("Failed to load violation assignees", err);
+            window.managerViolationAssignees = [];
+        }
+
+        return window.managerViolationAssignees;
+    };
     const loadEmployees = async () => {
         const tbody = document.getElementById("employeeListTbody");
         if (!tbody) return;
@@ -77,82 +103,99 @@
             const res = await fetch('/Manager/GetAllEmployees');
             const data = await res.json();
             if (data.success) {
-                tbody.innerHTML = data.data.map(e => `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                        <td class="p-4 py-3"><span class="font-medium text-slate-900">${e.employeeCode || 'N/A'}</span></td>
-                        <td class="p-4 py-3 text-slate-700">${e.fullName}</td>
-                        <td class="p-4 py-3 text-slate-500">${e.department || 'N/A'}</td>
-                        <td class="p-4 py-3 text-slate-500">${e.username}</td>
-                        <td class="p-4 py-3 text-center flex items-center justify-center gap-2">
-                            <button onclick="window.openCameraModal('${e.employeeCode}')" class="px-2 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded text-xs transition" title="Xem Camera">
-                                <i class="fa-solid fa-video"></i>
-                            </button>
-                            <button onclick="window.resetEmployeePassword('${e.username}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded text-xs transition font-semibold" title="Cấp lại mật khẩu mặc định (123)">
-                                <i class="fa-solid fa-key mr-1"></i>Reset MK
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                window.managerEmployeeList = data.data;
+                renderEmployees(data.data);
             }
         } catch(err) { console.error(err); }
     };
 
-    window.submitNewEmployee = async () => {
-        const code = document.getElementById('newEmpCode').value;
-        const name = document.getElementById('newEmpName').value;
-        const email = document.getElementById('newEmpEmail').value;
-        const dept = document.getElementById('newEmpDept').value;
+    const renderEmployees = (list) => {
+        const tbody = document.getElementById("employeeListTbody");
+        if (!tbody) return;
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Không tìm thấy nhân viên</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = list.map(e => `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 transition-colors">
+                <td class="p-4 py-3"><span class="font-medium text-slate-900">${e.employeeCode || 'N/A'}</span></td>
+                <td class="p-4 py-3 text-slate-700">${e.fullName}</td>
+                <td class="p-4 py-3 text-slate-500">${e.department || 'N/A'}</td>
+                <td class="p-4 py-3 text-slate-500">${e.username}</td>
+                <td class="p-4 py-3 text-center">
+                    <button onclick="window.resetEmployeePassword('${e.id}', '${e.employeeCode || e.fullName}')" class="text-slate-400 hover:text-amber-500 transition" title="Reset mật khẩu">
+                        <i class="fa-solid fa-key text-lg"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    };
 
-        if (!name || !email) {
-            alert('Vui lòng nhập Họ & Tên và Tài khoản (Email)!');
+    document.getElementById("employeeSearchInput")?.addEventListener("input", (e) => {
+        const term = e.target.value.toLowerCase();
+        if (!term) {
+            renderEmployees(window.managerEmployeeList);
+            return;
+        }
+        const filtered = window.managerEmployeeList.filter(emp => 
+            (emp.fullName && emp.fullName.toLowerCase().includes(term)) ||
+            (emp.employeeCode && emp.employeeCode.toLowerCase().includes(term)) ||
+            (emp.username && emp.username.toLowerCase().includes(term))
+        );
+        renderEmployees(filtered);
+    });
+
+    window.openAddEmployeeModal = () => {
+        document.getElementById("addEmpCode").value = "";
+        document.getElementById("addEmpName").value = "";
+        document.getElementById("addEmpUsername").value = "";
+        document.getElementById("addEmpPassword").value = "";
+        document.getElementById("addEmpDept").value = "";
+        
+        const modal = document.getElementById("addEmployeeModal");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        setTimeout(() => modal.querySelector('.saas-card').style.transform = 'scale(1)', 10);
+    };
+
+    window.closeAddEmployeeModal = () => {
+        const modal = document.getElementById("addEmployeeModal");
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+    };
+
+    window.submitAddEmployee = async () => {
+        const payload = {
+            EmployeeCode: document.getElementById("addEmpCode").value,
+            FullName: document.getElementById("addEmpName").value,
+            Username: document.getElementById("addEmpUsername").value,
+            Password: document.getElementById("addEmpPassword").value,
+            Department: document.getElementById("addEmpDept").value
+        };
+
+        if (!payload.EmployeeCode || !payload.FullName || !payload.Username) {
+            alert("Vui lòng điền các trường bắt buộc (*)");
             return;
         }
 
         try {
-            const res = await fetch('/Manager/CreateEmployee', {
+            const res = await fetch('/Manager/AddEmployee', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Username: email, FullName: name, Department: dept, EmployeeCode: code })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (data.success) {
-                alert(`Thêm nhân viên thành công!\nMật khẩu mặc định: ${data.defaultPassword}\nNhân viên sẽ được yêu cầu cập nhật lại trong lần đăng nhập đầu.`);
-                document.getElementById('addEmployeeModal').classList.add('hidden');
-                document.getElementById('addEmployeeModal').classList.remove('flex');
-                
-                document.getElementById('newEmpCode').value = '';
-                document.getElementById('newEmpName').value = '';
-                document.getElementById('newEmpEmail').value = '';
-                document.getElementById('newEmpDept').value = '';
-                
+                alert("Thêm nhân viên thành công!");
+                window.closeAddEmployeeModal();
                 loadEmployees();
+                if (typeof loadHomeStats === 'function') loadHomeStats();
             } else {
-                alert(data.message || 'Có lỗi xảy ra');
+                alert(data.message || "Có lỗi xảy ra");
             }
-        } catch (e) {
-            console.error(e);
-            alert('Không thể kết nối đến máy chủ');
-        }
-    };
-
-    window.resetEmployeePassword = async (username) => {
-        if (!confirm(`Bạn có chắc muốn cấp lại mật khẩu cho tài khoản ${username}?\nMật khẩu mới sẽ là "123" và nhân viên phải đổi mật khẩu khi đăng nhập.`)) return;
-
-        try {
-            const res = await fetch('/Manager/ResetEmployeePassword', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Username: username })
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert(`Cấp lại mật khẩu thành công!\nMật khẩu mới: ${data.newPassword}`);
-            } else {
-                alert(data.message || 'Có lỗi xảy ra');
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Không thể kết nối đến máy chủ');
+        } catch (err) {
+            console.error(err);
+            alert("Lỗi kết nối");
         }
     };
 
@@ -168,8 +211,8 @@
                         <td class="p-4 py-3 text-slate-900 font-medium">${ws.employeeCode}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(ws.date).toLocaleDateString('vi-VN')}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(ws.checkInTime).toLocaleTimeString('vi-VN')}</td>
-                        <td class="p-4 py-3 text-slate-500">${ws.checkOutTime ? new Date(ws.checkOutTime).toLocaleTimeString('vi-VN') : 'Äang lÃ m viá»‡c'}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${ws.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${ws.status === 'Late' ? 'Đi muộn' : (ws.status === 'On-time' || ws.status === 'On time' ? 'Đúng giờ' : ws.status)}</span></td>
+                        <td class="p-4 py-3 text-slate-500">${ws.checkOutTime ? new Date(ws.checkOutTime).toLocaleTimeString('vi-VN') : 'Đang làm việc'}</td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${ws.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}">${ws.status}</span></td>
                     </tr>
                 `).join('');
             }
@@ -180,63 +223,143 @@
         const tbody = document.getElementById("violationTbody");
         if (!tbody) return;
         try {
+            const assignees = await loadViolationAssignees();
             const res = await fetch('/Manager/GetAllViolations');
             const data = await res.json();
+            if (!data.success) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-red-500">${escapeHtml(data.message || 'Không tải được lịch sử vi phạm.')}</td></tr>`;
+                return;
+            }
+
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chưa có vi phạm nào.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-slate-400">Chưa có vi phạm nào.</td></tr>`;
                     return;
                 }
 
+                const buildTelegramState = (violation) => {
+                    if (violation.telegramSent) {
+                        return `
+                            <div class="flex flex-col gap-1">
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-700">Đã đồng bộ</span>
+                                ${violation.telegramSentAtUtc ? `<span class="text-[11px] text-slate-400">${new Date(violation.telegramSentAtUtc).toLocaleString('vi-VN')}</span>` : ''}
+                                ${violation.telegramTargetChatIds ? `<span class="text-[11px] text-slate-400">Chat: ${violation.telegramTargetChatIds}</span>` : ''}
+                            </div>`;
+                    }
+
+                    return `
+                        <div class="flex flex-col gap-1">
+                            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-amber-100 text-amber-700">Chưa đồng bộ</span>
+                            ${violation.telegramLastError ? `<span class="text-[11px] text-red-500">${violation.telegramLastError}</span>` : '<span class="text-[11px] text-slate-400">Chưa có phản hồi gửi.</span>'}
+                        </div>`;
+                };
+
+                const buildEmployeeCell = (violation) => {
+                    const currentCode = violation.employeeCode || "";
+                    const currentName = violation.employeeName || "";
+                    if (violation.status !== 'Pending') {
+                        return `
+                            <div class="flex flex-col gap-1">
+                                <span class="font-semibold text-slate-800">${escapeHtml(currentName || currentCode || 'Chưa gán')}</span>
+                                <span class="text-[11px] text-slate-400">${escapeHtml(currentCode || 'N/A')}</span>
+                            </div>`;
+                    }
+
+                    const options = assignees.map(emp => {
+                        const code = emp.employeeCode || emp.username || '';
+                        const label = `${emp.fullName || emp.username} (${code || 'N/A'})`;
+                        const selected = currentCode && (currentCode === emp.employeeCode || currentCode === emp.username) ? 'selected' : '';
+                        return `<option value="${emp.id}" ${selected}>${escapeHtml(label)}</option>`;
+                    }).join('');
+
+                    return `
+                        <select data-violation-employee="${violation.id}" class="min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100">
+                            <option value="">Chọn nhân viên vi phạm</option>
+                            ${options}
+                        </select>
+                        ${currentCode ? `<div class="mt-1 text-[11px] text-slate-400">Đang gán: ${escapeHtml(currentName || currentCode)}</div>` : ''}
+                    `;
+                };
+
                 tbody.innerHTML = data.data.map(v => {
-                    const violationTypes = {
-                        "Khong deo the": "Không đeo thẻ",
-                        "Hut thuoc": "Hút thuốc",
-                        "Ngu gat": "Ngủ gật",
-                        "Roi vi tri": "Rời vị trí",
-                        "Di muon": "Đi muộn",
-                        "Ve som": "Về sớm"
-                    };
-                    const typeDisplay = violationTypes[v.violationType] || v.violationType;
-                    
-                    const statuses = {
-                        "Pending": "Chờ xử lý",
-                        "Approved": "Đã duyệt",
-                        "Rejected": "Từ chối"
-                    };
-                    const statusDisplay = statuses[v.status] || v.status;
-                    
+                    const evidencePreview = v.hasEvidenceImage
+                        ? `<div id="violationEvidence-${v.id}" class="min-w-32 text-left">
+                                <span class="text-[11px] text-slate-400">Đang tải ảnh...</span>
+                           </div>`
+                        : `<div class="mb-2 text-[11px] text-slate-400">Chưa có ảnh minh chứng</div>`;
+
                     return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-4 py-3 text-slate-900 font-semibold">${v.trackingId || 'N/A'}</td>
-                        <td class="p-4 py-3 text-slate-900 font-medium">
-                            ${v.employeeCode}
-                            <div class="text-[10px] text-slate-500 font-normal mt-0.5">${v.employeeName || 'Không xác định'}</div>
-                        </td>
-                        <td class="p-4 py-3 text-slate-700">${typeDisplay}</td>
-                        <td class="p-4 py-3 text-slate-500">${v.cameraLocation}</td>
+                        <td class="p-4 py-3 text-slate-900 font-semibold">${escapeHtml(v.trackingId || 'N/A')}</td>
+                        <td class="p-4 py-3 text-slate-900 font-medium">${buildEmployeeCell(v)}</td>
+                        <td class="p-4 py-3 text-slate-700">${escapeHtml(v.violationType)}</td>
+                        <td class="p-4 py-3 text-slate-500">${escapeHtml(v.cameraLocation)}</td>
                         <td class="p-4 py-3 text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700">${v.severity}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full bg-red-100 text-red-700">${escapeHtml(v.severity)}</span></td>
                         <td class="p-4 py-3">
                             <div class="flex flex-col gap-1">
-                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${statusDisplay}</span>
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
                                 ${(v.reviewedBy || v.reviewedAtUtc) ? `<span class="text-[11px] text-slate-400">${v.reviewedBy || 'Manager'}${v.reviewedAtUtc ? ' • ' + new Date(v.reviewedAtUtc).toLocaleString('vi-VN') : ''}</span>` : ''}
                             </div>
                         </td>
+                        <td class="p-4 py-3">${evidencePreview}</td>
+                        <td class="p-4 py-3">${buildTelegramState(v)}</td>
                         <td class="p-4 py-3 text-right">
-                            ${v.status === 'Pending' ? `
                             <div class="flex justify-end gap-2">
+                                <button onclick="window.resendViolationTelegram('${v.id}')" class="rounded border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-red-200 hover:text-red-600">Gửi Telegram</button>
+                                ${v.status === 'Pending' ? `
                                 <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyệt</button>
                                 <button onclick="window.reviewViolation('${v.id}', 'Rejected')" class="rounded bg-red-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-600">Từ chối</button>
-                            </div>` : `<span class="text-xs text-slate-400">${v.reviewChannel || 'Đã xử lý'}</span>`}
+                                ` : `<span class="px-2 py-1 text-xs text-slate-400">${v.reviewChannel || 'Đã xử lý'}</span>`}
+                            </div>
                         </td>
                     </tr>
-                `}).join('');
+                `;
+                }).join('');
+                data.data
+                    .filter(v => v.hasEvidenceImage)
+                    .forEach(v => window.previewViolationEvidence(v.id, false));
             }
-        } catch(err) { console.error(err); }
+        } catch(err) {
+            console.error(err);
+            tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-red-500">Lỗi tải lịch sử vi phạm. Vui lòng thử lại.</td></tr>`;
+        }
+    };
+
+    window.previewViolationEvidence = async (id, showLoading = true) => {
+        const container = document.getElementById(`violationEvidence-${id}`);
+        if (!container) return;
+
+        if (showLoading) {
+            container.innerHTML = `<span class="text-[11px] text-slate-400">Đang tải ảnh...</span>`;
+        }
+        try {
+            const res = await fetch(`/Manager/GetViolationEvidence?id=${encodeURIComponent(id)}`);
+            const payload = await res.json();
+            if (!payload.success || !payload.data?.evidenceImageDataUrl) {
+                throw new Error(payload.message || "Không tải được ảnh minh chứng.");
+            }
+
+            container.innerHTML = `
+                <div class="overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                    <img src="${escapeHtml(payload.data.evidenceImageDataUrl)}" alt="Ảnh minh chứng vi phạm" class="h-20 w-32 object-cover select-none" draggable="false">
+                </div>
+                <p class="mt-1 text-[10px] font-semibold text-emerald-600"><i class="fa-solid fa-lock mr-1"></i>Ảnh mã hóa nội bộ</p>`;
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `<button type="button" onclick="window.previewViolationEvidence('${id}')" class="rounded border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">Tải lại ảnh</button>`;
+        }
     };
 
     window.reviewViolation = async (id, status) => {
+        const employeeSelect = document.querySelector(`[data-violation-employee="${id}"]`);
+        const employeeId = employeeSelect?.value || "";
+        if (status === 'Approved' && !employeeId) {
+            alert('Vui lòng chọn nhân viên vi phạm trước khi duyệt.');
+            employeeSelect?.focus();
+            return;
+        }
+
         const note = status === 'Rejected'
             ? (prompt('Nhập ghi chú từ chối vi phạm:') || 'Manager từ chối từ dashboard')
             : 'Manager duyệt từ dashboard';
@@ -244,13 +367,20 @@
         if (!confirm(`Xác nhận cập nhật vi phạm sang trạng thái ${status}?`)) return;
 
         try {
-            const res = await fetch(`/Manager/ReviewViolation?id=${id}&status=${encodeURIComponent(status)}&note=${encodeURIComponent(note)}`, { method: 'POST' });
+            const params = new URLSearchParams({
+                id,
+                status,
+                note,
+                employeeId
+            });
+            const res = await fetch(`/Manager/ReviewViolationAssignment?${params.toString()}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
+                alert(data.message || 'Đã cập nhật vi phạm.');
                 loadViolations();
                 loadHomeStats();
             } else {
-                alert(data.message || 'CÃ³ lá»—i xảy ra');
+                alert(data.message || 'Có lỗi xảy ra');
             }
         } catch (err) {
             console.error(err);
@@ -258,8 +388,49 @@
         }
     };
 
-    window.managerRequestsList = [];
-    const loadRequests = async () => {
+    window.resendViolationTelegram = async (id) => {
+        if (!confirm('Gửi lại thông báo Telegram cho vi phạm này?')) return;
+        try {
+            const res = await fetch(`/Manager/ResendViolationTelegram?id=${id}`, { method: 'POST' });
+            const data = await res.json();
+            const hint = document.getElementById('violationTelegramSyncHint');
+            if (hint) {
+                hint.textContent = data.message || (data.success ? 'Đã gửi Telegram.' : 'Gửi Telegram thất bại.');
+                hint.className = `border-b border-slate-100 px-4 py-3 text-xs ${data.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`;
+            }
+            if (data.success) {
+                loadViolations();
+            } else {
+                alert(data.message || 'Không thể gửi lại Telegram');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Không thể gửi lại Telegram');
+        }
+    };
+
+    document.getElementById('violationTelegramTestBtn')?.addEventListener('click', async () => {
+        try {
+            const res = await fetch('/Manager/SendViolationTelegramTest', { method: 'POST' });
+            const data = await res.json();
+            const hint = document.getElementById('violationTelegramSyncHint');
+            if (hint) {
+                hint.textContent = data.success
+                    ? `Testcase Telegram OA thành công. Chat: ${data.chatId || 'N/A'}`
+                    : `Testcase Telegram OA thất bại. ${data.message || ''}`;
+                hint.className = `border-b border-slate-100 px-4 py-3 text-xs ${data.success ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`;
+            }
+            if (!data.success) {
+                alert(data.message || 'Gửi testcase Telegram thất bại.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Không thể gửi testcase Telegram OA.');
+        }
+    });
+
+        window.managerRequestsList = [];
+        const loadRequests = async () => {
         const tbody = document.getElementById("requestTbody");
         if (!tbody) return;
         try {
@@ -272,40 +443,25 @@
                     return;
                 }
                 tbody.innerHTML = data.data.map(r => {
-                    let rawStatus = r.status || '';
-                    let displayStatus = 'Chờ duyệt';
-                    let tone = 'bg-amber-100 text-amber-700';
-                    const lowerStatus = rawStatus.toLowerCase();
-                    if (lowerStatus.includes('chờ') || lowerStatus.includes('chá»') || lowerStatus.includes('pending') || lowerStatus.includes('đợi')) {
-                        displayStatus = 'Chờ duyệt';
-                        tone = 'bg-amber-100 text-amber-700';
-                    } else if (lowerStatus.includes('đã duyệt') || lowerStatus.includes('đã') || lowerStatus.includes('approved') || lowerStatus.includes('ã£ duy')) {
-                        displayStatus = 'Đã duyệt';
-                        tone = 'bg-green-100 text-green-700';
-                    } else if (lowerStatus.includes('chối') || lowerStatus.includes('rejected') || lowerStatus.includes('chá»‘i')) {
-                        displayStatus = 'Từ chối';
-                        tone = 'bg-red-100 text-red-700';
-                    } else if (lowerStatus.includes('duyệt') || lowerStatus.includes('duyá»‡t')) {
-                        displayStatus = 'Đã duyệt';
-                        tone = 'bg-green-100 text-green-700';
-                    }
+                    let tone = 'bg-slate-100 text-slate-700';
+                    if (r.status === 'Đã duyệt' || r.status === 'Approved') tone = 'bg-green-100 text-green-700';
+                    else if (r.status === 'Từ chối' || r.status === 'Rejected') tone = 'bg-red-100 text-red-700';
+                    else tone = 'bg-amber-100 text-amber-700';
                     
                     return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-medium">${r.employeeName || 'N/A'}</td>
                         <td class="p-4 py-3 text-slate-700">
                             <div class="font-bold">${r.requestType}</div>
-                            <div class="text-[10px] text-slate-400 mt-1">${(r.content || '').replace(/\r?\n/g, '<br>')}</div>
+                            <div class="text-[10px] text-slate-400 mt-1">${r.content.replace(/\n/g, '<br>')}</div>
                         </td>
                         <td class="p-4 py-3 text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</td>
-                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${displayStatus}</span></td>
+                        <td class="p-4 py-3"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${tone}">${r.status}</span></td>
                         <td class="p-4 py-3 text-right">
-                            ${displayStatus === 'Chờ duyệt' ? `
-                            <button onclick="updateRequestStatus('${r.id}', 'Đã duyệt')" class="px-2 py-1.5 bg-green-500 text-white rounded shadow text-xs hover:bg-green-600 mr-1" title="Duyệt"><i class="fa-solid fa-check"></i></button>
-                            <button onclick="updateRequestStatus('${r.id}', 'Từ chối')" class="px-2 py-1.5 bg-red-500 text-white rounded shadow text-xs hover:bg-red-600 mr-1" title="Từ chối"><i class="fa-solid fa-xmark"></i></button>
-                            <button onclick="openRequestDetailModal('${r.id}')" class="px-2 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600" title="Chi tiết"><i class="fa-solid fa-eye"></i></button>
+                            ${r.status === 'Chờ duyệt' || r.status === 'Pending' ? `
+                            <button onclick="openRequestDetailModal(${r.id})" class="px-3 py-1.5 bg-blue-500 text-white rounded shadow text-xs hover:bg-blue-600 mr-1"><i class="fa-solid fa-eye"></i> Chi tiết</button>
                             ` : `
-                            <button onclick="openRequestDetailModal('${r.id}')" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50"><i class="fa-solid fa-eye"></i> Chi tiết</button>
+                            <button onclick="openRequestDetailModal(${r.id})" class="px-3 py-1.5 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50"><i class="fa-solid fa-eye"></i> Chi tiết</button>
                             `}
                         </td>
                     </tr>
@@ -314,163 +470,61 @@
         } catch(err) { console.error(err); }
     };
     
-    const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
-        const now = new Date();
-        const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        const locationDate = `Ngày ${d} tháng ${m} năm ${y}`;
-
-        const bodyHtml = bodyLines
-            .map(line => {
-                const filled = line
-                    .replace(/\{name\}/g, `<strong>${name}</strong>`)
-                    .replace(/\{department\}/g, `<strong>${department}</strong>`)
-                    .replace(/\{date\}/g, `<strong>${date}</strong>`)
-                    .replace(/\{reason\}/g, reason);
-                return `<p style="text-align:justify;text-indent:2em;margin:4px 0;">${filled}</p>`;
-            })
-            .join("");
-
-        return `
-<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.8;color:#111;padding:4px 8px;min-height:400px;">
-  <div style="text-align:center;margin-bottom:2px;">
-    <strong style="font-size:13px;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
-    <span style="font-size:12px;">Độc lập – Tự do – Hạnh phúc</span><br>
-    <span style="display:inline-block;width:140px;border-top:1.5px solid #111;margin-top:3px;"></span>
-  </div>
-
-  <div style="text-align:center;margin:14px 0 10px;">
-    <strong style="font-size:14px;text-transform:uppercase;letter-spacing:0.04em;">${tieuDe}</strong>
-  </div>
-
-  <p style="margin:6px 0;"><em>Kính gửi:</em> ${kinhGui}</p>
-
-  ${bodyHtml}
-
-  <div style="margin-top:20px;display:flex;justify-content:flex-end;">
-    <div style="text-align:center;min-width:180px;">
-      <p style="margin:0;"><em>${locationDate}</em></p>
-      <p style="margin:2px 0;">Người làm đơn</p>
-      <p style="margin:0;font-style:italic;font-size:11px;color:#555;">(Ký và ghi rõ họ tên)</p>
-      <p style="margin:40px 0 0;"><strong>${name}</strong></p>
-    </div>
-  </div>
-</div>`;
-    };
-
-    const buildDoc = {
-        "Nghỉ phép": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin nghỉ phép",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được nghỉ vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận cho tôi được nghỉ theo thời gian trên.",
-                "Tôi cam kết bàn giao công việc đầy đủ trước khi nghỉ và trở lại làm việc đúng lịch.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Đi muộn": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin đi muộn / về sớm",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được đi muộn / về sớm vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét và chấp thuận.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Tăng ca": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin làm thêm giờ (tăng ca)",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được làm thêm giờ vào ngày {date}.",
-                "Nội dung công việc / Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, phê duyệt để tôi có thể hoàn thành nhiệm vụ được giao.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Điều chỉnh ca": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin điều chỉnh ca làm việc",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được điều chỉnh ca làm việc vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận và sắp xếp ca phù hợp.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        )
-    };
-
     window.openRequestDetailModal = (id) => {
-        const req = window.managerRequestsList.find(x => x.id == id);
+        const req = window.managerRequestsList.find(x => x.id === id);
         if(!req) return;
         
-        const contentContainer = document.getElementById("managerReqDetailContent");
-        
-        let typeStr = req.requestType || "Nghỉ phép";
-        let builderKey = "Nghỉ phép";
-        if (typeStr.toLowerCase().includes("đi muộn") || typeStr.toLowerCase().includes("về sớm")) builderKey = "Đi muộn";
-        else if (typeStr.toLowerCase().includes("tăng ca") || typeStr.toLowerCase().includes("thêm giờ")) builderKey = "Tăng ca";
-        else if (typeStr.toLowerCase().includes("điều chỉnh ca")) builderKey = "Điều chỉnh ca";
+        const contentContainer = document.getElementById("requestDetailPreviewContent");
+        if(contentContainer) {
+            let formattedContent = req.content.replace(/\r?\n/g, '<br>');
+            if (window.buildDocHtml && window.buildDoc) {
+                let applyDate = '';
+                let reason = '';
+                req.content.split('\n').forEach(line => {
+                    if(line.startsWith('Ngày áp dụng:')) applyDate = line.replace('Ngày áp dụng:', '').trim();
+                    else if(line.startsWith('Lý do:')) reason = line.replace('Lý do:', '').trim();
+                });
+                
+                const name = req.employeeName || "[Tên nhân viên]";
+                const department = "[Bộ phận]"; // Or try to look up in managerEmployeeList
+                const dateStr = applyDate || new Date(req.submittedAt).toLocaleDateString('vi-VN');
+                const reasonStr = reason || req.content;
+                
+                let builder = window.buildDoc["Nghỉ phép"];
+                if (req.requestType.includes("Nghỉ phép")) builder = window.buildDoc["Nghỉ phép"];
+                else if (req.requestType.includes("muộn") || req.requestType.includes("về sớm")) builder = window.buildDoc["Đi muộn"];
+                else if (req.requestType.includes("Tăng ca") || req.requestType.includes("thêm giờ")) builder = window.buildDoc["Tăng ca"];
+                else if (req.requestType.includes("Điều chỉnh ca")) builder = window.buildDoc["Điều chỉnh ca"];
+                
+                if (builder) formattedContent = builder(name, department, dateStr, reasonStr);
+            }
 
-        let extractedDate = "[Ngày/Tháng/Năm]";
-        let extractedReason = "";
-        const lines = (req.content || '').split('\n').map(l => l.trim());
-        lines.forEach(line => {
-            if (line.startsWith("Ngày áp dụng:")) extractedDate = line.substring(13).trim();
-            else if (line.startsWith("Lý do:")) extractedReason = line.substring(6).trim();
-        });
-
-        if (!extractedReason) extractedReason = "[Nhập lý do chi tiết...]";
-
-        let name = req.employeeName || "Nhân viên";
-        let department = "Khối vận hành";
-
-        contentContainer.innerHTML = buildDoc[builderKey](name, department, extractedDate, extractedReason);
-        
-        let rawStatus = req.status || '';
-        let statusText = 'Chờ duyệt';
-        const lowerStatus = rawStatus.toLowerCase();
-        if (lowerStatus.includes('chờ') || lowerStatus.includes('chá»') || lowerStatus.includes('pending') || lowerStatus.includes('đợi')) {
-            statusText = 'Chờ duyệt';
-        } else if (lowerStatus.includes('đã duyệt') || lowerStatus.includes('đã') || lowerStatus.includes('approved') || lowerStatus.includes('ã£ duy')) {
-            statusText = 'Đã duyệt';
-        } else if (lowerStatus.includes('chối') || lowerStatus.includes('rejected') || lowerStatus.includes('chá»‘i')) {
-            statusText = 'Từ chối';
-        } else if (lowerStatus.includes('duyệt') || lowerStatus.includes('duyá»‡t')) {
-            statusText = 'Đã duyệt';
-        }
-
-        let statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-amber-500 text-amber-500 pointer-events-none";
-        if(statusText === 'Đã duyệt') {
-            statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-green-500 text-green-500 pointer-events-none";
-        } else if (statusText === 'Từ chối') {
-            statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-red-500 text-red-500 pointer-events-none";
-        }
-        
-        const statusDiv = document.createElement("div");
-        statusDiv.className = statusClass;
-        statusDiv.textContent = statusText;
-        
-        contentContainer.classList.add("relative");
-        contentContainer.appendChild(statusDiv);
-        
-        const rejectBtn = document.querySelector("button[onclick='rejectCurrentRequest()']");
-        const approveBtn = document.querySelector("button[onclick='approveCurrentRequest()']");
-        if (statusText === 'Chờ duyệt') {
-            if (rejectBtn) rejectBtn.classList.remove('hidden');
-            if (approveBtn) approveBtn.classList.remove('hidden');
-        } else {
-            if (rejectBtn) rejectBtn.classList.add('hidden');
-            if (approveBtn) approveBtn.classList.add('hidden');
+            contentContainer.innerHTML = formattedContent;
+            
+            let stamp = document.getElementById("managerReqDetailStatus");
+            if (!stamp) {
+                stamp = document.createElement("div");
+                stamp.id = "managerReqDetailStatus";
+                contentContainer.appendChild(stamp);
+            }
+            stamp.textContent = req.status;
+            let displayStatus = req.status.toUpperCase();
+            const actionButtonsContainer = document.getElementById("managerRequestDetailActions");
+            
+            if(displayStatus.includes('DUY') || displayStatus.includes('APPROVED')) {
+                stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-emerald-500 text-emerald-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                stamp.textContent = "ĐÃ DUYỆT";
+                if(actionButtonsContainer) actionButtonsContainer.classList.add('hidden');
+            } else if (displayStatus.includes('TỪ') || displayStatus.includes('CHỐI') || displayStatus.includes('REJECTED')) {
+                stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-red-500 text-red-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                stamp.textContent = "TỪ CHỐI";
+                if(actionButtonsContainer) actionButtonsContainer.classList.add('hidden');
+            } else {
+                stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-amber-500 text-amber-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                stamp.textContent = "CHỜ DUYỆT";
+                if(actionButtonsContainer) actionButtonsContainer.classList.remove('hidden');
+                if(actionButtonsContainer) actionButtonsContainer.classList.add('flex');
+            }
         }
         
         document.getElementById("managerRequestDetailModal").dataset.currentId = id;
@@ -499,17 +553,20 @@
         }
     };
     
-    window.updateRequestStatus = async (id, status) => {
+    window.updateRequestStatus = (id, status) => {
         if (!confirm('Xác nhận ' + status + ' đơn này?')) return;
-        try {
-            const res = await fetch(`/Manager/UpdateRequestStatus?id=${id}&status=${encodeURIComponent(status)}`, { method: 'POST' });
-            const data = await res.json();
-            if (data.success) {
-                loadRequests();
-            } else {
-                alert('Có lỗi xảy ra');
-            }
-        } catch(e) { console.error(e); }
+        fetch(`/Manager/UpdateRequestStatus?id=${id}&status=${encodeURIComponent(status)}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadRequests();
+                } else {
+                    alert('Có lỗi xảy ra');
+                }
+            })
+            .catch(e => {
+                console.error(e);
+            });
     };
 
     let managerChatContacts = [];
@@ -583,7 +640,6 @@
             if (contact) {
                 contact.unreadCount = 0;
                 renderManagerChatContacts();
-                if (typeof loadNotifications === 'function') loadNotifications();
             }
         } catch (e) { console.error(e); }
     };
@@ -609,6 +665,9 @@
         } catch (e) { console.error(e); }
     };
 
+    window.loadManagerChatContacts = loadChatContacts;
+    window.loadManagerConversation = loadManagerConversation;
+
     const renderManagerMessages = () => {
         const thread = document.getElementById("managerChatThread");
         if (!thread) return;
@@ -624,39 +683,40 @@
 
         thread.innerHTML = managerMessages.map(m => {
             const isSelf = m.senderRole === "Manager";
+            const sentAtFormatted = new Date(m.sentAt).toLocaleTimeString('vi-VN');
+            const editedHtml = m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic ml-1">(đã chỉnh sửa)</span>' : '';
+            
             if (isSelf) {
                 return `
-                <div class="flex gap-4 flex-row-reverse">
-                    <div class="flex flex-col items-end">
-                        <div class="flex items-center gap-2 mb-1 flex-row-reverse">
-                            <span class="text-xs font-semibold text-slate-700">Bạn</span>
-                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt + (!m.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN')}</span>
-                            ${m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic">(đã chỉnh sửa)</span>' : ''}
-                        </div>
-                        <div class="flex items-center gap-2">
-                            ${!m.isRevoked ? `
-                            <button onclick="window.editManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-blue-600 font-medium transition-colors px-2 py-1">Chỉnh sửa</button>
-                            <button onclick="window.revokeManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1">Thu hồi</button>
-                            ` : ''}
-                            <div class="${m.isRevoked ? 'max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-400 italic border border-slate-200' : 'max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white rounded-tr-none'} shadow-sm break-words">
-                                ${m.content}
-                            </div>
-                        </div>
+                <div class="flex flex-col items-end group mb-3">
+                    <div class="text-[10px] text-slate-400 mb-1 px-1">${sentAtFormatted}${editedHtml}</div>
+                    ${m.isRevoked ? `
+                    <div class="max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-400 italic border border-dashed border-slate-200 opacity-75">
+                        Tin nhắn đã bị thu hồi
                     </div>
-                </div>`;
-            } else {
-                return `
-                <div class="flex gap-4">
-                    <div class="flex flex-col items-start">
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs font-semibold text-slate-700">${m.senderName}</span>
-                            <span class="text-[10px] text-slate-400">${new Date(m.sentAt + (!m.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN')}</span>
-                            ${m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic">(đã chỉnh sửa)</span>' : ''}
-                        </div>
-                        <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-sm text-slate-700 max-w-md ${m.isRevoked ? 'opacity-50 italic' : ''}">
+                    ` : `
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.editManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-blue-600 font-medium transition-colors px-2 py-1">Chỉnh sửa</button>
+                        <button onclick="window.revokeManagerMessage(${m.id})" class="text-[11px] text-slate-400 hover:text-red-600 font-medium transition-colors px-2 py-1">Thu hồi</button>
+                        <div class="max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white">
                             ${m.content}
                         </div>
                     </div>
+                    `}
+                </div>`;
+            } else {
+                return `
+                <div class="flex flex-col items-start mb-3">
+                    <div class="text-[10px] text-slate-400 mb-1 px-1">${sentAtFormatted}${editedHtml}</div>
+                    ${m.isRevoked ? `
+                    <div class="max-w-md rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-400 italic border border-dashed border-slate-100 opacity-75">
+                        Tin nhắn đã bị thu hồi
+                    </div>
+                    ` : `
+                    <div class="max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
+                        ${m.content}
+                    </div>
+                    `}
                 </div>`;
             }
         }).join('');
@@ -670,25 +730,31 @@
 
         if (managerEditingMessageId) {
             try {
-                await fetch('/Manager/EditMessage', {
+                const res = await fetch('/Manager/EditMessage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ Id: managerEditingMessageId, Content: text })
                 });
-                clearManagerMessageEditing();
-                loadManagerConversation();
-                loadChatContacts();
+                const data = await res.json();
+                if (data.success) {
+                    clearManagerMessageEditing();
+                    loadManagerConversation();
+                    loadChatContacts();
+                }
             } catch (e) { console.error(e); }
         } else {
             try {
-                await fetch('/Manager/SendMessage', {
+                const res = await fetch('/Manager/SendMessage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ EmployeeId: managerActiveEmployeeId, Content: text })
                 });
-                input.value = "";
-                loadManagerConversation();
-                loadChatContacts();
+                const data = await res.json();
+                if (data.success) {
+                    input.value = "";
+                    loadManagerConversation();
+                    loadChatContacts();
+                }
             } catch (e) { console.error(e); }
         }
     });
@@ -727,13 +793,16 @@
     window.revokeManagerMessage = async (id) => {
         if (!confirm("Xác nhận thu hồi tin nhắn này?")) return;
         try {
-            await fetch('/Manager/RevokeMessage', {
+            const res = await fetch('/Manager/RevokeMessage', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ Id: id })
             });
-            loadManagerConversation();
-            loadChatContacts();
+            const data = await res.json();
+            if (data.success) {
+                loadManagerConversation();
+                loadChatContacts();
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -745,7 +814,7 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">Kho tÃ i liá»‡u đang trống.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400">Kho tài liệu đang trống.</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(f => `
@@ -771,65 +840,6 @@
                 document.getElementById('statAttendance').innerText = data.data.attendance;
                 document.getElementById('statViolations').innerText = data.data.violations;
                 document.getElementById('statRequests').innerText = data.data.requests;
-            }
-
-            // Load recent requests
-            const reqRes = await fetch('/Manager/GetAllRequests');
-            const reqData = await reqRes.json();
-            const reqTbody = document.getElementById("homeRecentRequestsTbody");
-            if (reqTbody && reqData.success) {
-                const pending = reqData.data.filter(r => r.status === 'Pending').slice(0, 5);
-                if (pending.length === 0) {
-                    reqTbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-400">Không có đơn từ chờ duyệt.</td></tr>';
-                } else {
-                    reqTbody.innerHTML = pending.map(r => `
-                        <tr class="hover:bg-slate-50 border-b border-slate-50">
-                            <td class="p-3">
-                                <p class="font-semibold text-slate-900">${r.employeeName}</p>
-                                <p class="text-[10px] text-slate-500">${new Date(r.submittedAt).toLocaleDateString('vi-VN')}</p>
-                            </td>
-                            <td class="p-3 text-slate-700">${r.requestType}</td>
-                            <td class="p-3 text-right">
-                                <button onclick="document.querySelector('[data-tab-trigger=\\\'requests\\\']').click()" class="text-xs bg-red-50 text-red-600 px-2 py-1 rounded font-medium hover:bg-red-100">Duyệt ngay</button>
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            }
-
-            // Load recent violations
-            const vioRes = await fetch('/Manager/GetAllViolations');
-            const vioData = await vioRes.json();
-            const vioTbody = document.getElementById("homeRecentViolationsTbody");
-            if (vioTbody && vioData.success) {
-                const recents = vioData.data.slice(0, 5);
-                if (recents.length === 0) {
-                    vioTbody.innerHTML = '<tr><td colspan="3" class="p-4 text-center text-slate-400">Không có vi phạm nào.</td></tr>';
-                } else {
-                    vioTbody.innerHTML = recents.map(v => {
-                        const violationTypes = {
-                            "Khong deo the": "Không đeo thẻ",
-                            "Hut thuoc": "Hút thuốc",
-                            "Ngu gat": "Ngủ gật",
-                            "Roi vi tri": "Rời vị trí",
-                            "Di muon": "Đi muộn",
-                            "Ve som": "Về sớm"
-                        };
-                        const typeDisplay = violationTypes[v.violationType] || v.violationType;
-                        return `
-                        <tr class="hover:bg-slate-50 border-b border-slate-50">
-                            <td class="p-3">
-                                <p class="font-semibold text-slate-900">${v.employeeCode} - ${v.employeeName || 'Không xác định'}</p>
-                                <p class="text-[10px] text-slate-500">${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</p>
-                            </td>
-                            <td class="p-3 text-slate-700">${typeDisplay}</td>
-                            <td class="p-3 text-right">
-                                <span class="px-2 py-1 text-[10px] font-bold rounded-full ${v.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.severity}</span>
-                            </td>
-                        </tr>
-                        `;
-                    }).join('');
-                }
             }
         } catch (err) { console.error(err); }
     };
@@ -865,27 +875,39 @@
             const data = await res.json();
             if (data.success) {
                 if (data.data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-slate-400">Chưa có dữ liệu lương tháng ${month}/${year}. Hãy bấm "Tính lương tháng này".</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-400">Chưa có dữ liệu lương tháng ${month}/${year}. Hãy bấm "Tính lương tháng này".</td></tr>`;
                     return;
                 }
                 tbody.innerHTML = data.data.map(p => `
                     <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-4 py-3 text-slate-900 font-medium">${p.employeeName}</td>
                         <td class="p-4 py-3 text-slate-700 text-right">${p.baseSalary.toLocaleString('vi-VN')} đ</td>
-                        <td class="p-4 py-3 text-slate-700 text-right">${p.actualWorkingDays}/${p.standardWorkingDays}</td>
-                        <td class="p-4 py-3 text-slate-700 text-right">${p.salaryPerDay.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-4 py-3 text-center text-slate-700 font-medium">${p.workingDays || 22}</td>
                         <td class="p-4 py-3 text-emerald-600 font-medium text-right">+${p.kpiBonus.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-red-600 font-medium text-right">-${p.violationDeduction.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-slate-900 font-bold text-right">${p.netSalary.toLocaleString('vi-VN')} đ</td>
                         <td class="p-4 py-3 text-center"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${p.status === 'Đã thanh toán' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}">${p.status}</span></td>
-                        <td class="p-4 py-3 text-center flex flex-col gap-1 items-center justify-center">
-                            ${p.status !== 'Đã thanh toán' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'Đã thanh toán')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm w-full">Thanh toán</button>` : ''}
-                            <button onclick="window.openEditPayrollModal('${p.id}', ${p.baseSalary}, ${p.standardWorkingDays}, ${p.actualWorkingDays}, ${p.kpiBonus})" class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300 transition shadow-sm w-full">Chỉnh sửa</button>
+                        <td class="p-4 py-3 text-center">
+                            ${p.status !== 'Đã thanh toán' ? `<button onclick="window.updatePayrollStatus('${p.id}', 'Đã thanh toán')" class="text-xs bg-emerald-500 text-white px-2 py-1 rounded hover:bg-emerald-600 transition shadow-sm">Thanh toán</button>` : ''}
                         </td>
                     </tr>
                 `).join('');
             }
         } catch(err) { console.error(err); }
+    };
+
+    window.resetEmployeePassword = async (id, displayName) => {
+        if (!id) return;
+        if (!confirm(`Xác nhận reset mật khẩu cho nhân viên ${displayName} về mặc định (123456)?`)) return;
+        try {
+            const res = await fetch(`/Manager/ResetPassword?id=${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                alert('Reset mật khẩu thành công!');
+            } else {
+                alert(data.message || 'Có lỗi xảy ra');
+            }
+        } catch(err) { console.error(err); alert('Lỗi kết nối'); }
     };
 
     window.calculatePayroll = async () => {
@@ -901,53 +923,6 @@
         try {
             await fetch(`/Manager/UpdatePayrollStatus?id=${id}&status=${status}`, { method: 'POST' });
             loadPayrolls();
-        } catch(err) { console.error(err); }
-    };
-
-    window.openEditPayrollModal = (id, baseSalary, standardDays, actualDays, kpiBonus) => {
-        document.getElementById('editPayrollId').value = id;
-        document.getElementById('editPayrollBase').value = baseSalary;
-        document.getElementById('editPayrollStandardDays').value = standardDays;
-        document.getElementById('editPayrollActualDays').value = actualDays;
-        document.getElementById('editPayrollKpi').value = kpiBonus;
-        
-        const modal = document.getElementById('editPayrollModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    };
-
-    window.closeEditPayrollModal = () => {
-        const modal = document.getElementById('editPayrollModal');
-        modal.classList.remove('flex');
-        modal.classList.add('hidden');
-    };
-
-    window.submitEditPayroll = async () => {
-        const id = document.getElementById('editPayrollId').value;
-        const baseSalary = parseFloat(document.getElementById('editPayrollBase').value) || 0;
-        const standardDays = parseInt(document.getElementById('editPayrollStandardDays').value) || 0;
-        const actualDays = parseInt(document.getElementById('editPayrollActualDays').value) || 0;
-        const kpiBonus = parseFloat(document.getElementById('editPayrollKpi').value) || 0;
-
-        try {
-            const res = await fetch('/Manager/EditPayrollRecord', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    Id: id,
-                    BaseSalary: baseSalary,
-                    StandardWorkingDays: standardDays,
-                    ActualWorkingDays: actualDays,
-                    KpiBonus: kpiBonus
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                closeEditPayrollModal();
-                loadPayrolls();
-            } else {
-                alert(data.message);
-            }
         } catch(err) { console.error(err); }
     };
 
@@ -1045,20 +1020,20 @@
 
         if (newPwd !== confirmPwd) {
             msg.className = "text-xs font-semibold text-red-600";
-            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu xÃ¡c nháº­n không khớp.';
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu xác nhận không khớp.';
             msg.classList.remove("hidden");
             return;
         }
 
         if (newPwd.length < 8) {
             msg.className = "text-xs font-semibold text-red-600";
-            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu má»›i pháº£i tá»« 8 kÃ½ tá»±.';
+            msg.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Mật khẩu mới phải từ 8 ký tự.';
             msg.classList.remove("hidden");
             return;
         }
 
         msg.className = "text-xs font-semibold text-emerald-600";
-        msg.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>Äá»•i máº­t kháº©u thÃ nh cÃ´ng!';
+        msg.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i>Đổi mật khẩu thành công!';
         msg.classList.remove("hidden");
 
         document.querySelector("[data-profile-pwd-old]").value = "";
@@ -1077,8 +1052,8 @@
             const btn = input.nextElementSibling;
             if (btn && btn.tagName === 'BUTTON') {
                 btn.innerHTML = '<i class="fa-solid fa-lock text-slate-400"></i>';
-                btn.title = hasPayrollPin ? "YÃªu cáº§u mÃ£ PIN" : "ChÆ°a cÃ i mÃ£ PIN";
-                btn.onclick = () => alert("Báº¡n cáº§n xÃ¡c thá»±c PIN trÃªn á»©ng dá»¥ng Ä‘iá»‡n thoáº¡i Ä‘á»ƒ chá»‰nh sá»­a.");
+                btn.title = hasPayrollPin ? "Yêu cầu mã PIN" : "Chưa cài mã PIN";
+                btn.onclick = () => alert("Bạn cần xác thực PIN trên ứng dụng điện thoại để chỉnh sửa.");
             }
         });
     };
@@ -1105,7 +1080,7 @@
                 document.querySelectorAll("[data-profile-department]").forEach(el => el.value = result.data.department || "");
                 document.querySelectorAll("[data-profile-phone]").forEach(el => el.value = result.data.phone || "");
                 document.querySelectorAll("[data-profile-email]").forEach(el => el.value = result.data.email || "");
-                document.querySelectorAll("[data-profile-role]").forEach(el => el.textContent = "Quáº£n lÃ½");
+                document.querySelectorAll("[data-profile-role]").forEach(el => el.textContent = "Quản lý");
                 renderProfile();
             }
         } catch (e) { console.error("Error loading profile", e); }
@@ -1220,17 +1195,19 @@
         faceModal?.classList.remove("flex");
     };
 
+    const faceScanline = document.querySelector("[data-face-scanline]");
+
     const updateFaceStepUI = (step) => {
         for (let i = 0; i < maxFaces; i++) {
             const el = document.getElementById(`step-${i}`);
             if (!el) continue;
             if (i === step) {
-                el.className = "flex-1 rounded-lg bg-red-600/20 py-2 text-red-400 border border-red-600/30 transition-colors duration-300";
+                el.className = "flex-1 rounded-lg bg-red-50 py-2 text-red-600 border border-red-200 transition-colors duration-300";
             } else if (i < step) {
-                el.className = "flex-1 rounded-lg bg-green-500/20 py-2 text-green-400 border border-green-500/30 transition-colors duration-300";
-                el.innerHTML = '<i class="fa-solid fa-check"></i>';
+                el.className = "flex-1 rounded-lg bg-emerald-50 py-2 text-emerald-600 border border-emerald-200 transition-colors duration-300";
+                el.innerHTML = "Hoàn thành";
             } else {
-                el.className = "flex-1 rounded-lg bg-slate-800 py-2 text-slate-400 transition-colors duration-300";
+                el.className = "flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300";
             }
         }
         if (faceInstruction && step < maxFaces) {
@@ -1244,51 +1221,62 @@
     faceCaptureBtn?.addEventListener("click", async () => {
         if (faceImages.length >= maxFaces || !faceVideo || !faceCanvas) return;
         
+        // Show scan animation
+        if (faceScanline) {
+            faceScanline.classList.remove('hidden');
+            faceScanline.style.animation = 'none';
+            faceScanline.offsetHeight; // trigger reflow
+            faceScanline.style.animation = 'scan 1.5s linear infinite';
+        }
+        
         const ctx = faceCanvas.getContext("2d");
         faceCanvas.width = faceVideo.videoWidth;
         faceCanvas.height = faceVideo.videoHeight;
         ctx.drawImage(faceVideo, 0, 0, faceCanvas.width, faceCanvas.height);
         
-        faceImages.push(faceCanvas.toDataURL("image/jpeg", 0.85));
+        const currentImageData = faceCanvas.toDataURL("image/jpeg", 0.85);
         
-        if (faceImages.length < maxFaces) {
-            updateFaceStepUI(faceImages.length);
-        } else {
-            updateFaceStepUI(4);
-            if (faceInstruction) faceInstruction.textContent = "Đang xử lý và cập nhật dữ liệu sinh trắc học...";
-            faceStatus?.classList.remove("hidden");
-            faceCaptureBtn.disabled = true;
+        setTimeout(async () => {
+            if (faceScanline) faceScanline.classList.add('hidden');
+            faceImages.push(currentImageData);
             
-            const payload = faceImages.join(";base64split;");
-            
-            try {
-                const res = await fetch("/Account/UpdateFace", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams({ faceImagesBase64: payload })
-                });
-                const data = await res.json();
+            if (faceImages.length < maxFaces) {
+                updateFaceStepUI(faceImages.length);
+            } else {
+                updateFaceStepUI(4);
+                if (faceInstruction) faceInstruction.textContent = "Đang xử lý và cập nhật dữ liệu sinh trắc học...";
+                faceStatus?.classList.remove("hidden");
+                faceCaptureBtn.disabled = true;
                 
-                if (data.success) {
-                    alert("Cập nhật dữ liệu khuôn mặt thành công!");
-                    closeFaceModal();
-                } else {
-                    alert(data.message || "Cập nhật thất bại.");
+                const payload = faceImages.join(";base64split;");
+                
+                try {
+                    const res = await fetch("/Account/UpdateFace", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: new URLSearchParams({ faceImagesBase64: payload })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        alert("Cập nhật dữ liệu khuôn mặt thành công!");
+                        closeFaceModal();
+                    } else {
+                        alert(data.message || "Cập nhật thất bại.");
+                        faceImages = [];
+                        updateFaceStepUI(0);
+                    }
+                } catch (e) {
+                    alert("Lỗi kết nối máy chủ.");
                     faceImages = [];
                     updateFaceStepUI(0);
+                } finally {
+                    faceStatus?.classList.add("hidden");
+                    faceCaptureBtn.disabled = false;
                 }
-            } catch (e) {
-                alert("Lỗi kết nối máy chủ.");
-                faceImages = [];
-                updateFaceStepUI(0);
-            } finally {
-                faceStatus?.classList.add("hidden");
-                faceCaptureBtn.disabled = false;
             }
-        }
+        }, 1000);
     });
-
-
 
     loadProfile();
 
@@ -1318,80 +1306,308 @@ window.handleTestVideoSelect = async (event) => {
     }
 };
 
-    const loadNotifications = async () => {
-        try {
-            const res = await fetch("/Manager/GetNotifications");
-            const data = await res.json();
-            if (data.success && data.data) {
-                const listEl = document.querySelector("#dashboardNotificationMenu .max-h-64");
-                const unreadBadge = document.querySelector("#dashboardNotificationTrigger .bg-red-500");
-                const ping = document.querySelector("#dashboardNotificationTrigger .bg-red-400");
-                const notifTrigger = document.getElementById("dashboardNotificationTrigger");
-                
-                if (listEl) {
-                    if (data.data.length === 0) {
-                        listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
-                    } else {
-                        listEl.innerHTML = data.data.map(n => `
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="window.location.href='?tab=${n.tab}'">
-                                <p class="text-sm font-semibold text-slate-900">${n.title}</p>
-                                <p class="text-xs text-slate-500 line-clamp-1">${n.body || ''}</p>
-                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
-                            </div>
-                        `).join('');
-                    }
-                }
-                
-                if (unreadBadge && ping && notifTrigger) {
-                    const hasUnread = data.data.some(n => !n.isRead);
-                    if (hasUnread) {
-                        unreadBadge.classList.remove("hidden");
-                        ping.classList.remove("hidden");
-                        notifTrigger.classList.add("text-red-600");
-                    } else {
-                        unreadBadge.classList.add("hidden");
-                        ping.classList.add("hidden");
-                        notifTrigger.classList.remove("text-red-600");
-                    }
-                }
-            }
-        } catch (e) { console.error(e); }
+
+(() => {
+    const videoPreview = document.getElementById('cameraSourcePreviewVideo');
+    const imagePreview = document.getElementById('cameraSourcePreviewImage');
+    const placeholder = document.getElementById('cameraSourcePreviewPlaceholder');
+    const modelSelect = document.getElementById('cameraModelSelect');
+    const statusText = document.getElementById('cameraStatusText');
+    const outputGrid = document.getElementById('cameraOutputGrid');
+    const logBox = document.getElementById('cameraLogBox');
+    
+    const sourceTypeSelect = document.getElementById('cameraSourceTypeSelect');
+    const indexWrap = document.getElementById('cameraIndexWrap');
+    const indexSelect = document.getElementById('cameraIndexSelect');
+    const fileWrap = document.getElementById('cameraInputFileWrap');
+    const fileInput = document.getElementById('cameraTestVideoInput');
+    const fileBtn = document.getElementById('cameraChooseFileBtn');
+    const fileLabel = document.getElementById('cameraSelectedVideoLabel');
+    
+    const startBtn = document.getElementById('cameraStartLiveBtn');
+    const pauseBtn = document.getElementById('cameraPauseBtn');
+    const stopBtn = document.getElementById('cameraStopLiveBtn');
+    const refreshBtn = document.getElementById('cameraRefreshBtn');
+    const realtimeIndicator = document.getElementById('cameraRealtimeIndicator');
+
+    let stream = null;
+    let isRunning = false;
+    let isPaused = false;
+    let isSendingFrame = false;
+    let analysisTimerId = null;
+    const analysisIntervalMs = 16; // Giảm xuống 16ms (~60 FPS) chuẩn thời gian thực
+    let frameCounter = 0;
+    
+    const captureCanvas = document.createElement('canvas');
+    const captureContext = captureCanvas.getContext('2d', { willReadFrequently: true });
+
+    const log = (msg) => {
+        if (!logBox) return;
+        const time = new Date().toLocaleTimeString();
+        logBox.textContent = `[${time}] ${msg}\n` + logBox.textContent;
     };
 
-    loadNotifications();
-    setInterval(loadNotifications, 10000); // 10 seconds
+    const setStatus = (msg) => {
+        if (statusText) statusText.innerHTML = msg;
+    };
 
-    document.querySelector("[data-notification-mark-all]")?.addEventListener("click", async () => {
-        try {
-            await fetch('/Manager/MarkAllNotificationsRead', { method: 'POST' });
-            loadNotifications();
-        } catch (e) { console.error(e); }
+    // UI Toggles
+    if (sourceTypeSelect) {
+        sourceTypeSelect.addEventListener('change', () => {
+            const type = sourceTypeSelect.value;
+            if (type === 'webcam') {
+                indexWrap.classList.remove('hidden');
+                fileWrap.classList.add('hidden');
+            } else {
+                indexWrap.classList.add('hidden');
+                fileWrap.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (fileBtn) fileBtn.addEventListener('click', () => fileInput && fileInput.click());
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            fileLabel.textContent = file.name;
+            const url = URL.createObjectURL(file);
+            
+            placeholder.classList.add('hidden');
+            if (file.type.startsWith('image/')) {
+                videoPreview.classList.add('hidden');
+                imagePreview.classList.remove('hidden');
+                imagePreview.src = url;
+            } else {
+                imagePreview.classList.add('hidden');
+                videoPreview.classList.remove('hidden');
+                videoPreview.src = url;
+            }
+            log(`Đã nạp file ${file.name}`);
+        });
+    }
+
+    const stopMedia = () => {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        if (videoPreview) {
+            videoPreview.pause();
+            videoPreview.srcObject = null;
+        }
+    };
+
+    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+        stopMedia();
+        if (fileLabel) fileLabel.textContent = 'Chưa chọn file đầu vào.';
+        if (imagePreview) imagePreview.src = '';
+        if (videoPreview) videoPreview.src = '';
+        placeholder.classList.remove('hidden');
+        imagePreview.classList.add('hidden');
+        videoPreview.classList.add('hidden');
+        
+        ['canvasSmoking', 'canvasLeaving'].forEach(id => {
+            const cvs = document.getElementById(id);
+            if (cvs) { cvs.classList.add('hidden'); cvs.getContext('2d')?.clearRect(0, 0, cvs.width, cvs.height); }
+        });
+        ['placeholderSmoking', 'placeholderLeaving'].forEach(id => {
+            const p = document.getElementById(id);
+            if (p) p.classList.remove('hidden');
+        });
+
+        log('Làm mới nguồn.');
     });
 
-// --- SIGNALR REAL-TIME NOTIFICATIONS ---
-document.addEventListener("DOMContentLoaded", () => {
-    if (typeof signalR !== 'undefined') {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/chatHub")
-            .withAutomaticReconnect()
-            .build();
+    const getCaptureElement = () => {
+        return !imagePreview.classList.contains('hidden') ? imagePreview : videoPreview;
+    };
 
-        connection.on("ReceiveNotification", (data) => {
-            if (typeof loadNotifications === 'function') {
-                loadNotifications();
-            }
-        });
+    const captureFrameBlob = async () => {
+        const element = getCaptureElement();
+        if (!element || !captureContext || element.classList.contains('hidden')) return null;
 
-        connection.on("MessagesChanged", (data) => {
-            // Nạp lại danh sách chat nếu đang ở tab messages
-            if (typeof loadChatContacts === 'function' && !document.querySelector("[data-tab-panel='messages']").classList.contains("hidden")) {
-                loadChatContacts();
-            }
-            if (typeof loadManagerConversation === 'function' && managerActiveEmployeeId) {
-                loadManagerConversation();
-            }
-        });
+        const isImg = element.tagName === 'IMG';
+        const w = isImg ? element.naturalWidth : element.videoWidth;
+        const h = isImg ? element.naturalHeight : element.videoHeight;
+        
+        if (!w || !h) return null;
 
-        connection.start().catch(err => console.error("SignalR Connection Error: ", err));
-    }
-});
+        const maxDim = 640;
+        let tw = w, th = h;
+        if (w > maxDim || h > maxDim) {
+            const r = Math.min(maxDim / w, maxDim / h);
+            tw = Math.round(w * r);
+            th = Math.round(h * r);
+        }
+
+        captureCanvas.width = tw;
+        captureCanvas.height = th;
+        captureContext.drawImage(element, 0, 0, tw, th);
+
+        return await new Promise(res => captureCanvas.toBlob(res, 'image/jpeg', 0.82));
+    };
+
+    const analyzeCurrentFrame = async () => {
+        if (!isRunning || isPaused || isSendingFrame) return;
+        isSendingFrame = true;
+        
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 25000);
+        
+        try {
+            const blob = await captureFrameBlob();
+            if (!blob) {
+                isSendingFrame = false;
+                return;
+            }
+
+            frameCounter++;
+            const form = new FormData();
+            form.append('frame', blob, `frame_${frameCounter}.jpg`);
+            form.append('modelType', modelSelect ? modelSelect.value : 'all');
+
+            const res = await fetch('/Manager/AnalyzeMonitoringFrame', {
+                method: 'POST', body: form, signal: abortController.signal
+            });
+
+            clearTimeout(timeoutId);
+            const payload = await res.json();
+            if (!res.ok) throw new Error(payload.message || 'Lỗi HTTP');
+            if (!payload.success) throw new Error(payload.message);
+
+            if (payload.data && payload.data.length > 0) {
+                payload.data.forEach(run => {
+                    if (!run.annotatedImageBase64) return;
+                    
+                    const src = `data:${run.annotatedImageMimeType || 'image/jpeg'};base64,${run.annotatedImageBase64}`;
+                    let targetCanvasId = "canvasSmoking";
+                    let targetPlaceholderId = "placeholderSmoking";
+
+                    if (run.modelType && run.modelType.includes("Smoking")) {
+                        targetCanvasId = "canvasSmoking";
+                        targetPlaceholderId = "placeholderSmoking";
+                    } else if (run.modelType && run.modelType.includes("Leaving")) {
+                        targetCanvasId = "canvasLeaving";
+                        targetPlaceholderId = "placeholderLeaving";
+                    }
+
+                    const canvas = document.getElementById(targetCanvasId);
+                    const placeholderEl = document.getElementById(targetPlaceholderId);
+                    
+                    if (canvas) {
+                        const img = new Image();
+                        img.onload = () => {
+                            if (placeholderEl) placeholderEl.classList.add('hidden');
+                            canvas.classList.remove('hidden');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0, img.width, img.height);
+                        };
+                        img.src = src;
+                    }
+                });
+            }
+        } catch (e) {
+            log(`Lỗi: ${e.message}`);
+        } finally {
+            isSendingFrame = false;
+        }
+    };
+
+    if (startBtn) startBtn.addEventListener('click', async () => {
+        if (isRunning) return;
+        
+        const type = sourceTypeSelect?.value;
+        if (type === 'webcam') {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true 
+                });
+                placeholder.classList.add('hidden');
+                imagePreview.classList.add('hidden');
+                videoPreview.classList.remove('hidden');
+                videoPreview.srcObject = stream;
+                await videoPreview.play();
+                log('Đã mở webcam thật.');
+            } catch (e) {
+                log(`Lỗi webcam: ${e.message}`);
+                return;
+            }
+        } else {
+            if (videoPreview && !videoPreview.classList.contains('hidden')) {
+                await videoPreview.play().catch(()=>{});
+            }
+        }
+
+        isRunning = true;
+        isPaused = false;
+        frameCounter = 0;
+        if (realtimeIndicator) { realtimeIndicator.classList.remove('hidden'); realtimeIndicator.classList.add('flex'); }
+        setStatus('Đang chạy giám sát realtime...');
+        log('Bắt đầu phân tích nguồn.');
+
+        await analyzeCurrentFrame();
+        if (analysisTimerId) clearInterval(analysisTimerId);
+        analysisTimerId = setInterval(analyzeCurrentFrame, analysisIntervalMs);
+    });
+
+    if (pauseBtn) pauseBtn.addEventListener('click', () => {
+        if (!isRunning) return;
+        isPaused = !isPaused;
+        if (videoPreview && !videoPreview.classList.contains('hidden')) {
+            if (isPaused) videoPreview.pause();
+            else videoPreview.play().catch(()=>{});
+        }
+        setStatus(isPaused ? 'Đã tạm dừng' : 'Đang chạy giám sát realtime...');
+        log(isPaused ? 'Tạm dừng.' : 'Tiếp tục.');
+    });
+
+    if (stopBtn) stopBtn.addEventListener('click', () => {
+        isRunning = false;
+        isPaused = false;
+        if (analysisTimerId) clearInterval(analysisTimerId);
+        if (realtimeIndicator) { realtimeIndicator.classList.add('hidden'); realtimeIndicator.classList.remove('flex'); }
+        
+        if (sourceTypeSelect?.value === 'webcam') {
+            stopMedia();
+            placeholder.classList.remove('hidden');
+            videoPreview.classList.add('hidden');
+        } else {
+            if (videoPreview) videoPreview.pause();
+        }
+        
+        setStatus('Đã dừng phân tích.');
+        log('Dừng giám sát.');
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.connection) {
+            window.connection.on("MessagesChanged", () => {
+                const messagesTab = document.querySelector('[data-tab-panel="messages"]');
+                if (messagesTab && !messagesTab.classList.contains("hidden")) {
+                    loadManagerConversation();
+                    loadChatContacts();
+                } else {
+                    if (typeof loadChatContacts === "function") loadChatContacts();
+                }
+            });
+        } else {
+            setTimeout(() => {
+                if (window.connection) {
+                    window.connection.on("MessagesChanged", () => {
+                        const messagesTab = document.querySelector('[data-tab-panel="messages"]');
+                        if (messagesTab && !messagesTab.classList.contains("hidden")) {
+                            loadManagerConversation();
+                            loadChatContacts();
+                        } else {
+                            if (typeof loadChatContacts === "function") loadChatContacts();
+                        }
+                    });
+                }
+            }, 2000);
+        }
+    });
+})();

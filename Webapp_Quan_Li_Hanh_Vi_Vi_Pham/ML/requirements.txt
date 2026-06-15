@@ -1,3 +1,5 @@
 deepface
 opencv-python
 tf-keras
+ultralytics
+onnxruntime

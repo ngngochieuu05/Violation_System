@@ -392,6 +392,117 @@
         }
     };
 
+    const escapeViolationHtml = (value) => String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+    const getViolationSeverityClass = (severity) => {
+        const value = String(severity || "").toLowerCase();
+        if (value === "high" || value === "danger") return "bg-red-100 text-red-700";
+        if (value === "low") return "bg-slate-100 text-slate-700";
+        return "bg-amber-100 text-amber-700";
+    };
+
+    const getViolationIconClass = (severity) => {
+        const value = String(severity || "").toLowerCase();
+        if (value === "high" || value === "danger") return "fa-ban text-red-500";
+        if (value === "low") return "fa-circle-info text-slate-500";
+        return "fa-triangle-exclamation text-amber-500";
+    };
+
+    const renderViolationLists = (list, countEl, listEl, fullCountEl, fullListEl) => {
+        const processedCount = list.filter(item => item.status === "Approved" || item.status === "Rejected" || item.status === "Đã duyệt" || item.status === "Từ chối").length;
+        const pendingCount = Math.max(0, list.length - processedCount);
+        const points = list.filter(item => item.status === "Approved" || item.status === "Đã duyệt").length * 10;
+
+        if (countEl) countEl.textContent = `${list.length} vi phạm`;
+        if (fullCountEl) fullCountEl.textContent = list.length;
+
+        const totalStat = document.getElementById("violationStatsTotal");
+        const processedStat = document.getElementById("violationStatsProcessed");
+        const pendingStat = document.getElementById("violationStatsPending");
+        const pointsStat = document.getElementById("violationStatsPoints");
+        if (totalStat) totalStat.textContent = list.length;
+        if (processedStat) processedStat.textContent = processedCount;
+        if (pendingStat) pendingStat.textContent = pendingCount;
+        if (pointsStat) pointsStat.textContent = points;
+
+        if (listEl) {
+            if (list.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-6 text-slate-400">
+                        <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
+                        <p class="text-xs">Không có vi phạm ghi nhận</p>
+                    </div>`;
+            } else {
+                listEl.innerHTML = list.map(item => {
+                    const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                    });
+                    const statusClass = item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500";
+                    return `
+                        <div class="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-semibold text-slate-800 truncate">${escapeViolationHtml(item.violationType)}</span>
+                                    <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full ${getViolationSeverityClass(item.severity)}">${escapeViolationHtml(item.severity)}</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-camera mr-1"></i>${escapeViolationHtml(item.cameraLocation)} • ${date}</p>
+                            </div>
+                            <span class="text-[10px] font-semibold ${statusClass}">${escapeViolationHtml(item.status)}</span>
+                        </div>`;
+                }).join("");
+            }
+        }
+
+        if (fullListEl) {
+            if (list.length === 0) {
+                fullListEl.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-slate-400">
+                        <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-50 mb-4 shadow-inner">
+                            <i class="fa-solid fa-circle-check text-2xl text-green-500"></i>
+                        </div>
+                        <p class="text-sm">Hồ sơ trong sạch. Chưa ghi nhận vi phạm nào.</p>
+                    </div>`;
+            } else {
+                fullListEl.innerHTML = list.map(item => {
+                    const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
+                        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    });
+                    const evidenceImageDataUrl = item.evidenceImageDataUrl || "";
+                    const reviewNote = item.reviewNote || "Không có ghi chú.";
+                    const statusClass = item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500";
+                    return `
+                        <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden">
+                            ${evidenceImageDataUrl ? `
+                                <div class="border-b border-slate-100 bg-slate-50">
+                                    <img src="${escapeViolationHtml(evidenceImageDataUrl)}" alt="Ảnh minh chứng vi phạm" class="h-40 w-full object-cover select-none" draggable="false">
+                                </div>` : ''}
+                            <div class="p-5">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner">
+                                        <i class="fa-solid ${getViolationIconClass(item.severity)} text-lg"></i>
+                                    </div>
+                                    <span class="px-2 py-1 text-[10px] font-bold rounded-md ${getViolationSeverityClass(item.severity)} uppercase tracking-widest">${escapeViolationHtml(item.severity)}</span>
+                                </div>
+                                <h4 class="font-outfit text-base font-bold text-slate-900 mb-1 line-clamp-2">${escapeViolationHtml(item.violationType)}</h4>
+                                <div class="space-y-1 mt-3">
+                                    <p class="text-[11px] text-slate-500"><i class="fa-solid fa-camera text-slate-400 mr-2 w-3 text-center"></i>${escapeViolationHtml(item.cameraLocation)}</p>
+                                    <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
+                                    <p class="text-[11px] font-semibold mt-2 ${statusClass}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${escapeViolationHtml(item.status)}</p>
+                                    <p class="text-[11px] text-slate-500 leading-relaxed"><i class="fa-solid fa-message text-slate-400 mr-2 w-3 text-center"></i>${escapeViolationHtml(reviewNote)}</p>
+                                    ${evidenceImageDataUrl ? `<p class="text-[11px] font-semibold text-emerald-600"><i class="fa-solid fa-lock mr-1"></i>Ảnh minh chứng đã được mã hóa và chỉ xem trong hệ thống.</p>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                }).join("");
+            }
+        }
+    };
+
     const loadMyViolations = async () => {
         const countEl = document.getElementById("homeViolationCount");
         const listEl = document.getElementById("homeViolationList");
@@ -402,92 +513,7 @@
             const res = await fetch("/Employee/GetMyViolations");
             const result = await res.json();
             if (result.success && Array.isArray(result.data)) {
-                const list = result.data;
-                if (countEl) countEl.textContent = `${list.length} vi phạm`;
-                if (fullCountEl) fullCountEl.textContent = list.length;
-
-                // Home Tab Widget
-                if (listEl) {
-                    if (list.length === 0) {
-                        listEl.innerHTML = `
-                            <div class="text-center py-6 text-slate-400">
-                                <i class="fa-solid fa-circle-check text-2xl text-green-500 mb-2"></i>
-                                <p class="text-xs">Không có vi phạm ghi nhận</p>
-                            </div>
-                        `;
-                    } else {
-                        listEl.innerHTML = list.map(item => {
-                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
-                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-                            });
-                            let severityClass = "bg-amber-100 text-amber-700";
-                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
-                                severityClass = "bg-red-100 text-red-700";
-                            } else if (item.severity?.toLowerCase() === "low") {
-                                severityClass = "bg-slate-100 text-slate-700";
-                            }
-
-                            return `
-                                <div class="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-1.5">
-                                            <span class="text-xs font-semibold text-slate-800 truncate">${item.violationType}</span>
-                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full ${severityClass}">${item.severity}</span>
-                                        </div>
-                                        <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-camera mr-1"></i>${item.cameraLocation} • ${date}</p>
-                                    </div>
-                                    <span class="text-[10px] font-semibold ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}">${item.status}</span>
-                                </div>
-                            `;
-                        }).join("");
-                    }
-                }
-
-                // Violations Tab Grid
-                if (fullListEl) {
-                    if (list.length === 0) {
-                        fullListEl.innerHTML = `
-                            <div class="col-span-full text-center py-12 text-slate-400">
-                                <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-green-50 mb-4 shadow-inner">
-                                    <i class="fa-solid fa-circle-check text-2xl text-green-500"></i>
-                                </div>
-                                <p class="text-sm">Hồ sơ trong sạch. Chưa ghi nhận vi phạm nào.</p>
-                            </div>
-                        `;
-                    } else {
-                        fullListEl.innerHTML = list.map(item => {
-                            const date = new Date(item.detectedAtUtc).toLocaleDateString('vi-VN', {
-                                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                            });
-                            let severityClass = "bg-amber-100 text-amber-700";
-                            let iconClass = "fa-triangle-exclamation text-amber-500";
-                            if (item.severity?.toLowerCase() === "high" || item.severity?.toLowerCase() === "danger") {
-                                severityClass = "bg-red-100 text-red-700";
-                                iconClass = "fa-ban text-red-500";
-                            } else if (item.severity?.toLowerCase() === "low") {
-                                severityClass = "bg-slate-100 text-slate-700";
-                                iconClass = "fa-circle-info text-slate-500";
-                            }
-
-                            return `
-                                <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div class="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center shadow-inner">
-                                            <i class="fa-solid ${iconClass} text-lg"></i>
-                                        </div>
-                                        <span class="px-2 py-1 text-[10px] font-bold rounded-md ${severityClass} uppercase tracking-widest">${item.severity}</span>
-                                    </div>
-                                    <h4 class="font-outfit text-base font-bold text-slate-900 mb-1 line-clamp-2">${item.violationType}</h4>
-                                    <div class="space-y-1 mt-3">
-                                        <p class="text-[11px] text-slate-500"><i class="fa-solid fa-camera text-slate-400 mr-2 w-3 text-center"></i>${item.cameraLocation}</p>
-                                        <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
-                                        <p class="text-[11px] font-semibold mt-2 ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${item.status}</p>
-                                    </div>
-                                </div>
-                            `;
-                        }).join("");
-                    }
-                }
+                renderViolationLists(result.data, countEl, listEl, fullCountEl, fullListEl);
             }
         } catch (err) {
             console.error("Failed to load violations", err);
@@ -629,17 +655,12 @@
         const res = await fetch('/Employee/GetMyRequests');
         const data = await res.json();
         if (data.success) {
-            requests = data.data.map(r => {
-                let s = r.status;
-                if (s === 'Ä Ã£ duyá»‡t' || s === 'Approved') s = 'Đã duyệt';
-                if (s === 'TÃ¬nh tráº¡ng' || s === 'Rejected') s = 'Từ chối'; // Just in case
-                return {
-                    type: r.requestType,
-                    date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
-                    content: r.content,
-                    status: s
-                };
-            });
+            requests = data.data.map(r => ({
+                type: r.requestType,
+                date: new Date(r.submittedAt).toLocaleDateString('vi-VN'),
+                content: r.content,
+                status: r.status
+            }));
             
             list.innerHTML = '';
             if (!requests.length) {
@@ -666,41 +687,51 @@
                     const modal = document.getElementById("requestDetailModal");
                     const content = document.getElementById("requestDetailPreviewContent");
                     if (modal && content) {
-                        let typeStr = item.type || "Nghỉ phép";
-                        let builderKey = "Nghỉ phép";
-                        if (typeStr.toLowerCase().includes("đi muộn") || typeStr.toLowerCase().includes("về sớm")) builderKey = "Đi muộn";
-                        else if (typeStr.toLowerCase().includes("tăng ca") || typeStr.toLowerCase().includes("thêm giờ")) builderKey = "Tăng ca";
-                        else if (typeStr.toLowerCase().includes("điều chỉnh ca")) builderKey = "Điều chỉnh ca";
-
-                        let extractedDate = "[Ngày/Tháng/Năm]";
-                        let extractedReason = "";
-                        const lines = (item.content || '').split('\n').map(l => l.trim());
-                        lines.forEach(line => {
-                            if (line.startsWith("Ngày áp dụng:")) extractedDate = line.substring(13).trim();
-                            else if (line.startsWith("Lý do:")) extractedReason = line.substring(6).trim();
-                        });
-                        if (!extractedReason) extractedReason = "[Nhập lý do chi tiết...]";
-
-                        let name = profile.name || "[Tên nhân viên]";
-                        let department = profile.department || "[Bộ phận]";
-
-                        try {
-                            content.innerHTML = buildDoc[builderKey](name, department, extractedDate, extractedReason);
-                        } catch (e) {
-                            content.innerHTML = item.content.replace(/\r?\n/g, '<br>');
+                        let formattedContent = item.content.replace(/\r?\n/g, '<br>');
+                        if (window.buildDocHtml && window.buildDoc) {
+                            let applyDate = '';
+                            let reason = '';
+                            item.content.split('\n').forEach(line => {
+                                if(line.startsWith('Ngày áp dụng:')) applyDate = line.replace('Ngày áp dụng:', '').trim();
+                                else if(line.startsWith('Lý do:')) reason = line.replace('Lý do:', '').trim();
+                            });
+                            
+                            const name = profile.name || "[Tên nhân viên]";
+                            const department = profile.department || "[Bộ phận]";
+                            const dateStr = applyDate || item.date;
+                            const reasonStr = reason || item.content;
+                            
+                            let builder = window.buildDoc["Nghỉ phép"];
+                            if (item.type.includes("Nghỉ phép")) builder = window.buildDoc["Nghỉ phép"];
+                            else if (item.type.includes("muộn") || item.type.includes("về sớm")) builder = window.buildDoc["Đi muộn"];
+                            else if (item.type.includes("Tăng ca") || item.type.includes("thêm giờ")) builder = window.buildDoc["Tăng ca"];
+                            else if (item.type.includes("Điều chỉnh ca")) builder = window.buildDoc["Điều chỉnh ca"];
+                            
+                            if (builder) formattedContent = builder(name, department, dateStr, reasonStr);
                         }
-
-                        let statusText = item.status || 'Chờ duyệt';
-                        let statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-amber-500 text-amber-500 pointer-events-none";
-                        if (statusText === 'Đã duyệt') statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-green-500 text-green-500 pointer-events-none";
-                        else if (statusText === 'Từ chối') statusClass = "absolute top-12 right-8 border-4 px-4 py-2 text-xl font-bold uppercase rotate-12 opacity-80 border-red-500 text-red-500 pointer-events-none";
-
-                        const statusDiv = document.createElement("div");
-                        statusDiv.className = statusClass;
-                        statusDiv.textContent = statusText;
                         
-                        content.classList.add("relative");
-                        content.appendChild(statusDiv);
+                        content.innerHTML = formattedContent;
+                        
+                        // Add status stamp
+                        let stamp = document.getElementById("empReqDetailStatus");
+                        if (!stamp) {
+                            stamp = document.createElement("div");
+                            stamp.id = "empReqDetailStatus";
+                            content.appendChild(stamp);
+                        }
+                        stamp.textContent = item.status;
+                        let displayStatus = item.status.toUpperCase();
+                        
+                        if(displayStatus.includes('DUY') || displayStatus.includes('APPROVED')) {
+                            stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-emerald-500 text-emerald-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                            stamp.textContent = "ĐÃ DUYỆT";
+                        } else if (displayStatus.includes('TỪ') || displayStatus.includes('CHỐI') || displayStatus.includes('REJECTED')) {
+                            stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-red-500 text-red-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                            stamp.textContent = "TỪ CHỐI";
+                        } else {
+                            stamp.className = "absolute bottom-12 left-12 border-4 px-6 py-3 text-2xl font-bold uppercase -rotate-12 opacity-80 border-amber-500 text-amber-500 rounded-xl pointer-events-none bg-white/50 backdrop-blur-sm";
+                            stamp.textContent = "CHỜ DUYỆT";
+                        }
 
                         modal.classList.remove("hidden");
                         modal.classList.add("flex");
@@ -789,14 +820,9 @@ const loadChatContacts = async () => {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ channel: contact.username })
                             }).then(() => {
-                                // Reload contacts softly to stay synced
+                                // Reload contacts to clear the badge
                                 loadChatContacts();
-                                if (typeof loadNotifications === 'function') loadNotifications();
                             });
-                            // Optimistically clear the badge
-                            contact.unreadCount = 0;
-                            const badge = el.querySelector('.bg-red-500.absolute');
-                            if (badge) badge.remove();
                         } catch(e) {}
                     }
                     
@@ -825,33 +851,14 @@ const loadMessages = async () => {
         if (result.success && Array.isArray(result.data)) {
             chats = {}; // Reset toàn bộ
             result.data.forEach(m => {
-                let ch = m.channel || "manager";
-                let author = "other";
-
-                if (m.senderRole === "Employee") {
-                    if (m.employeeUsername === currentUsername) {
-                        // I sent this message
-                        ch = m.channel;
-                        author = "self";
-                    } else {
-                        // Someone else sent this to me
-                        ch = m.employeeUsername;
-                        author = "other";
-                    }
-                } else if (m.senderRole === "Manager") {
-                    // Manager sent this
-                    ch = m.channel || "manager";
-                    author = "other";
-                }
-
+                const ch = m.channel || "manager";
                 if (!chats[ch]) chats[ch] = [];
                 chats[ch].push({
                     id: m.id,
-                    author: author,
+                    author: m.senderRole === "Employee" ? "self" : "other",
                     text: m.content,
                     revoked: m.isRevoked,
-                    sentAt: m.sentAt,
-                    editedAtUtc: m.editedAtUtc
+                    time: m.sentAt ? new Date(m.sentAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : ""
                 });
             });
             await loadChatContacts(); // Load danh bạ thực tế thay vì hardcode
@@ -913,30 +920,8 @@ const loadMessages = async () => {
             } else {
                 bubble.className = message.author === "self"
                     ? "max-w-md rounded-2xl bg-red-600 px-4 py-3 text-sm text-white"
-                    : "max-w-md rounded-2xl bg-white px-4 py-3 text-sm text-slate-700 shadow-sm border border-slate-100";
+                    : "max-w-md rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-700";
                 bubble.textContent = message.text;
-                
-                // Add timestamp row
-                const timeStr = message.sentAt ? new Date(message.sentAt + (!message.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN') : '';
-                const editLabel = message.editedAtUtc ? '<span class="text-[10px] text-slate-400 italic ml-1">(đã chỉnh sửa)</span>' : '';
-                
-                const metaRow = document.createElement("div");
-                metaRow.className = "flex items-center gap-2 mb-1 px-1 " + (message.author === "self" ? "flex-row-reverse" : "flex-row");
-                
-                const timeSpan = document.createElement("span");
-                timeSpan.className = "text-[10px] text-slate-400";
-                timeSpan.innerHTML = timeStr + editLabel;
-                
-                const authorSpan = document.createElement("span");
-                authorSpan.className = "text-xs font-semibold text-slate-700";
-                authorSpan.textContent = message.author === "self" ? "Bạn" : (document.querySelector("[data-chat-title]")?.textContent || "Khách");
-                
-                metaRow.appendChild(authorSpan);
-                if(timeStr) metaRow.appendChild(timeSpan);
-
-                const contentWrapper = document.createElement("div");
-                contentWrapper.className = "flex flex-col " + (message.author === "self" ? "items-end" : "items-start");
-                contentWrapper.appendChild(metaRow);
                 
                 if (message.author === "self") {
                     const row = document.createElement("div");
@@ -984,17 +969,19 @@ const loadMessages = async () => {
                     row.appendChild(editBtn);
                     row.appendChild(revokeBtn);
                     row.appendChild(bubble);
-                    contentWrapper.appendChild(row);
+                    bubbleWrapper.appendChild(row);
                 } else {
-                    const row = document.createElement("div");
-                    row.className = "flex items-center gap-2";
-                    row.appendChild(bubble);
-                    contentWrapper.appendChild(row);
+                    bubbleWrapper.appendChild(bubble);
                 }
-                
-                bubbleWrapper.appendChild(contentWrapper);
             }
             
+            if (message.time) {
+                const timeSpan = document.createElement("span");
+                timeSpan.className = "text-[10px] text-slate-400 mt-1 px-1";
+                timeSpan.textContent = message.time;
+                bubbleWrapper.appendChild(timeSpan);
+            }
+
             thread.appendChild(bubbleWrapper);
         });
 
@@ -1216,12 +1203,6 @@ const loadMessages = async () => {
                 document.getElementById('empNetSalaryTop').textContent = latest.netSalary.toLocaleString('vi-VN') + ' ₫';
                 
                 document.getElementById('empBaseSalary').textContent = latest.baseSalary.toLocaleString('vi-VN') + ' ₫';
-                if (document.getElementById('empWorkingDays')) {
-                    document.getElementById('empWorkingDays').textContent = `${latest.actualWorkingDays} / ${latest.standardWorkingDays}`;
-                }
-                if (document.getElementById('empSalaryPerDay')) {
-                    document.getElementById('empSalaryPerDay').textContent = latest.salaryPerDay.toLocaleString('vi-VN') + ' ₫';
-                }
                 document.getElementById('empKpiBonus').textContent = '+' + latest.kpiBonus.toLocaleString('vi-VN') + ' ₫';
                 document.getElementById('empDeduction').textContent = '-' + latest.violationDeduction.toLocaleString('vi-VN') + ' ₫';
 
@@ -1587,100 +1568,7 @@ const loadMessages = async () => {
         clearMessageEditing();
     });
 
-    const buildDocHtml = (tieuDe, kinhGui, bodyLines, name, department, date, reason) => {
-        const now = new Date();
-        const d = now.getDate(), m = now.getMonth() + 1, y = now.getFullYear();
-        const locationDate = `Ngày ${d} tháng ${m} năm ${y}`;
-
-        const bodyHtml = bodyLines
-            .map(line => {
-                const filled = line
-                    .replace(/\{name\}/g, `<strong>${name}</strong>`)
-                    .replace(/\{department\}/g, `<strong>${department}</strong>`)
-                    .replace(/\{date\}/g, `<strong>${date}</strong>`)
-                    .replace(/\{reason\}/g, reason);
-                return `<p style="text-align:justify;text-indent:2em;margin:4px 0;">${filled}</p>`;
-            })
-            .join("");
-
-        return `
-<div style="font-family:'Times New Roman',serif;font-size:13px;line-height:1.8;color:#111;padding:4px 8px;">
-  <div style="text-align:center;margin-bottom:2px;">
-    <strong style="font-size:13px;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
-    <span style="font-size:12px;">Độc lập – Tự do – Hạnh phúc</span><br>
-    <span style="display:inline-block;width:140px;border-top:1.5px solid #111;margin-top:3px;"></span>
-  </div>
-
-  <div style="text-align:center;margin:14px 0 10px;">
-    <strong style="font-size:14px;text-transform:uppercase;letter-spacing:0.04em;">${tieuDe}</strong>
-  </div>
-
-  <p style="margin:6px 0;"><em>Kính gửi:</em> ${kinhGui}</p>
-
-  ${bodyHtml}
-
-  <div style="margin-top:20px;display:flex;justify-content:flex-end;">
-    <div style="text-align:center;min-width:180px;">
-      <p style="margin:0;"><em>${locationDate}</em></p>
-      <p style="margin:2px 0;">Người làm đơn</p>
-      <p style="margin:0;font-style:italic;font-size:11px;color:#555;">(Ký và ghi rõ họ tên)</p>
-      <p style="margin:40px 0 0;"><strong>${name}</strong></p>
-    </div>
-  </div>
-</div>`;
-    };
-
-    const buildDoc = {
-        "Nghỉ phép": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin nghỉ phép",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được nghỉ vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận cho tôi được nghỉ theo thời gian trên.",
-                "Tôi cam kết bàn giao công việc đầy đủ trước khi nghỉ và trở lại làm việc đúng lịch.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Đi muộn": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin đi muộn / về sớm",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được đi muộn / về sớm vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét và chấp thuận.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Tăng ca": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin làm thêm giờ (tăng ca)",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được làm thêm giờ vào ngày {date}.",
-                "Nội dung công việc / Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, phê duyệt để tôi có thể hoàn thành nhiệm vụ được giao.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        ),
-        "Điều chỉnh ca": (name, department, date, reason) => buildDocHtml(
-            "Đơn xin điều chỉnh ca làm việc",
-            "Ban Giám đốc và Quản lý bộ phận",
-            [
-                "Tôi tên là: {name} &nbsp;&nbsp; Bộ phận: {department}",
-                "Tôi làm đơn này kính xin phép được điều chỉnh ca làm việc vào ngày {date}.",
-                "Lý do: {reason}",
-                "Kính mong Ban Giám đốc và Quản lý bộ phận xem xét, chấp thuận và sắp xếp ca phù hợp.",
-                "Trân trọng cảm ơn!"
-            ],
-            name, department, date, reason
-        )
-    };
+    // buildDoc and buildDocHtml moved to site.js
 
     const updateRequestPreview = () => {
         const typeEl = document.querySelector("[data-request-type]");
@@ -1699,7 +1587,7 @@ const loadMessages = async () => {
         const name = profile.name || "[Tên nhân viên]";
         const department = profile.department || "[Bộ phận]";
 
-        const builder = buildDoc[code] || buildDoc["Nghỉ phép"];
+        const builder = window.buildDoc[code] || window.buildDoc["Nghỉ phép"];
         previewEl.innerHTML = builder(name, department, dateStr, reason);
     };
 
@@ -1768,61 +1656,19 @@ const loadMessages = async () => {
         renderRequests();
     });
 
-    document.querySelector("[data-profile-save]")?.addEventListener("click", async () => {
-        const btn = document.querySelector("[data-profile-save]");
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Đang lưu...';
-        btn.disabled = true;
-
-        const updatedProfile = {
+    document.querySelector("[data-profile-save]")?.addEventListener("click", () => {
+        profile = {
+            ...profile,
             name: document.querySelector("[data-profile-input='name']")?.value.trim() || profile.name,
             department: document.querySelector("[data-profile-input='department']")?.value.trim() || profile.department,
             email: document.querySelector("[data-profile-input='email']")?.value.trim() || profile.email,
             phone: document.querySelector("[data-profile-input='phone']")?.value.trim() || profile.phone
         };
-
-        try {
-            const res = await fetch("/Employee/UpdateProfile", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    Name: updatedProfile.name,
-                    Department: updatedProfile.department,
-                    Email: updatedProfile.email,
-                    Phone: updatedProfile.phone
-                })
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                profile = { ...profile, ...updatedProfile };
-                writeStore(storageKeys.profile, profile);
-                renderProfile();
-                const msg = document.querySelector("[data-profile-message]");
-                if (msg) {
-                    msg.textContent = "Đã lưu thành công. Email này có thể dùng để Đăng nhập Google.";
-                    msg.classList.remove("text-slate-500", "text-red-600");
-                    msg.classList.add("text-emerald-600");
-                }
-            } else {
-                const msg = document.querySelector("[data-profile-message]");
-                if (msg) {
-                    msg.textContent = "Lỗi: " + (data.message || "Không thể cập nhật.");
-                    msg.classList.remove("text-slate-500", "text-emerald-600");
-                    msg.classList.add("text-red-600");
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            const msg = document.querySelector("[data-profile-message]");
-            if (msg) {
-                msg.textContent = "Lỗi kết nối máy chủ.";
-                msg.classList.remove("text-slate-500", "text-emerald-600");
-                msg.classList.add("text-red-600");
-            }
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+        writeStore(storageKeys.profile, profile);
+        renderProfile();
+        const msg = document.querySelector("[data-profile-message]");
+        if (msg) {
+            msg.textContent = "Đã cập nhật thông tin hiển thị trong khu vực nhân viên.";
         }
     });
 
@@ -2044,7 +1890,6 @@ const loadMessages = async () => {
     const addTaskTrigger = document.querySelector("[data-task-add-trigger]");
     const addTaskModal = document.querySelector("[data-task-add-modal]");
     const addTaskCloseBtn = document.querySelector("[data-task-add-close]");
-    const submitNewTaskBtn = document.getElementById("submitNewTaskBtn");
 
     if (addTaskModal) {
         document.body.appendChild(addTaskModal);
@@ -2086,7 +1931,7 @@ const loadMessages = async () => {
 
     addTaskCloseBtn?.addEventListener("click", closeAddTaskModal);
 
-    // The task creation event listener has been consolidated below at line 2090.
+    // Removed duplicate submitNewTaskBtn event listener
 
     // --- Task Event Listeners ---
     document.addEventListener("change", (e) => {
@@ -2267,17 +2112,19 @@ const loadMessages = async () => {
         faceModal?.classList.remove("flex");
     };
 
+    const faceScanline = document.querySelector("[data-face-scanline]");
+
     const updateFaceStepUI = (step) => {
         for (let i = 0; i < maxFaces; i++) {
             const el = document.getElementById(`step-${i}`);
             if (!el) continue;
             if (i === step) {
-                el.className = "flex-1 rounded-lg bg-red-600/20 py-2 text-red-400 border border-red-600/30 transition-colors duration-300";
+                el.className = "flex-1 rounded-lg bg-red-50 py-2 text-red-600 border border-red-200 transition-colors duration-300";
             } else if (i < step) {
-                el.className = "flex-1 rounded-lg bg-green-500/20 py-2 text-green-400 border border-green-500/30 transition-colors duration-300";
-                el.innerHTML = '<i class="fa-solid fa-check"></i>';
+                el.className = "flex-1 rounded-lg bg-emerald-50 py-2 text-emerald-600 border border-emerald-200 transition-colors duration-300";
+                el.innerHTML = "Hoàn thành";
             } else {
-                el.className = "flex-1 rounded-lg bg-slate-800 py-2 text-slate-400 transition-colors duration-300";
+                el.className = "flex-1 rounded-lg bg-slate-100 py-2 text-slate-500 transition-colors duration-300";
             }
         }
         if (faceInstruction && step < maxFaces) {
@@ -2291,49 +2138,62 @@ const loadMessages = async () => {
     faceCaptureBtn?.addEventListener("click", async () => {
         if (faceImages.length >= maxFaces || !faceVideo || !faceCanvas) return;
         
+        // Show scan animation
+        if (faceScanline) {
+            faceScanline.classList.remove('hidden');
+            faceScanline.style.animation = 'none';
+            faceScanline.offsetHeight; // trigger reflow
+            faceScanline.style.animation = 'scan 1.5s linear infinite';
+        }
+        
         const ctx = faceCanvas.getContext("2d");
         faceCanvas.width = faceVideo.videoWidth;
         faceCanvas.height = faceVideo.videoHeight;
         ctx.drawImage(faceVideo, 0, 0, faceCanvas.width, faceCanvas.height);
         
-        faceImages.push(faceCanvas.toDataURL("image/jpeg", 0.85));
+        const currentImageData = faceCanvas.toDataURL("image/jpeg", 0.85);
         
-        if (faceImages.length < maxFaces) {
-            updateFaceStepUI(faceImages.length);
-        } else {
-            // Done capturing 4 images, send to backend
-            updateFaceStepUI(4);
-            if (faceInstruction) faceInstruction.textContent = "Đang xử lý và cập nhật dữ liệu sinh trắc học...";
-            faceStatus?.classList.remove("hidden");
-            faceCaptureBtn.disabled = true;
+        setTimeout(async () => {
+            if (faceScanline) faceScanline.classList.add('hidden');
+            faceImages.push(currentImageData);
             
-            const payload = faceImages.join(";base64split;");
-            
-            try {
-                const res = await fetch("/Account/UpdateFace", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams({ faceImagesBase64: payload })
-                });
-                const data = await res.json();
+            if (faceImages.length < maxFaces) {
+                updateFaceStepUI(faceImages.length);
+            } else {
+                // Done capturing 4 images, send to backend
+                updateFaceStepUI(4);
+                if (faceInstruction) faceInstruction.textContent = "Đang xử lý và cập nhật dữ liệu sinh trắc học...";
+                faceStatus?.classList.remove("hidden");
+                faceCaptureBtn.disabled = true;
                 
-                if (data.success) {
-                    alert("Cập nhật dữ liệu khuôn mặt thành công!");
-                    closeFaceModal();
-                } else {
-                    alert(data.message || "Cập nhật thất bại.");
+                const payload = faceImages.join(";base64split;");
+                
+                try {
+                    const res = await fetch("/Account/UpdateFace", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: new URLSearchParams({ faceImagesBase64: payload })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        alert("Cập nhật dữ liệu khuôn mặt thành công!");
+                        closeFaceModal();
+                    } else {
+                        alert(data.message || "Cập nhật thất bại.");
+                        faceImages = [];
+                        updateFaceStepUI(0);
+                    }
+                } catch (e) {
+                    alert("Lỗi kết nối máy chủ.");
                     faceImages = [];
                     updateFaceStepUI(0);
+                } finally {
+                    faceStatus?.classList.add("hidden");
+                    faceCaptureBtn.disabled = false;
                 }
-            } catch (e) {
-                alert("Lỗi kết nối máy chủ.");
-                faceImages = [];
-                updateFaceStepUI(0);
-            } finally {
-                faceStatus?.classList.add("hidden");
-                faceCaptureBtn.disabled = false;
             }
-        }
+        }, 1000);
     });
 
     // --- Payroll PIN Logic ---
@@ -2537,6 +2397,7 @@ const loadMessages = async () => {
     })();
 
     loadMyViolations();
+    loadMessages();
     setActiveTab(initialTab);
 
     setInterval(() => {
@@ -2550,109 +2411,18 @@ const loadMessages = async () => {
         stopAttendanceCamera();
     });
 
-        const loadNotifications = async () => {
-        try {
-            const res = await fetch("/Employee/GetNotifications");
-            const data = await res.json();
-            if (data.success && data.data) {
-                const listEl = document.querySelector("[data-notification-list]");
-                const unreadBadge = document.querySelector("[data-notification-unread-badge]");
-                
-                if (listEl) {
-                    if (data.data.length === 0) {
-                        listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
-                    } else {
-                        listEl.innerHTML = data.data.map(n => `
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="window.location.href='?tab=${n.tab}'">
-                                <p class="text-sm font-semibold text-slate-900">${n.title}</p>
-                                <p class="text-xs text-slate-500 line-clamp-1">${n.body || ''}</p>
-                                <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
-                            </div>
-                        `).join('');
-                    }
-                }
-                
-                if (unreadBadge) {
-                    const hasUnread = data.data.some(n => !n.isRead);
-                    if (hasUnread) {
-                        unreadBadge.classList.remove("hidden");
-                        unreadBadge.classList.add("flex");
-                    } else {
-                        unreadBadge.classList.add("hidden");
-                        unreadBadge.classList.remove("flex");
-                    }
-                }
-            }
-        } catch (e) { console.error(e); }
-    };
-
-    // Load initial notifications and poll periodically
-    loadNotifications();
-    setInterval(loadNotifications, 10000); // 10 seconds
+        // Load initial notifications and poll periodically
+    if (typeof window.loadNotifications === 'function') {
+        window.loadNotifications();
+        setInterval(window.loadNotifications, 10000); // 10 seconds
+    }
 
     document.querySelector("[data-notification-mark-all]")?.addEventListener("click", async () => {
         try {
             await fetch('/Employee/MarkAllNotificationsRead', { method: 'POST' });
-            loadNotifications();
+            if (typeof window.loadNotifications === 'function') window.loadNotifications();
         } catch (e) { console.error(e); }
     });
-
-    // --- Security Setup Check ---
-    const checkSecuritySetup = async () => {
-        try {
-            const res = await fetch('/Account/OnboardingStatus');
-            const data = await res.json();
-            if (data.success && (data.requiresInitialSecuritySetup || data.mustChangePassword || !data.hasBiometricRegistration)) {
-                // Force switch to profile tab
-                const profileBtn = document.querySelector('[data-tab-trigger="profile"]') || document.querySelector('[data-tab-trigger="ho-so"]');
-                if (profileBtn) profileBtn.click();
-                
-                // Show blocking overlay over everything except the profile content
-                let overlay = document.getElementById('securitySetupOverlay');
-                if (!overlay) {
-                    overlay = document.createElement('div');
-                    overlay.id = 'securitySetupOverlay';
-                    overlay.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center';
-                    overlay.style.zIndex = '9999';
-                    overlay.innerHTML = `
-                        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border border-red-100">
-                            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                                <i class="fa-solid fa-shield-halved"></i>
-                            </div>
-                            <h2 class="text-xl font-bold text-slate-800 mb-2 font-outfit">Yêu cầu bảo mật</h2>
-                            <p class="text-sm text-slate-600 mb-6">Bạn cần cập nhật mật khẩu và thiết lập nhận diện khuôn mặt để sử dụng các tính năng của hệ thống.</p>
-                            <button onclick="document.getElementById('securitySetupOverlay').style.display='none'; const profileBtn = document.querySelector('[data-tab-trigger=\\'profile\\']'); if (profileBtn) profileBtn.click();" class="px-6 py-2.5 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition">
-                                <i class="fa-solid fa-arrow-right mr-2"></i>Đến trang Cài đặt hồ sơ
-                            </button>
-                        </div>
-                    `;
-                    document.body.appendChild(overlay);
-                }
-                
-                // Disable clicking on other sidebar items
-                const sidebarLinks = document.querySelectorAll('.sidebar-link, [data-tab-trigger]');
-                sidebarLinks.forEach(link => {
-                    if (link.dataset.target !== 'ho-so' && link.dataset.target !== 'profile' && link.dataset.tabTrigger !== 'profile' && link.dataset.tabTrigger !== 'ho-so') {
-                        link.style.pointerEvents = 'none';
-                        link.style.opacity = '0.5';
-                    }
-                });
-            } else if (data.success && !data.requiresInitialSecuritySetup && !data.mustChangePassword && data.hasBiometricRegistration) {
-                const overlay = document.getElementById('securitySetupOverlay');
-                if (overlay) overlay.remove();
-                
-                // Re-enable sidebar links
-                const sidebarLinks = document.querySelectorAll('.sidebar-link, [data-tab-trigger]');
-                sidebarLinks.forEach(link => {
-                    link.style.pointerEvents = 'auto';
-                    link.style.opacity = '1';
-                });
-            }
-        } catch (e) { console.error(e); }
-    };
-    
-    checkSecuritySetup();
-    setInterval(checkSecuritySetup, 10000); // Check every 10s
 
 })();
 

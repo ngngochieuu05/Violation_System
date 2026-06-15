@@ -1,7 +1,6 @@
 (() => {
-    const app = document.querySelector("[data-employee-app]");
     const modal = document.querySelector("[data-onboarding-modal]");
-    if (!app || !modal) {
+    if (!modal) {
         return;
     }
 
@@ -43,7 +42,14 @@
         element.className = `inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${done ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`;
     };
 
+    let isSetupRequired = false;
+    let isModalHiddenForProfile = false;
+
     const setModalState = (open) => {
+        isSetupRequired = open;
+        if (isModalHiddenForProfile && open) {
+            return;
+        }
         modal.classList.toggle("hidden", !open);
         modal.classList.toggle("flex", open);
         document.body.classList.toggle("overflow-hidden", open);
@@ -76,9 +82,9 @@
                 return;
             }
 
-            const requiresSetup = !!data.requiresInitialSecuritySetup;
             const mustChangePassword = !!data.mustChangePassword;
             const hasBiometric = !!data.hasBiometricRegistration;
+            const requiresSetup = !!data.requiresInitialSecuritySetup || !hasBiometric;
 
             setModalState(requiresSetup);
             passwordSection?.classList.toggle("hidden", !mustChangePassword);
@@ -112,6 +118,7 @@
                 startPolling();
             } else {
                 stopPolling();
+                isModalHiddenForProfile = false;
             }
         } catch (error) {
             console.error("Failed to refresh onboarding status", error);
@@ -170,9 +177,40 @@
     });
 
     openFaceButton?.addEventListener("click", () => {
-        document.querySelector("[data-profile-update-face]")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        isModalHiddenForProfile = true;
+        // Go to Profile Tab
+        document.querySelector("[data-tab-trigger='profile']")?.click();
+        
+        // Hide modal
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        document.body.classList.remove("overflow-hidden");
+        
+        // Highlight face update section
+        setTimeout(() => {
+            const faceBtn = document.querySelector("[data-profile-update-face]");
+            if (faceBtn) {
+                faceBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                faceBtn.classList.add("ring-4", "ring-red-500", "ring-opacity-50");
+                setTimeout(() => faceBtn.classList.remove("ring-4", "ring-red-500", "ring-opacity-50"), 3000);
+            }
+        }, 500);
+
         startPolling();
     });
+
+    // Enforce tab constraint
+    document.addEventListener("click", (e) => {
+        if (!isSetupRequired) return;
+
+        // If they click on any sidebar tab that is NOT profile, block it
+        const tabTrigger = e.target.closest("[data-tab-trigger]");
+        if (tabTrigger && tabTrigger.getAttribute("data-tab-trigger") !== "profile") {
+            e.preventDefault();
+            e.stopPropagation();
+            alert("Vui lòng hoàn tất cập nhật hồ sơ và dữ liệu khuôn mặt trước khi sử dụng các tính năng khác.");
+        }
+    }, true); // use capture phase to intercept early
 
     refreshStatus();
 })();

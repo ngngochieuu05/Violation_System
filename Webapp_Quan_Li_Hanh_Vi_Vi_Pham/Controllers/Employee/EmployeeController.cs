@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Utilities;
 
 namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Controllers.Employee;
 
@@ -386,7 +387,22 @@ public class EmployeeController : Controller
             .Take(20)
             .ToListAsync(cancellationToken);
 
-        return Json(new { success = true, data = violations });
+        var data = violations.Select(v => new
+        {
+            v.Id,
+            v.TrackingId,
+            v.EmployeeCode,
+            v.EmployeeName,
+            v.ViolationType,
+            v.Severity,
+            v.DetectedAtUtc,
+            CameraLocation = VietnameseText.NormalizeMojibake(v.CameraLocation),
+            v.Status,
+            v.ReviewNote,
+            EvidenceImageDataUrl = BuildEvidenceImageDataUrl(v.EvidenceUrl)
+        }).ToList();
+
+        return Json(new { success = true, data });
     }
 
     [HttpGet]
@@ -564,7 +580,7 @@ public class EmployeeController : Controller
             SenderName = user.FullName,
             Title = string.IsNullOrWhiteSpace(dto.Title) ? "Tin nhắn mới" : dto.Title,
             Content = dto.Content ?? string.Empty,
-            SentAt = DateTime.UtcNow,
+            SentAt = DateTime.UtcNow.AddHours(7),
             IsRead = false
         };
 
@@ -689,18 +705,17 @@ public class EmployeeController : Controller
             return Json(new { success = false, message = "Khong xac dinh duoc tai khoan." });
         }
 
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        
         var contacts = await _context.Users
-            .Where(u => u.Id != user.Id && (u.Role != "Employee" || (u.FaceImagePath != null && u.FaceImagePath != "")))
+            .Where(u => u.Id != user.Id)
             .Select(u => new
             {
                 username = u.Username,
                 fullName = u.FullName ?? u.Username,
                 role = u.Role ?? "Employee",
-                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
-                unreadCount = _context.EmployeeMessages.Count(m => !m.IsRead && (
-                    (m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee") ||
-                    (m.EmployeeUserId == u.Id && (m.Channel == user.Username || m.Channel == user.Id.ToString()))
-                ))
+                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : u.AvatarPath + "?v=" + timestamp.ToString(),
+                unreadCount = _context.EmployeeMessages.Count(m => m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee" && !m.IsRead)
             })
             .ToListAsync(cancellationToken);
 
@@ -722,14 +737,6 @@ public class EmployeeController : Controller
                      || m.Channel == user.Username)
             .OrderBy(m => m.SentAt)
             .ToListAsync(cancellationToken);
-
-        foreach (var msg in messages)
-        {
-            if (msg.IsRevoked)
-            {
-                msg.Content = "Tin nhắn đã thu hồi";
-            }
-        }
 
         return Json(new { success = true, data = messages });
     }
@@ -766,7 +773,7 @@ public class EmployeeController : Controller
                 body = m.Content,
                 createdAt = m.SentAt,
                 isRead = m.IsRead,
-                tab = "messages"
+                tab = (m.Title.Contains("vi phạm") || m.Title.Contains("vi pham") || m.Title.Contains("Violation")) ? "violations" : "messages"
             })
             .ToListAsync(cancellationToken);
 
@@ -862,6 +869,33 @@ public class EmployeeController : Controller
             : await _context.Users.FirstOrDefaultAsync(u => u.Username == username, cancellationToken);
     }
 
+    private string BuildEvidenceImageDataUrl(string? evidenceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(evidenceUrl) || string.IsNullOrWhiteSpace(_environment.WebRootPath))
+        {
+            return string.Empty;
+        }
+
+        var relativePath = evidenceUrl.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(_environment.WebRootPath, relativePath));
+        var webRoot = Path.GetFullPath(_environment.WebRootPath);
+        if (!fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(fullPath))
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(fullPath).ToLowerInvariant();
+        var contentType = extension switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
+
+        var bytes = System.IO.File.ReadAllBytes(fullPath);
+        return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
+    }
+
     private async Task NotifyConversationChangedAsync(User employee, string managerUsername)
     {
         var groups = new[]
@@ -878,20 +912,9 @@ public class EmployeeController : Controller
             channel = managerUsername
         });
 
-        // Bắn thông báo Realtime cho Manager và Admin
-        var notificationGroups = new[]
-        {
-            InternalChatHub.BuildUsernameGroup(managerUsername),
-            "role:admin",
-            "role:manager"
-        };
-        await _chatHub.Clients.Groups(notificationGroups).SendAsync("ReceiveNotification", new
-        {
-            title = "Tin nhắn từ Nhân viên",
-            message = $"{employee.FullName} vừa gửi tin nhắn mới.",
-            type = "message",
-            url = "?tab=messages"
-        });
+        // Also trigger floating notification for the manager specifically
+        await _chatHub.Clients.Group(InternalChatHub.BuildUsernameGroup(managerUsername))
+            .SendAsync("ReceiveNotification", $"Có tin nhắn mới từ {employee.FullName}");
     }
 
     private async Task<string> SaveAttendanceImageAsync(Guid userId, string? imageDataUrl, string prefix, CancellationToken cancellationToken)
@@ -1010,10 +1033,10 @@ public class EmployeeController : Controller
         }
 
         var unreadMessages = await _context.EmployeeMessages
-            .Where(m => !m.IsRead && (
-                (m.EmployeeUserId == user.Id && m.Channel == req.Channel && m.SenderRole != "Employee") || 
-                (m.EmployeeUsername == req.Channel && (m.Channel == user.Username || m.Channel == user.Id.ToString()) && m.SenderRole == "Employee")
-            ))
+            .Where(m => m.EmployeeUserId == user.Id 
+                     && m.Channel == req.Channel 
+                     && m.SenderRole != "Employee" 
+                     && !m.IsRead)
             .ToListAsync(cancellationToken);
 
         if (unreadMessages.Any())
@@ -1029,7 +1052,6 @@ public class EmployeeController : Controller
     }
 
 }
-
 
 
 
