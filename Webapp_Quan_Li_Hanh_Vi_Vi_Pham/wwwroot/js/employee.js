@@ -307,6 +307,10 @@
         if (homeHero) {
             homeHero.classList.toggle("hidden", normalized !== "home");
         }
+        
+        if (typeof window.closeComplaintModal === 'function') {
+            window.closeComplaintModal();
+        }
 
         if (normalized === "home") {
             loadMyViolations();
@@ -321,6 +325,7 @@
         url.searchParams.set("tab", normalized);
         window.history.replaceState({}, "", url);
     };
+    window.setActiveTab = setActiveTab;
 
     const renderDateTime = () => {
         const now = new Date();
@@ -483,6 +488,34 @@
                                         <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
                                         <p class="text-[11px] font-semibold mt-2 ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${item.status}</p>
                                     </div>
+                                    ${(() => {
+                                        const isPending = item.status === 'Pending' || item.status === 'Chờ duyệt';
+                                        
+                                        if (!item.complaintReason) {
+                                            // Chưa khiếu nại
+                                            if (isPending) {
+                                                return `<button onclick="window.openComplaintModal('${item.id}')" class="w-full mt-3 py-2 text-xs font-semibold rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition border border-red-100">Khiếu nại</button>`;
+                                            } else {
+                                                // Đã được xử lý mà không qua khiếu nại
+                                                return `<div class="w-full mt-3 py-2 text-xs font-semibold rounded-xl bg-slate-50 text-slate-500 border border-slate-200 text-center">Đã xử lý</div>`;
+                                            }
+                                        } else {
+                                            // Đã gửi khiếu nại
+                                            if (!isPending || item.reviewChannel === 'ComplaintReview') {
+                                                // Đã được xử lý
+                                                const accepted = item.status === 'Approved' || item.status === 'Đã duyệt';
+                                                return `<div class="mt-3 py-2 px-3 text-xs font-semibold rounded-xl ${accepted ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'} text-center">
+                                                    <i class="fa-solid ${accepted ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i>
+                                                    Khiếu nại đã ${accepted ? 'được chấp nhận' : 'bị từ chối'}
+                                                </div>`;
+                                            } else {
+                                                // Đang chờ xử lý
+                                                return `<button class="w-full mt-3 py-2 text-xs font-semibold rounded-xl bg-amber-50 text-amber-600 border border-amber-100 cursor-not-allowed">
+                                                    <i class="fa-solid fa-clock mr-1"></i>Đang chờ xét khiếu nại
+                                                </button>`;
+                                            }
+                                        }
+                                    })()}
                                 </div>
                             `;
                         }).join("");
@@ -2563,7 +2596,7 @@ const loadMessages = async () => {
                         listEl.innerHTML = '<div class="px-4 py-5 text-center text-sm text-slate-500">Chưa có thông báo nào.</div>';
                     } else {
                         listEl.innerHTML = data.data.map(n => `
-                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="window.location.href='?tab=${n.tab}'">
+                            <div class="px-4 py-3 hover:bg-slate-50 transition cursor-pointer border-b border-slate-50 last:border-0 ${!n.isRead ? 'bg-red-50/30' : ''}" onclick="typeof window.setActiveTab === 'function' ? window.setActiveTab('${n.tab}') : window.location.href='?tab=${n.tab}'">
                                 <p class="text-sm font-semibold text-slate-900">${n.title}</p>
                                 <p class="text-xs text-slate-500 line-clamp-1">${n.body || ''}</p>
                                 <p class="text-[10px] text-slate-400 mt-1">${new Date(n.createdAt + (!n.createdAt.endsWith('Z') ? 'Z' : '')).toLocaleString('vi-VN')}</p>
@@ -2596,6 +2629,56 @@ const loadMessages = async () => {
             loadNotifications();
         } catch (e) { console.error(e); }
     });
+
+    window.openComplaintModal = (id) => {
+        const modal = document.getElementById('complaintModal');
+        const hiddenId = document.getElementById('complaintViolationId');
+        if(modal && hiddenId) {
+            hiddenId.value = id;
+            document.getElementById('complaintReason').value = '';
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+        }
+    };
+
+    window.closeComplaintModal = () => {
+        const modal = document.getElementById('complaintModal');
+        if(modal) {
+            modal.classList.add('hidden');
+            modal.style.display = '';
+        }
+    };
+
+    window.submitComplaint = async () => {
+        const id = document.getElementById('complaintViolationId')?.value;
+        const reason = document.getElementById('complaintReason')?.value.trim();
+        if(!id || !reason) {
+            alert('Vui lòng nhập lý do khiếu nại!');
+            return;
+        }
+
+        try {
+            const res = await fetch('/Employee/SubmitComplaint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ViolationId: id, Reason: reason })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert('Gửi khiếu nại thành công!');
+                window.closeComplaintModal();
+                loadMyViolations();
+            } else {
+                alert('Lỗi: ' + data.message);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Có lỗi xảy ra khi gửi khiếu nại.');
+        }
+    };
+
 
     // --- Security Setup Check ---
     const checkSecuritySetup = async () => {

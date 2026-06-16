@@ -109,7 +109,7 @@
             <p class="text-sm text-zinc-500">Metadata file và eval artifact được đọc tự động theo logic của page so sánh/kiểm thử trong <code>tool_train</code>.</p>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full whitespace-nowrap text-left text-sm">
+            <table class="w-full text-left text-sm">
                 <thead class="border-b border-zinc-200 bg-zinc-100 text-xs uppercase text-zinc-800">
                     <tr>
                         <th class="px-6 py-4">Model</th>
@@ -137,7 +137,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm font-semibold text-zinc-800">@item.EngineLabel</div>
-                                <div class="mt-1 break-all font-mono text-xs text-zinc-400">@item.ModelPath</div>
+                                <div class="mt-1 break-all whitespace-normal max-w-[250px] font-mono text-xs text-zinc-400">@item.ModelPath</div>
                                 <div class="mt-1 text-xs text-zinc-500">@(item.FileSizeMb.HasValue ? $"{item.FileSizeMb:0.##} MB" : "Không đọc được dung lượng")</div>
                             </td>
                             <td class="px-6 py-4">
@@ -151,19 +151,19 @@
                                 <div class="mt-1 text-xs text-zinc-600">mAP50-95: @(item.Map50To95.HasValue ? $"{item.Map50To95:0.###}" : "—")</div>
                                 <div class="mt-2 max-w-xs whitespace-normal text-xs text-zinc-500">@classPreview</div>
                             </td>
-                            <td class="px-6 py-4 text-center">
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
                                 <span class="rounded-full px-3 py-1 text-xs font-semibold @(item.IsActive ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-600")">
                                     @(item.IsActive ? "Hoạt động" : "Vô hiệu")
                                 </span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-zinc-500">@item.CreatedAtUtc.ToString("dd/MM/yyyy")</td>
-                            <td class="px-6 py-4">
+                            <td class="px-6 py-4 text-sm text-zinc-500 whitespace-nowrap">@item.CreatedAtUtc.ToString("dd/MM/yyyy")</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center justify-end gap-2">
                                     <button type="button" onclick="navigator.clipboard.writeText('@item.ModelPath'); alert('Đã sao chép đường dẫn file.');" class="rounded-md bg-zinc-100 p-1.5 text-zinc-500 transition hover:bg-blue-100 hover:text-blue-600" title="Sao chép đường dẫn">
                                         <i class="fa-regular fa-copy"></i>
                                     </button>
-                                    <button type="button" onclick="openEditModal('@item.Id', '@item.Name', '@item.Type', '@item.ModelPath', '@item.ConfThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)', '@item.IouThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)')" class="rounded-md bg-zinc-100 p-1.5 text-zinc-500 transition hover:bg-amber-100 hover:text-amber-600" title="Hiệu chỉnh">
-                                        <i class="fa-regular fa-pen-to-square"></i>
+                                    <button type="button" onclick="openEditModal('@item.Id', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(item.Name))', '@item.Type', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(item.ModelPath))', '@item.ConfThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)', '@item.IouThreshold.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)')" class="flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 hover:text-amber-800" title="Chỉnh sửa">
+                                        <i class="fa-solid fa-pen"></i> Sửa
                                     </button>
                                     <form asp-action="ToggleAiModel" method="post" class="m-0 inline-block">
                                         <input type="hidden" name="id" value="@item.Id" />

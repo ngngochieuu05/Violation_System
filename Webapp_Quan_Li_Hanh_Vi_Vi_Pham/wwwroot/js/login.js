@@ -79,6 +79,13 @@ function captureAndLogin() {
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    // Draw black mask outside the oval to limit AI detection
+    context.fillStyle = "black";
+    context.beginPath();
+    context.rect(0, 0, canvas.width, canvas.height);
+    context.ellipse(canvas.width / 2, canvas.height / 2, canvas.width * 0.3, canvas.height * 0.45, 0, 0, 2 * Math.PI);
+    context.fill("evenodd");
+
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     const loginUrl = window.BiometricLoginConfig?.loginUrl || '/Account/BiometricLogin';
 

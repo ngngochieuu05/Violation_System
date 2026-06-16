@@ -259,6 +259,7 @@ class MonitoringSessionWorker:
         self.capture = None
         self.current_frame_index = -1
         self.static_image = None
+        self.last_alert_ts = {}
 
         for model in models:
             raw_conf = float(model.get("ConfThreshold", 0.25))
@@ -402,6 +403,10 @@ class MonitoringSessionWorker:
             if state["alertSent"] or duration_seconds < threshold_seconds:
                 continue
 
+            # Áp dụng thời gian chờ (cooldown) 5 giây giữa các lần gửi cho cùng một loại vi phạm
+            if now_ts - self.last_alert_ts.get(rule_type, 0.0) < 5.0:
+                continue
+
             annotated_frame = annotated_frames.get(detection["modelType"]) or frame
             snapshot_base64, snapshot_mime = crop_snapshot(annotated_frame, state["objectBox"])
             payload = {
@@ -421,6 +426,7 @@ class MonitoringSessionWorker:
             success, summary = self.publisher.send(payload)
             if success:
                 state["alertSent"] = True
+                self.last_alert_ts[rule_type] = now_ts
                 print(
                     json.dumps(
                         {

@@ -43,7 +43,24 @@ namespace Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Helpers
         public static string Decrypt(string cipherText)
         {
             if (string.IsNullOrEmpty(cipherText)) return cipherText;
-            if (!cipherText.StartsWith(Prefix)) return cipherText; // Not encrypted, return as is (for backwards compatibility)
+            if (!cipherText.StartsWith(Prefix)) 
+            {
+                // Fallback for backwards compatibility: Old messages were encrypted with Security.EncryptionHelper
+                // using the hardcoded key "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234".
+                try
+                {
+                    var oldDecrypted = Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Security.EncryptionHelper.Decrypt(cipherText, "ma_khoa_bao_mat_32_ky_tu_cho_aes_1234");
+                    if (!string.IsNullOrEmpty(oldDecrypted) && oldDecrypted != cipherText)
+                    {
+                        return oldDecrypted;
+                    }
+                }
+                catch
+                {
+                    // Ignore exception and return as is
+                }
+                return cipherText;
+            }
 
             try
             {

@@ -384,6 +384,21 @@ public class EmployeeController : Controller
             .Where(v => v.EmployeeCode == user.EmployeeCode || v.EmployeeCode == user.Username)
             .OrderByDescending(v => v.DetectedAtUtc)
             .Take(20)
+            .Select(v => new {
+                v.Id,
+                v.TrackingId,
+                v.ViolationType,
+                v.Severity,
+                v.CameraLocation,
+                v.DetectedAtUtc,
+                v.Status,
+                v.ComplaintReason,
+                v.ComplaintSubmittedAtUtc,
+                v.ReviewChannel,
+                v.ReviewedBy,
+                v.ReviewedAtUtc,
+                v.ReviewNote
+            })
             .ToListAsync(cancellationToken);
 
         return Json(new { success = true, data = violations });
@@ -754,21 +769,22 @@ public class EmployeeController : Controller
             return Json(new { success = false, message = "Khong xac dinh duoc tai khoan." });
         }
 
-        var messages = await _context.EmployeeMessages
+        var rawMessages = await _context.EmployeeMessages
             .Where(m => m.EmployeeUserId == user.Id && m.SenderRole != "Employee")
             .OrderByDescending(m => m.SentAt)
             .Take(10)
-            .Select(m => new
-            {
-                source = "message",
-                id = m.Id,
-                title = string.IsNullOrWhiteSpace(m.Title) ? $"Tin nhan tu {m.SenderName}" : m.Title,
-                body = m.Content,
-                createdAt = m.SentAt,
-                isRead = m.IsRead,
-                tab = "messages"
-            })
             .ToListAsync(cancellationToken);
+
+        var messages = rawMessages.Select(m => new
+        {
+            source = "message",
+            id = m.Id,
+            title = string.IsNullOrWhiteSpace(m.Title) ? $"Tin nhắn từ {m.SenderName}" : m.Title,
+            body = m.Content,
+            createdAt = m.SentAt,
+            isRead = m.IsRead,
+            tab = (m.Content?.ToLower().Contains("khiếu nại") == true || m.Content?.ToLower().Contains("vi phạm") == true) ? "violations" : "messages"
+        }).ToList();
 
         var requestUpdates = await _context.ApprovalRequests
             .Where(r => r.EmployeeUserId == user.Id && r.Status != "Chờ duyệt" && r.Status != "Pending")

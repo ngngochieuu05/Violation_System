@@ -305,7 +305,19 @@
                         <td class="p-4 py-3">${evidencePreview}</td>
                         <td class="p-4 py-3">${buildTelegramState(v)}</td>
                         <td class="p-4 py-3 text-right">
-                            <div class="flex justify-end gap-2">
+                            <div class="flex justify-end gap-2 flex-wrap">
+                                ${v.complaintReason ? `<button
+                                    data-vid="${v.id}"
+                                    data-vtid="${(v.trackingId || 'N/A').replace(/"/g, '&quot;')}"
+                                    data-vreason="${(v.complaintReason || '').replace(/"/g, '&quot;').replace(/\n/g, '&#10;')}"
+                                    data-vtime="${v.complaintSubmittedAtUtc || ''}"
+                                    data-vreviewed="${v.reviewChannel === 'ComplaintReview' ? '1' : '0'}"
+                                    data-vstatus="${v.status || ''}"
+                                    data-vreviewedby="${(v.reviewedBy || '').replace(/"/g, '&quot;')}"
+                                    data-vreviewnote="${(v.reviewNote || '').replace(/"/g, '&quot;').replace(/\n/g, '&#10;')}"
+                                    data-vreviewedat="${v.reviewedAtUtc || ''}"
+                                    onclick="window.openViolationComplaintModal(this.dataset.vid, this.dataset.vtid, this.dataset.vreason, this.dataset.vtime, this.dataset.vreviewed, this.dataset.vstatus, this.dataset.vreviewedby, this.dataset.vreviewnote, this.dataset.vreviewedat)"
+                                    class="rounded border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100">Xem khiếu nại</button>` : ''}
                                 <button onclick="window.resendViolationTelegram('${v.id}')" class="rounded border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:border-red-200 hover:text-red-600">Gửi Telegram</button>
                                 ${v.status === 'Pending' ? `
                                 <button onclick="window.reviewViolation('${v.id}', 'Approved')" class="rounded bg-emerald-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-600">Duyệt</button>
@@ -406,6 +418,133 @@
         } catch (err) {
             console.error(err);
             alert('Không thể gửi lại Telegram');
+        }
+    };
+    window.openViolationComplaintModal = (violationId, trackingId, reason, submittedAtUtc, reviewed, status, reviewedBy, reviewNote, reviewedAt) => {
+        const modal = document.getElementById('violationComplaintModal');
+        if (!modal) return;
+
+        const idEl = document.getElementById('violationComplaintId');
+        const trackingEl = document.getElementById('violationComplaintTrackingId');
+        const timeEl = document.getElementById('violationComplaintSubmittedAt');
+        const reasonEl = document.getElementById('violationComplaintReason');
+        const noteEl = document.getElementById('violationComplaintReviewNote');
+        const actionBtns = document.getElementById('violationComplaintActions');
+        const reviewResultEl = document.getElementById('violationComplaintReviewResult');
+
+        if (idEl) idEl.value = violationId || '';
+        if (trackingEl) trackingEl.textContent = trackingId || 'N/A';
+        if (timeEl) {
+            timeEl.textContent = submittedAtUtc
+                ? new Date(submittedAtUtc).toLocaleString('vi-VN')
+                : '--';
+        }
+        if (reasonEl) reasonEl.textContent = reason || '--';
+        if (noteEl) noteEl.value = '';
+
+        // More robust isReviewed check
+        const isReviewed = reviewed === '1' || status === 'Approved' || status === 'Rejected';
+
+        const closeOnlyBtn = document.getElementById('violationComplaintCloseOnlyBtn');
+
+        // Show/hide action buttons
+        if (actionBtns) actionBtns.style.display = isReviewed ? 'none' : 'flex';
+        if (closeOnlyBtn) closeOnlyBtn.style.display = isReviewed ? 'flex' : 'none';
+
+        // Show/hide review result section
+        if (reviewResultEl) {
+            if (isReviewed) {
+                const isAccepted = status === 'Approved';
+                const decisionLabel = isAccepted ? 'Chấp nhận' : 'Từ chối';
+                const decisionColor = isAccepted ? '#059669' : '#dc2626';
+                const decisionBg = isAccepted ? '#ecfdf5' : '#fef2f2';
+                const decisionBorder = isAccepted ? '#a7f3d0' : '#fecaca';
+                const icon = isAccepted ? 'fa-check-circle' : 'fa-times-circle';
+                reviewResultEl.style.display = 'block';
+                reviewResultEl.innerHTML = `
+                    <div style="border: 1px solid ${decisionBorder}; background: ${decisionBg}; border-radius: 0.75rem; padding: 1rem;">
+                        <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin: 0 0 0.75rem;">Kết quả xử lý</p>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fa-solid ${icon}" style="color: ${decisionColor}; font-size: 1.1rem;"></i>
+                            <span style="font-weight: 700; color: ${decisionColor}; font-size: 0.9rem;">${decisionLabel} khiếu nại</span>
+                        </div>
+                        ${reviewedBy ? `<p style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;"><b>Người xử lý:</b> ${reviewedBy}</p>` : ''}
+                        ${reviewedAt ? `<p style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;"><b>Thời gian:</b> ${new Date(reviewedAt).toLocaleString('vi-VN')}</p>` : ''}
+                        ${reviewNote ? `<p style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;"><b>Ghi chú:</b> ${reviewNote}</p>` : ''}
+                    </div>`;
+            } else {
+                reviewResultEl.style.display = 'none';
+                reviewResultEl.innerHTML = '';
+            }
+        }
+
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+    };
+
+    window.closeViolationComplaintModal = () => {
+        const modal = document.getElementById('violationComplaintModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.style.display = '';
+    };
+
+    window.submitComplaintReview = async (decision) => {
+        const violationId = document.getElementById('violationComplaintId')?.value;
+        const note = document.getElementById('violationComplaintReviewNote')?.value.trim() || '';
+        const trackingId = document.getElementById('violationComplaintTrackingId')?.textContent;
+
+        if (!violationId) {
+            alert('Không xác định được mã vi phạm.');
+            return;
+        }
+
+        const decisionText = decision === 'Accepted' ? 'chấp nhận' : 'từ chối';
+        if (!confirm(`Bạn có chắc muốn ${decisionText} khiếu nại vi phạm ${trackingId}?`)) return;
+
+        try {
+            const res = await fetch('/Manager/ReviewComplaint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ViolationId: violationId, Decision: decision, ReviewNote: note })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const actionBtns = document.getElementById('violationComplaintActions');
+                const reviewResultEl = document.getElementById('violationComplaintReviewResult');
+                const closeOnlyBtn = document.getElementById('violationComplaintCloseOnlyBtn');
+
+                if (actionBtns) actionBtns.style.display = 'none';
+                if (closeOnlyBtn) closeOnlyBtn.style.display = 'flex';
+
+                if (reviewResultEl) {
+                    const isAccepted = decision === 'Accepted';
+                    const decisionLabel = isAccepted ? 'Chấp nhận' : 'Từ chối';
+                    const decisionColor = isAccepted ? '#059669' : '#dc2626';
+                    const decisionBg = isAccepted ? '#ecfdf5' : '#fef2f2';
+                    const decisionBorder = isAccepted ? '#a7f3d0' : '#fecaca';
+                    const icon = isAccepted ? 'fa-check-circle' : 'fa-times-circle';
+                    reviewResultEl.style.display = 'block';
+                    reviewResultEl.innerHTML = `
+                        <div style="border: 1px solid ${decisionBorder}; background: ${decisionBg}; border-radius: 0.75rem; padding: 1rem;">
+                            <p style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin: 0 0 0.75rem;">Kết quả xử lý</p>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <i class="fa-solid ${icon}" style="color: ${decisionColor}; font-size: 1.1rem;"></i>
+                                <span style="font-weight: 700; color: ${decisionColor}; font-size: 0.9rem;">${decisionLabel} khiếu nại</span>
+                            </div>
+                            <p style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;"><b>Thời gian xử lý:</b> Vừa xong</p>
+                            ${note ? `<p style="font-size: 0.75rem; color: #64748b; margin: 0.25rem 0;"><b>Ghi chú:</b> ${note.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''}
+                        </div>`;
+                }
+                loadViolations();
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể xử lý khiếu nại.'));
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Có lỗi xảy ra khi gửi kết quả khiếu nại.');
         }
     };
 
@@ -842,6 +981,54 @@
                 document.getElementById('statRequests').innerText = data.data.requests;
             }
         } catch (err) { console.error(err); }
+
+        // Load Recent Requests widget
+        try {
+            const reqTbody = document.getElementById('homeRecentRequestsTbody');
+            if (reqTbody) {
+                const res = await fetch('/Manager/GetAllRequests');
+                const data = await res.json();
+                if (data.success && data.data.length > 0) {
+                    const pending = data.data.filter(r => r.status === 'Pending' || r.status === 'Chờ duyệt').slice(0, 8);
+                    const display = pending.length > 0 ? pending : data.data.slice(0, 8);
+                    reqTbody.innerHTML = display.map(r => `
+                        <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-800 text-xs">${r.employeeName || 'N/A'}</p>
+                                <p class="text-[11px] text-slate-400">${r.requestType || ''}</p>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${r.status === 'Approved' || r.status === 'Đã duyệt' ? 'bg-green-100 text-green-700' : r.status === 'Rejected' || r.status === 'Từ chối' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${r.status}</span>
+                            </td>
+                        </tr>`).join('');
+                } else {
+                    reqTbody.innerHTML = '<tr><td class="p-4 text-center text-slate-400 text-sm">Không có đơn từ chờ duyệt.</td></tr>';
+                }
+            }
+        } catch (err) { console.error('homeRecentRequests error', err); }
+
+        // Load Recent Violations widget
+        try {
+            const violTbody = document.getElementById('homeRecentViolationsTbody');
+            if (violTbody) {
+                const res = await fetch('/Manager/GetAllViolations');
+                const data = await res.json();
+                if (data.success && data.data.length > 0) {
+                    violTbody.innerHTML = data.data.slice(0, 8).map(v => `
+                        <tr class="border-b border-slate-50 hover:bg-slate-50 transition">
+                            <td class="px-4 py-3">
+                                <p class="font-semibold text-slate-800 text-xs">${v.violationType || 'N/A'}</p>
+                                <p class="text-[11px] text-slate-400">${v.employeeName || v.employeeCode || 'Chưa gán'} • ${new Date(v.detectedAtUtc).toLocaleString('vi-VN')}</p>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${v.status === 'Approved' ? 'bg-green-100 text-green-700' : v.status === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}">${v.status}</span>
+                            </td>
+                        </tr>`).join('');
+                } else {
+                    violTbody.innerHTML = '<tr><td class="p-4 text-center text-slate-400 text-sm">Chưa ghi nhận vi phạm nào.</td></tr>';
+                }
+            }
+        } catch (err) { console.error('homeRecentViolations error', err); }
     };
 
     const loadTasks = async () => {

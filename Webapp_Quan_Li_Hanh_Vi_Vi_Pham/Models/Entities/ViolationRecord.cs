@@ -22,4 +22,6 @@ public class ViolationRecord
     public DateTime? ReviewedAtUtc { get; set; }
     public string? ReviewChannel { get; set; }
     public string? ReviewNote { get; set; }
+    public string? ComplaintReason { get; set; }
+    public DateTime? ComplaintSubmittedAtUtc { get; set; }
 }

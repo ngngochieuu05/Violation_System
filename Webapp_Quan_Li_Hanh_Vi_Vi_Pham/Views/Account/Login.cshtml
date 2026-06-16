@@ -131,9 +131,15 @@
             <div class="relative rounded-2xl overflow-hidden bg-zinc-950/5 aspect-video border border-zinc-200 flex items-center justify-center">
                 <video id="webcam" autoplay muted playsinline class="w-full h-full object-cover transform -scale-x-100"></video>
                 <canvas id="photoCanvas" class="hidden"></canvas>
+
+                <!-- Oval Mask Overlay -->
+                <div class="absolute inset-0 z-10 pointer-events-none backdrop-blur-md bg-zinc-900/30" style="mask-image: radial-gradient(ellipse 30% 45% at center, transparent 99%, black 100%); -webkit-mask-image: radial-gradient(ellipse 30% 45% at center, transparent 99%, black 100%);"></div>
+                <div class="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+                    <div class="w-[60%] h-[90%] rounded-[50%] border-2 border-dashed border-red-500/60 shadow-[0_0_0_9999px_rgba(0,0,0,0.1)]"></div>
+                </div>
                 
                 <!-- Scanning animation overlay -->
-                <div id="scanLine" class="absolute w-full h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_#dc2626] top-0 left-0 hidden"></div>
+                <div id="scanLine" class="absolute z-20 w-full h-[2px] bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_#dc2626] top-0 left-0 hidden"></div>
                 
                 <!-- No-camera status message -->
                 <div id="cameraStatus" class="absolute text-center p-4">

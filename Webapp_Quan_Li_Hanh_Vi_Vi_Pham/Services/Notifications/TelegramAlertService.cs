@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
@@ -720,14 +720,14 @@ public class TelegramAlertService : ITelegramAlertService
 
         if (!string.IsNullOrWhiteSpace(violation.EvidenceUrl))
         {
-            return new TelegramSendResult
+            _logger.LogWarning("Không tìm thấy ảnh minh chứng tại '{EvidencePath}' từ EvidenceUrl '{EvidenceUrl}'. Đang gửi cảnh báo dạng text.", evidencePath, violation.EvidenceUrl);
+            var result = await SendMessageCoreAsync(chatId, message, replyMarkup, cancellationToken);
+            if (result.Success)
             {
-                Success = false,
-                ChatId = chatId,
-                Message = message,
-                ResponseSummary = $"Không tìm thấy ảnh minh chứng tại '{evidencePath}' từ EvidenceUrl '{violation.EvidenceUrl}'.",
-                DeliveryMode = "missing-photo"
-            };
+                result.ResponseSummary += " (Ảnh minh chứng bị lỗi hoặc chưa lưu thành công trên máy chủ)";
+                result.DeliveryMode = "message-missing-photo";
+            }
+            return result;
         }
 
         return await SendMessageCoreAsync(chatId, message, replyMarkup, cancellationToken);

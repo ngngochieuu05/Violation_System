@@ -234,7 +234,9 @@ public partial class ManagerController : Controller
                 v.ReviewedBy,
                 v.ReviewedAtUtc,
                 v.ReviewChannel,
-                v.ReviewNote
+                v.ReviewNote,
+                v.ComplaintReason,
+                v.ComplaintSubmittedAtUtc
             })
             .ToList();
 
@@ -287,6 +289,90 @@ public partial class ManagerController : Controller
             message = result.ResponseSummary,
             chatId = result.ChatId
         });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReviewComplaint([FromBody] ReviewComplaintRequest req, CancellationToken cancellationToken)
+    {
+        if (req.ViolationId == Guid.Empty)
+            return Json(new { success = false, message = "Mã vi phạm không hợp lệ." });
+
+        var violation = await _context.ViolationRecords
+            .FirstOrDefaultAsync(v => v.Id == req.ViolationId, cancellationToken);
+
+        if (violation == null)
+            return Json(new { success = false, message = "Không tìm thấy vi phạm." });
+
+        if (string.IsNullOrWhiteSpace(violation.ComplaintReason))
+            return Json(new { success = false, message = "Vi phạm này chưa có khiếu nại." });
+
+        var reviewer = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Manager";
+        var decision = req.Decision ?? "Rejected";
+
+        violation.ReviewedBy = reviewer;
+        violation.ReviewedAtUtc = DateTime.UtcNow;
+        violation.ReviewChannel = "ComplaintReview";
+        violation.ReviewNote = req.ReviewNote;
+
+        if (string.Equals(decision, "Accepted", StringComparison.OrdinalIgnoreCase))
+            violation.Status = "Approved";
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTime.UtcNow,
+            Username = reviewer,
+            Action = "Xử lý khiếu nại",
+            Details = $"Manager {reviewer} {(decision == "Accepted" ? "chấp nhận" : "từ chối")} khiếu nại vi phạm {violation.TrackingId}. Ghi chú: {req.ReviewNote ?? "(trống)"}",
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+            Status = "Thành công"
+        });
+
+        if (!string.IsNullOrWhiteSpace(violation.EmployeeCode))
+        {
+            var employee = await _context.Users.FirstOrDefaultAsync(
+                u => u.EmployeeCode == violation.EmployeeCode || u.Username == violation.EmployeeCode,
+                cancellationToken);
+
+            if (employee != null)
+            {
+                var decisionVi = decision == "Accepted" ? "Chấp nhận" : "Từ chối";
+                var employeeName = string.IsNullOrWhiteSpace(employee.FullName) ? employee.Username : employee.FullName;
+
+                _context.EmployeeMessages.Add(new EmployeeMessage
+                {
+                    EmployeeUserId = employee.Id,
+                    EmployeeUsername = employee.Username,
+                    EmployeeName = employeeName,
+                    Channel = "violations",
+                    SenderRole = "Manager",
+                    SenderName = reviewer,
+                    Title = $"Kết quả khiếu nại: {violation.TrackingId}",
+                    Content =
+                        $"Mã vi phạm: {violation.TrackingId}\n" +
+                        $"Kết quả: {decisionVi}\n" +
+                        $"Người xử lý: {reviewer}\n" +
+                        $"Ghi chú: {req.ReviewNote ?? "(không có ghi chú)"}",
+                    SentAt = DateTime.UtcNow.AddHours(7),
+                    IsRead = false
+                });
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await _chatHub.Clients.Group($"user:{employee.Id}").SendAsync(
+                    "ReceiveNotification",
+                    $"Khiếu nại vi phạm {violation.TrackingId} của bạn đã được {decisionVi.ToLower()}.");
+            }
+            else
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return Json(new { success = true, message = $"Đã {(decision == "Accepted" ? "chấp nhận" : "từ chối")} khiếu nại thành công." });
     }
 
     [HttpPost]
@@ -1274,4 +1360,11 @@ public class AddEmployeeRequest
     public string? EmployeeCode { get; set; }
     public string? Username { get; set; }
     public string? Password { get; set; }
+}
+
+public sealed class ReviewComplaintRequest
+{
+    public Guid ViolationId { get; set; }
+    public string? Decision { get; set; }   // "Accepted" | "Rejected"
+    public string? ReviewNote { get; set; }
 }
