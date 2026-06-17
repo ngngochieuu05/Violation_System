@@ -1,7 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.ML.Inference;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Entities;
+using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Models.Manager;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Services.Notifications;
 using Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Utilities;
 
@@ -246,6 +248,7 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ViolationDbContext>();
         var telegramService = scope.ServiceProvider.GetRequiredService<ITelegramAlertService>();
+        var hubContext = scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.SignalR.IHubContext<Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs.InternalChatHub>>();
         var results = new List<ViolationAlertResult>(alertsToPublish.Count);
 
         foreach (var alert in alertsToPublish)
@@ -274,6 +277,21 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
                 Details = alert.Message,
                 IpAddress = "127.0.0.1",
                 Status = "Cảnh báo"
+            });
+
+            // Gửi thông báo đến Manager's menudrop
+            dbContext.EmployeeMessages.Add(new EmployeeMessage
+            {
+                EmployeeUserId = Guid.Empty,
+                EmployeeUsername = "System",
+                EmployeeName = "Hệ thống giám sát",
+                Channel = "violations",
+                SenderRole = "System",
+                SenderName = "Hệ thống giám sát",
+                Title = "Phát hiện vi phạm mới",
+                Content = $"Hệ thống vừa phát hiện vi phạm: {alert.ViolationType} (TrackID: {alert.TrackId}). Vui lòng vào mục Giám sát để xem chi tiết.",
+                SentAt = alert.DetectedAtUtc,
+                IsRead = false
             });
 
             results.Add(new ViolationAlertResult
@@ -310,6 +328,15 @@ public class ViolationMonitoringOrchestrator : IViolationMonitoringOrchestrator
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to send Telegram alert for {TrackId}", result.TrackId);
+            }
+
+            try
+            {
+                await hubContext.Clients.Group(Webapp_Quan_Li_Hanh_Vi_Vi_Pham.Hubs.InternalChatHub.BuildRoleGroup("Manager")).SendAsync("ReceiveNotification", $"Hệ thống Giám sát AI vừa phát hiện 1 vi phạm mới ({result.ViolationType}). Nhấn để xem chi tiết.", cancellationToken: cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send SignalR notification to Manager for {TrackId}", result.TrackId);
             }
         }
 

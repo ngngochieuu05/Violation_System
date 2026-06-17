@@ -308,6 +308,7 @@ public partial class ManagerController : Controller
 
         var reviewer = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Manager";
         var decision = req.Decision ?? "Rejected";
+        var oldStatus = violation.Status;
 
         violation.ReviewedBy = reviewer;
         violation.ReviewedAtUtc = DateTime.UtcNow;
@@ -315,7 +316,32 @@ public partial class ManagerController : Controller
         violation.ReviewNote = req.ReviewNote;
 
         if (string.Equals(decision, "Accepted", StringComparison.OrdinalIgnoreCase))
-            violation.Status = "Approved";
+            violation.Status = "Rejected"; // Cập nhật đúng logic: Chấp nhận khiếu nại -> huỷ vi phạm
+        else
+            violation.Status = "Approved"; // Từ chối khiếu nại -> giữ nguyên vi phạm (đã duyệt)
+
+        // Đồng bộ lương
+        if (!string.IsNullOrWhiteSpace(violation.EmployeeCode))
+        {
+            var employee = await _context.Users.FirstOrDefaultAsync(u => u.EmployeeCode == violation.EmployeeCode || u.Username == violation.EmployeeCode, cancellationToken);
+            if (employee != null)
+            {
+                var payroll = await _context.PayrollRecords.FirstOrDefaultAsync(p => p.EmployeeId == employee.Id && p.Month == violation.DetectedAtUtc.Month && p.Year == violation.DetectedAtUtc.Year, cancellationToken);
+                if (payroll != null)
+                {
+                    if (violation.Status == "Approved" && oldStatus != "Approved")
+                    {
+                        payroll.ViolationDeduction += 50000;
+                        payroll.NetSalary -= 50000;
+                    }
+                    else if (violation.Status != "Approved" && oldStatus == "Approved")
+                    {
+                        payroll.ViolationDeduction -= 50000;
+                        payroll.NetSalary += 50000;
+                    }
+                }
+            }
+        }
 
         _context.AuditLogs.Add(new AuditLog
         {
@@ -353,7 +379,7 @@ public partial class ManagerController : Controller
                         $"Kết quả: {decisionVi}\n" +
                         $"Người xử lý: {reviewer}\n" +
                         $"Ghi chú: {req.ReviewNote ?? "(không có ghi chú)"}",
-                    SentAt = DateTime.UtcNow.AddHours(7),
+                    SentAt = DateTime.UtcNow,
                     IsRead = false
                 });
 
@@ -494,11 +520,31 @@ public partial class ManagerController : Controller
                 : employee.Username;
         }
 
+        var oldStatus = violation.Status;
         violation.Status = status;
         violation.ReviewedBy = reviewer;
         violation.ReviewedAtUtc = DateTime.UtcNow;
         violation.ReviewChannel = "ManagerDashboard";
         violation.ReviewNote = note;
+
+        // Đồng bộ với bảng lương
+        if (employee != null)
+        {
+            var payroll = await _context.PayrollRecords.FirstOrDefaultAsync(p => p.EmployeeId == employee.Id && p.Month == violation.DetectedAtUtc.Month && p.Year == violation.DetectedAtUtc.Year, cancellationToken);
+            if (payroll != null)
+            {
+                if (status == "Approved" && oldStatus != "Approved")
+                {
+                    payroll.ViolationDeduction += 50000;
+                    payroll.NetSalary -= 50000;
+                }
+                else if (status != "Approved" && oldStatus == "Approved")
+                {
+                    payroll.ViolationDeduction -= 50000;
+                    payroll.NetSalary += 50000;
+                }
+            }
+        }
 
         _context.AuditLogs.Add(new AuditLog
         {
@@ -651,12 +697,11 @@ public partial class ManagerController : Controller
             
             if (existing != null) continue;
 
-            // Tính số lượng vi phạm trong tháng
-            var violations = await _context.ViolationRecords
-                .Where(v => v.EmployeeCode == emp.EmployeeCode && v.DetectedAtUtc.Month == month && v.DetectedAtUtc.Year == year)
-                .ToListAsync(cancellationToken);
+            // Tính số lượng vi phạm đã duyệt (Approved) trong tháng
+            var violationsCount = await _context.ViolationRecords
+                .CountAsync(v => v.EmployeeCode == emp.EmployeeCode && v.Status == "Approved" && v.DetectedAtUtc.Month == month && v.DetectedAtUtc.Year == year, cancellationToken);
             
-            decimal deduction = violations.Count * 50000; // Mỗi vi phạm trừ 50k
+            decimal deduction = violationsCount * 50000; // Mỗi vi phạm trừ 50k
             decimal kpiBonus = 1000000; // Mặc định thưởng 1M, Manager có thể sửa sau
 
             var payroll = new PayrollRecord
@@ -1327,7 +1372,7 @@ public partial class ManagerController : Controller
                 $"Trạng thái: {violation.Status}\n" +
                 $"{evidenceLine}\n" +
                 $"Ghi chú quản lý: {violation.ReviewNote ?? "Không có"}",
-            SentAt = DateTime.UtcNow.AddHours(7),
+            SentAt = DateTime.UtcNow,
             IsRead = false
         };
     }

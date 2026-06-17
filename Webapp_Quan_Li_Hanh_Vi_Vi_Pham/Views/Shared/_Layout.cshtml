@@ -106,13 +106,17 @@
                                 
                                 <div data-dropdown-menu class="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50">
                                     <div class="px-4 py-3 border-b border-slate-100">
+                                        @{
+                                            var roleName = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                                            var displayRole = roleName == "Employee" ? "Nhân viên" : (roleName == "Manager" ? "Quản lý" : (roleName == "Admin" ? "Quản trị viên" : roleName));
+                                        }
                                         <p class="text-sm font-semibold text-slate-900 truncate" data-profile-name>@User.FindFirst("FullName")?.Value</p>
-                                        <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                                        <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@displayRole</p>
                                     </div>
                                     <div class="py-2">
                                         @if (User.IsInRole("Employee"))
                                         {
-                                            <a href="/Employee?tab=profile" data-tab-trigger="profile" class="block px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"><i class="fa-solid fa-id-badge mr-3 w-4 text-center"></i>Profile</a>
+                                            <a href="/Employee?tab=profile" data-tab-trigger="profile" class="block px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors"><i class="fa-solid fa-id-badge mr-3 w-4 text-center"></i>Hồ sơ cá nhân</a>
                                         }
                                     </div>
                                     <div class="border-t border-slate-100 py-2">

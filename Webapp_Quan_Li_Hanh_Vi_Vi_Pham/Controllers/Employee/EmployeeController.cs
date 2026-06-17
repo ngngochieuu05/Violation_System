@@ -1044,6 +1044,67 @@ public class EmployeeController : Controller
         return Json(new { success = true });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> SubmitComplaint([FromBody] SubmitComplaintRequest req, CancellationToken cancellationToken)
+    {
+        var user = await GetCurrentUserAsync(cancellationToken);
+        if (user == null)
+        {
+            return Json(new { success = false, message = "Không xác định được tài khoản." });
+        }
+
+        if (string.IsNullOrWhiteSpace(req.ViolationId) || string.IsNullOrWhiteSpace(req.Reason))
+        {
+            return Json(new { success = false, message = "Vui lòng nhập lý do khiếu nại." });
+        }
+
+        if (!Guid.TryParse(req.ViolationId, out var violationId))
+        {
+            return Json(new { success = false, message = "Mã vi phạm không hợp lệ." });
+        }
+
+        var violation = await _context.ViolationRecords.FirstOrDefaultAsync(v => v.Id == violationId, cancellationToken);
+        if (violation == null)
+        {
+            return Json(new { success = false, message = "Không tìm thấy vi phạm." });
+        }
+
+        violation.ComplaintReason = req.Reason.Trim();
+        violation.ComplaintSubmittedAtUtc = DateTime.UtcNow;
+
+        var message = new EmployeeMessage
+        {
+            EmployeeUserId = user.Id,
+            EmployeeUsername = user.Username,
+            EmployeeName = user.FullName,
+            Channel = "violations",
+            SenderRole = "Employee",
+            SenderName = user.FullName,
+            Title = $"Khiếu nại vi phạm: {violation.TrackingId}",
+            Content = $"Nhân viên: {user.EmployeeCode}_{user.FullName} - Mã vi phạm: {violation.TrackingId} - Loại vi phạm: {violation.ViolationType} - Lý do khiếu nại: {req.Reason}",
+            SentAt = DateTime.UtcNow,
+            IsRead = false
+        };
+
+        _context.EmployeeMessages.Add(message);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        await _chatHub.Clients.Group("role:Manager").SendAsync("ReceiveNotification", new
+        {
+            title = "Khiếu nại mới",
+            message = $"Nhân viên {user.FullName} vừa khiếu nại vi phạm.",
+            type = "violation",
+            url = "?tab=violations"
+        }, cancellationToken: cancellationToken);
+
+        return Json(new { success = true });
+    }
+
+    public sealed class SubmitComplaintRequest
+    {
+        public string ViolationId { get; set; } = string.Empty;
+        public string Reason { get; set; } = string.Empty;
+    }
 }
 
 

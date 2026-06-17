@@ -822,7 +822,7 @@
 
         thread.innerHTML = managerMessages.map(m => {
             const isSelf = m.senderRole === "Manager";
-            const sentAtFormatted = new Date(m.sentAt).toLocaleTimeString('vi-VN');
+            const sentAtFormatted = m.sentAt ? new Date(m.sentAt + (!m.sentAt.endsWith('Z') ? 'Z' : '')).toLocaleTimeString('vi-VN') : '';
             const editedHtml = m.editedAtUtc && !m.isRevoked ? '<span class="text-[10px] text-slate-400 italic ml-1">(đã chỉnh sửa)</span>' : '';
             
             if (isSelf) {

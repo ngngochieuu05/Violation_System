@@ -96,7 +96,7 @@
     </aside>
 
     <div class="dashboard-main relative overflow-x-hidden overflow-y-visible bg-[#F5F7FA]">
-        <header class="dashboard-header relative z-10 overflow-visible border-b border-slate-200 bg-white shadow-sm">
+        <header class="dashboard-header relative z-[100] overflow-visible border-b border-slate-200 bg-white shadow-sm">
             <div>
                 <h2 class="font-outfit text-xl font-bold text-slate-900">Manager Dashboard</h2>
             </div>
@@ -105,7 +105,7 @@
                 <div class="relative ml-2" id="dashboardNotificationDropdown">
                     <button type="button" class="relative text-slate-500 transition-all duration-200 hover:-translate-y-0.5 hover:text-red-600 active:scale-95 focus:outline-none" id="dashboardNotificationTrigger">
                         <i class="fa-regular fa-bell text-xl"></i>
-                        <span data-notification-unread-badge class="absolute right-0 top-0 hidden h-2 w-2">
+                        <span data-notification-unread-badge class="absolute right-0 top-0 hidden flex h-2 w-2">
                             <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
                             <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
                         </span>
@@ -132,8 +132,12 @@
 
                     <div id="dashboardDropdownMenu" class="absolute z-50 mt-2 hidden w-48 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200" style="right: 0;">
                         <div class="border-b border-slate-100 px-4 py-3">
+                            @{
+                                var roleName = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                                var displayRole = roleName == "Employee" ? "Nhân viên" : (roleName == "Manager" ? "Quản lý" : (roleName == "Admin" ? "Quản trị viên" : roleName));
+                            }
                             <p class="truncate text-sm font-semibold text-slate-900" data-profile-name>@User.FindFirst("FullName")?.Value</p>
-                            <p class="truncate text-xs font-bold uppercase tracking-wider text-slate-500">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                            <p class="truncate text-xs font-bold uppercase tracking-wider text-slate-500">@displayRole</p>
                         </div>
                         <div class="border-t border-slate-100 py-1">
                             <a href="/Account/Logout" class="flex w-full items-center px-4 py-2 text-sm font-medium text-red-600 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-50 hover:text-red-700 hover:shadow-md active:scale-95">

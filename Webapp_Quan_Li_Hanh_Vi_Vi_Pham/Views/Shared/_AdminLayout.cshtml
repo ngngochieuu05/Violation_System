@@ -189,8 +189,12 @@
                             
                             <div id="dashboardDropdownMenu" class="absolute mt-2 w-52 origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 hidden z-50" style="right: 0;">
                                 <div class="px-4 py-3 border-b border-slate-100">
+                                    @{
+                                        var roleName = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                                        var displayRole = roleName == "Employee" ? "Nhân viên" : (roleName == "Manager" ? "Quản lý" : (roleName == "Admin" ? "Quản trị viên" : roleName));
+                                    }
                                     <p class="text-sm font-semibold text-slate-900 truncate">@User.FindFirst("FullName")?.Value</p>
-                                    <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</p>
+                                    <p class="text-xs text-slate-500 truncate uppercase font-bold tracking-wider">@displayRole</p>
                                 </div>
                                 <div class="py-1">
                                     <button type="button" id="adminProfileModalTrigger" class="flex w-full items-center text-left px-4 py-2 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-all duration-200 hover:-translate-y-0.5 active:scale-95">

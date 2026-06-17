@@ -173,7 +173,7 @@ public partial class ManagerController
             SenderName = manager.FullName,
             Title = string.IsNullOrWhiteSpace(req.Title) ? "Tin nhắn từ Quản lý" : req.Title,
             Content = req.Content,
-            SentAt = DateTime.UtcNow.AddHours(7),
+            SentAt = DateTime.UtcNow,
             IsRead = false
         };
 
@@ -306,7 +306,7 @@ public partial class ManagerController
         // Messages SENT TO manager
         var messages = await _context.EmployeeMessages
             .Where(m =>
-                m.SenderRole == "Employee"
+                (m.SenderRole == "Employee" || m.SenderRole == "System")
                 && (m.Channel == manager.Username || m.Channel == "violations"))
             .OrderByDescending(m => m.SentAt)
             .Take(10)

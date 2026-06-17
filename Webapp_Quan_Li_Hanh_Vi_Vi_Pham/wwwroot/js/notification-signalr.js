@@ -14,15 +14,16 @@ document.addEventListener("DOMContentLoaded", function () {
     connection.on("ReceiveNotification", function (message) {
         updateBadges();
         reloadChatPanels();
-        showToast(message);
     });
 
     connection.on("MessagesChanged", function (payload) {
         if (payload && payload.channel === "violations" && typeof window.loadMyViolations === "function") {
             window.loadMyViolations();
+            updateBadges();
             return;
         }
 
+        updateBadges();
         reloadChatPanels(payload);
     });
 
@@ -58,31 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    function showToast(message) {
-        const toast = document.createElement('div');
-        toast.className = 'fixed bottom-4 right-4 bg-white border border-red-100 shadow-xl rounded-xl p-4 z-[9999] flex items-start gap-3 transform transition-all duration-300 translate-y-full opacity-0';
-        toast.innerHTML = `
-            <div class="text-red-600 mt-0.5"><i class="fa-solid fa-bell"></i></div>
-            <div class="flex-1 cursor-pointer" onclick="window.navigateToTabFromMessage('${message}')">
-                <h4 class="text-sm font-bold text-zinc-900">Thông báo mới</h4>
-                <p class="text-xs text-zinc-600 mt-1">${message}</p>
-            </div>
-            <button class="text-zinc-400 hover:text-zinc-600 ml-2 focus:outline-none" onclick="this.parentElement.remove()">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        `;
-        document.body.appendChild(toast);
-        
-        requestAnimationFrame(() => {
-            toast.classList.remove('translate-y-full', 'opacity-0');
-        });
 
-        setTimeout(() => {
-            toast.classList.add('translate-y-full', 'opacity-0');
-            setTimeout(() => { if (toast.parentElement) toast.remove(); }, 300);
-        }, 5000);
-    }
-    
     // Inject floating bell for Manager/Admin if they don't have dashboardNotificationDropdown
     if (!document.getElementById('dashboardNotificationDropdown')) {
         const floatingBell = document.createElement('div');
