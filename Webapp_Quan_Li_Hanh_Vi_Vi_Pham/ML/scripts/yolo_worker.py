@@ -1,6 +1,5 @@
 import argparse
 import base64
-import io
 import json
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
@@ -14,7 +13,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 
 
 def resize_frame(frame, max_side=960):
@@ -110,16 +108,97 @@ def encode_jpeg_base64(frame_bgr):
     return base64.b64encode(encoded.tobytes()).decode("utf-8")
 
 
+def normalize_mojibake(value):
+    if not isinstance(value, str) or not value:
+        return value
+
+    try:
+        repaired = value.encode("latin1", errors="ignore").decode("utf-8", errors="ignore")
+        return repaired or value
+    except Exception:
+        return value
+
+
+def bbox_iou(box_a, box_b):
+    ax1, ay1, ax2, ay2 = box_a
+    bx1, by1, bx2, by2 = box_b
+    inter_x1 = max(ax1, bx1)
+    inter_y1 = max(ay1, by1)
+    inter_x2 = min(ax2, bx2)
+    inter_y2 = min(ay2, by2)
+    if inter_x2 <= inter_x1 or inter_y2 <= inter_y1:
+        return 0.0
+    inter_area = (inter_x2 - inter_x1) * (inter_y2 - inter_y1)
+    area_a = max(1.0, (ax2 - ax1) * (ay2 - ay1))
+    area_b = max(1.0, (bx2 - bx1) * (by2 - by1))
+    return inter_area / float(area_a + area_b - inter_area)
+
+
 def build_detection(model_type, class_name, confidence, bbox, model_name):
     x1, y1, x2, y2 = bbox
+    normalized_class_name = normalize_mojibake(str(class_name))
+    normalized_model_name = normalize_mojibake(str(model_name)) if model_name else ""
     return {
         "modelType": model_type,
-        "label": class_name,
-        "displayLabel": f"{model_name}: {class_name}" if model_name else class_name,
+        "label": normalized_class_name,
+        "displayLabel": f"{normalized_model_name}: {normalized_class_name}" if normalized_model_name else normalized_class_name,
         "confidence": round(float(confidence), 4),
         "boundingBox": f"x:{int(x1)},y:{int(y1)},w:{int(x2 - x1)},h:{int(y2 - y1)}",
         "processedAtUtc": datetime.now(timezone.utc).isoformat(),
     }
+
+
+class StreamTracker:
+    def __init__(self, iou_threshold=0.4):
+        self.iou_threshold = iou_threshold
+        self.entries = []
+        self.next_id = 1
+
+    def assign(self, detections):
+        remaining_entries = list(self.entries)
+        updated_entries = []
+        for detection in detections:
+            values = {}
+            for part in detection["boundingBox"].split(","):
+                key, raw = part.split(":", 1)
+                values[key] = int(raw)
+
+            current_box = (
+                values.get("x", 0),
+                values.get("y", 0),
+                values.get("x", 0) + values.get("w", 1),
+                values.get("y", 0) + values.get("h", 1),
+            )
+            normalized_label = str(detection.get("label", "")).strip().lower()
+
+            best_index = -1
+            best_iou = 0.0
+            for index, entry in enumerate(remaining_entries):
+                if entry["label"] != normalized_label:
+                    continue
+                current_iou = bbox_iou(entry["box"], current_box)
+                if current_iou >= self.iou_threshold and current_iou > best_iou:
+                    best_iou = current_iou
+                    best_index = index
+
+            if best_index >= 0:
+                matched = remaining_entries.pop(best_index)
+                track_id = matched["trackId"]
+            else:
+                track_id = f"T{self.next_id:04d}"
+                self.next_id += 1
+
+            detection["trackId"] = track_id
+            updated_entries.append(
+                {
+                    "trackId": track_id,
+                    "label": normalized_label,
+                    "box": current_box,
+                }
+            )
+
+        self.entries = updated_entries
+        return detections
 
 
 def resolve_device(device_mode):
@@ -141,18 +220,25 @@ def maybe_enable_half(use_half, resolved_device):
     return bool(use_half) and resolved_device != "cpu"
 
 
+def resolve_detection_color(detection):
+    normalized_label = str(detection.get("label", "")).strip().lower()
+    if normalized_label == "person":
+        return (255, 191, 0)
+    if normalized_label == "cigarette":
+        return (249, 115, 22)
+    if normalized_label in {"un-occupied_desk", "empty-chair", "non-human", "empty_seat"}:
+        return (16, 185, 129)
+
+    model_type = str(detection.get("modelType", "")).strip()
+    return (249, 115, 22) if model_type == "YoloSmoking" else (168, 85, 247)
+
+
 def draw_detections(frame_bgr, detections, model_name, no_detection_text):
-    rgb_frame = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    image = Image.fromarray(rgb_frame)
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default()
-
-    accent = (249, 115, 22) if any(item["modelType"] == "YoloSmoking" for item in detections) else (16, 185, 129)
-
     if not detections:
-        draw.rectangle((16, 16, 500, 46), fill=(15, 23, 42))
-        draw.text((24, 22), no_detection_text, fill=(255, 255, 255), font=font)
-        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        display_text = normalize_mojibake(no_detection_text) or "Đang giám sát..."
+        cv2.rectangle(frame_bgr, (16, 16), (500, 46), (42, 23, 15), -1)
+        cv2.putText(frame_bgr, display_text, (24, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+        return frame_bgr
 
     for detection in detections:
         values = {}
@@ -167,18 +253,25 @@ def draw_detections(frame_bgr, detections, model_name, no_detection_text):
         x2 = x1 + width
         y2 = y1 + height
 
-        caption = f"{detection['displayLabel']} {float(detection['confidence']):.2f}"
-        text_bbox = draw.textbbox((0, 0), caption, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        text_height = text_bbox[3] - text_bbox[1]
-        text_y = max(4, y1 - text_height - 10)
+        caption = f"{normalize_mojibake(detection['displayLabel'])} {float(detection['confidence']):.2f}"
+        if detection.get("trackId"):
+            caption = f"{caption} #{detection['trackId']}"
+        (text_width, text_height), baseline = cv2.getTextSize(caption, cv2.FONT_HERSHEY_SIMPLEX, 0.48, 1)
+        text_y = max(18, y1 - 8)
+        accent = resolve_detection_color(detection)
 
-        draw.rectangle((x1, y1, x2, y2), outline=accent, width=3)
-        draw.rectangle((x1, text_y, x1 + text_width + 12, text_y + text_height + 8), fill=accent)
-        draw.text((x1 + 6, text_y + 4), caption, fill=(255, 255, 255), font=font)
+        cv2.rectangle(frame_bgr, (x1, y1), (x2, y2), accent, 2)
+        cv2.rectangle(
+            frame_bgr,
+            (x1, text_y - text_height - baseline - 6),
+            (x1 + text_width + 10, text_y + 4),
+            accent,
+            -1,
+        )
+        cv2.putText(frame_bgr, caption, (x1 + 4, text_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
 
-    draw.text((18, 18), model_name or "YOLO Monitoring", fill=(255, 255, 255), font=font)
-    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    cv2.putText(frame_bgr, model_name or "YOLO Monitoring", (18, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    return frame_bgr
 
 
 class YoloWorker:
@@ -191,6 +284,7 @@ class YoloWorker:
         self.model_load_ms = 0
         self.resolved_device, self.gpu_available = resolve_device(device_mode)
         self.half = maybe_enable_half(use_half, self.resolved_device)
+        self.tracker = StreamTracker()
         self._load_model()
 
     def _load_model(self):
@@ -275,6 +369,8 @@ class YoloWorker:
                             label,
                         )
                     )
+
+            detections = self.tracker.assign(detections)
 
             annotated_frame = draw_detections(
                 frame.copy(),

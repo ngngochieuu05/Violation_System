@@ -262,6 +262,20 @@ public static class DbSeeder
         }
 
         context.SaveChanges();
+
+        try
+        {
+            context.Database.ExecuteSqlRaw(
+                """
+                UPDATE [ViolationRecords]
+                SET [CameraLocation] = N'Camera giám sát mặc định'
+                WHERE [CameraLocation] = 'Camera giÃ¡m sÃ¡t máº·c Ä‘á»‹nh' OR [CameraLocation] = N'Camera giÃ¡m sÃ¡t máº·c Ä‘á»‹nh';
+                """);
+        }
+        catch
+        {
+            // Ignore if tables are not fully ready
+        }
     }
 
     private static void EnsureUserColumns(ViolationDbContext context)
@@ -378,6 +392,22 @@ public static class DbSeeder
             IF COL_LENGTH('ViolationRecords', 'TelegramLastError') IS NULL
             BEGIN
                 ALTER TABLE [ViolationRecords] ADD [TelegramLastError] nvarchar(1024) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ComplaintReason') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ComplaintReason] nvarchar(max) NULL;
+            END
+            """);
+
+        context.Database.ExecuteSqlRaw(
+            """
+            IF COL_LENGTH('ViolationRecords', 'ComplaintSubmittedAtUtc') IS NULL
+            BEGIN
+                ALTER TABLE [ViolationRecords] ADD [ComplaintSubmittedAtUtc] datetime2 NULL;
             END
             """);
     }
@@ -533,23 +563,30 @@ public static class DbSeeder
 
         context.Database.ExecuteSqlRaw(
             """
-            IF OBJECT_ID('dbo.PayrollRecords', 'U') IS NULL
-            BEGIN
-                CREATE TABLE [dbo].[PayrollRecords]
-                (
-                    [Id] uniqueidentifier NOT NULL PRIMARY KEY,
-                    [EmployeeId] uniqueidentifier NOT NULL,
-                    [Month] int NOT NULL,
-                    [Year] int NOT NULL,
-                    [BaseSalary] decimal(18,2) NOT NULL,
-                    [KpiBonus] decimal(18,2) NOT NULL,
-                    [ViolationDeduction] decimal(18,2) NOT NULL,
-                    [NetSalary] decimal(18,2) NOT NULL,
-                    [Status] nvarchar(64) NOT NULL DEFAULT('Chưa thanh toán'),
-                    [CreatedAt] datetime2 NOT NULL,
-                    [PaidAt] datetime2 NULL
-                );
-            END
+                  IF OBJECT_ID('dbo.PayrollRecords', 'U') IS NULL
+      BEGIN
+          CREATE TABLE [dbo].[PayrollRecords]
+          (
+              [Id] uniqueidentifier NOT NULL PRIMARY KEY,
+              [EmployeeId] uniqueidentifier NOT NULL,
+              [Month] int NOT NULL,
+              [Year] int NOT NULL,
+              [StandardWorkingDays] int NOT NULL DEFAULT(22),
+              [ActualWorkingDays] int NOT NULL DEFAULT(0),
+              [SalaryPerDay] decimal(18,2) NOT NULL DEFAULT(0),
+              [BaseSalary] decimal(18,2) NOT NULL,
+              [KpiBonus] decimal(18,2) NOT NULL,
+              [ViolationDeduction] decimal(18,2) NOT NULL,
+              [NetSalary] decimal(18,2) NOT NULL,
+              [Status] nvarchar(64) NOT NULL DEFAULT('Chua thanh toán'),
+              [CreatedAt] datetime2 NOT NULL,
+              [PaidAt] datetime2 NULL
+          );
+      END
+      
+      IF COL_LENGTH('PayrollRecords', 'StandardWorkingDays') IS NULL ALTER TABLE [PayrollRecords] ADD [StandardWorkingDays] int NOT NULL DEFAULT(22);
+      IF COL_LENGTH('PayrollRecords', 'ActualWorkingDays') IS NULL ALTER TABLE [PayrollRecords] ADD [ActualWorkingDays] int NOT NULL DEFAULT(0);
+      IF COL_LENGTH('PayrollRecords', 'SalaryPerDay') IS NULL ALTER TABLE [PayrollRecords] ADD [SalaryPerDay] decimal(18,2) NOT NULL DEFAULT(0);
             """);
 
         context.Database.ExecuteSqlRaw(

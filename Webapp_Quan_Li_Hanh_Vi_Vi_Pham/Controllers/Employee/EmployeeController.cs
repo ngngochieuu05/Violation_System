@@ -58,8 +58,8 @@ public class EmployeeController : Controller
                 user.Role,
                 hasPayrollPin = !string.IsNullOrEmpty(user.PayrollPin),
                 avatarUrl = string.IsNullOrWhiteSpace(user.AvatarPath)
-                    ? null
-                    : $"{user.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}"
+                ? null
+                : (user.AvatarPath.StartsWith("/") ? $"{user.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}" : $"/{user.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}")
             }
         });
     }
@@ -397,11 +397,71 @@ public class EmployeeController : Controller
                 v.ReviewChannel,
                 v.ReviewedBy,
                 v.ReviewedAtUtc,
-                v.ReviewNote
+                v.ReviewNote,
+                HasEvidenceImage = !string.IsNullOrWhiteSpace(v.EvidenceUrl)
             })
             .ToListAsync(cancellationToken);
 
         return Json(new { success = true, data = violations });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetViolationEvidence(Guid id, CancellationToken cancellationToken)
+    {
+        var user = await GetCurrentUserAsync(cancellationToken);
+        if (user == null)
+        {
+            return Json(new { success = false, message = "Không xác định được tài khoản." });
+        }
+
+        var violation = await _context.ViolationRecords
+            .AsNoTracking()
+            .FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
+
+        if (violation == null)
+        {
+            return Json(new { success = false, message = "Không tìm thấy vi phạm." });
+        }
+
+        if (violation.EmployeeCode != user.EmployeeCode && violation.EmployeeCode != user.Username)
+        {
+            return Json(new { success = false, message = "Bạn không có quyền truy cập ảnh minh chứng của vi phạm này." });
+        }
+
+        var evidenceImageDataUrl = BuildEvidenceImageDataUrl(violation.EvidenceUrl);
+        if (string.IsNullOrWhiteSpace(evidenceImageDataUrl))
+        {
+            return Json(new { success = false, message = "Không tìm thấy ảnh minh chứng." });
+        }
+
+        return Json(new { success = true, data = new { evidenceImageDataUrl } });
+    }
+
+    private string BuildEvidenceImageDataUrl(string? evidenceUrl)
+    {
+        if (string.IsNullOrWhiteSpace(evidenceUrl) || string.IsNullOrWhiteSpace(_environment.WebRootPath))
+        {
+            return string.Empty;
+        }
+
+        var relativePath = evidenceUrl.TrimStart('/', '\\').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(_environment.WebRootPath, relativePath));
+        var webRoot = Path.GetFullPath(_environment.WebRootPath);
+        if (!fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(fullPath))
+        {
+            return string.Empty;
+        }
+
+        var extension = Path.GetExtension(fullPath).ToLowerInvariant();
+        var contentType = extension switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            _ => "image/jpeg"
+        };
+
+        var bytes = System.IO.File.ReadAllBytes(fullPath);
+        return $"data:{contentType};base64,{Convert.ToBase64String(bytes)}";
     }
 
     [HttpGet]
@@ -711,7 +771,7 @@ public class EmployeeController : Controller
                 username = u.Username,
                 fullName = u.FullName ?? u.Username,
                 role = u.Role ?? "Employee",
-                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                avatarUrl = string.IsNullOrWhiteSpace(u.AvatarPath) ? null : (u.AvatarPath.StartsWith("/") ? $"{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}" : $"/{u.AvatarPath}?v={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}"),
                 unreadCount = _context.EmployeeMessages.Count(m => !m.IsRead && (
                     (m.EmployeeUserId == user.Id && m.Channel == u.Username && m.SenderRole != "Employee") ||
                     (m.EmployeeUserId == u.Id && (m.Channel == user.Username || m.Channel == user.Id.ToString()))

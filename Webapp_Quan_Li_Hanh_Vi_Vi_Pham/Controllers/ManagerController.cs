@@ -489,6 +489,7 @@ public partial class ManagerController : Controller
     [HttpPost]
     public async Task<IActionResult> ReviewViolationAssignment(Guid id, string status, Guid? employeeId, string? note, CancellationToken cancellationToken)
     {
+        System.IO.File.AppendAllText("D:\\WEB\\project\\Webapp_Quan_Li_Hanh_Vi_Vi_Pham\\debug_log.txt", $"[ReviewViolationAssignment] id={id}, status={status}, employeeId={employeeId}\n");
         var reviewer = User.FindFirst("FullName")?.Value ?? User.Identity?.Name ?? "Manager";
         var violation = await _context.ViolationRecords.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
         if (violation == null)

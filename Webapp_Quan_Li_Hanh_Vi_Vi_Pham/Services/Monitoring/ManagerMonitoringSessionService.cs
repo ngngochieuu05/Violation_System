@@ -104,14 +104,14 @@ public class ManagerMonitoringSessionService : IManagerMonitoringSessionService
         {
             if (!string.IsNullOrWhiteSpace(eventArgs.Data))
             {
-                _logger.LogInformation("[monitoring-session:{SessionId}] {Message}", sessionId, eventArgs.Data);
+                LogWorkerMessage(sessionId, eventArgs.Data, isError: false);
             }
         };
         process.ErrorDataReceived += (_, eventArgs) =>
         {
             if (!string.IsNullOrWhiteSpace(eventArgs.Data))
             {
-                _logger.LogWarning("[monitoring-session:{SessionId}] {Message}", sessionId, eventArgs.Data);
+                LogWorkerMessage(sessionId, eventArgs.Data, isError: true);
             }
         };
 
@@ -344,6 +344,70 @@ public class ManagerMonitoringSessionService : IManagerMonitoringSessionService
         string SourceLabel,
         string SessionDirectory,
         Process Process);
+
+    private void LogWorkerMessage(string sessionId, string rawMessage, bool isError)
+    {
+        var message = rawMessage.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        if (message.StartsWith("{", StringComparison.Ordinal))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(message);
+                var root = document.RootElement;
+                var type = root.TryGetProperty("type", out var typeElement)
+                    ? typeElement.GetString()
+                    : null;
+
+                if (string.Equals(type, "instant-alert", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ruleType = root.TryGetProperty("ruleType", out var ruleElement) ? ruleElement.GetString() : "unknown";
+                    var trackId = root.TryGetProperty("trackId", out var trackElement) ? trackElement.GetString() : "n/a";
+                    var duration = root.TryGetProperty("durationSeconds", out var durationElement) ? durationElement.ToString() : "0";
+                    _logger.LogInformation(
+                        "[monitoring-session:{SessionId}] alert {RuleType} track={TrackId} duration={Duration}s",
+                        sessionId,
+                        ruleType,
+                        trackId,
+                        duration);
+                    return;
+                }
+
+                if (string.Equals(type, "instant-alert-error", StringComparison.OrdinalIgnoreCase))
+                {
+                    var ruleType = root.TryGetProperty("ruleType", out var ruleElement) ? ruleElement.GetString() : "unknown";
+                    var trackId = root.TryGetProperty("trackId", out var trackElement) ? trackElement.GetString() : "n/a";
+                    var error = root.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : message;
+                    _logger.LogWarning(
+                        "[monitoring-session:{SessionId}] alert-error {RuleType} track={TrackId}: {Error}",
+                        sessionId,
+                        ruleType,
+                        trackId,
+                        error);
+                    return;
+                }
+
+                // Ignore high-frequency JSON noise from the worker. The UI reads progress from status.json.
+                return;
+            }
+            catch (JsonException)
+            {
+                // Fall through for plain-text logging.
+            }
+        }
+
+        if (isError)
+        {
+            _logger.LogWarning("[monitoring-session:{SessionId}] {Message}", sessionId, message);
+            return;
+        }
+
+        _logger.LogDebug("[monitoring-session:{SessionId}] {Message}", sessionId, message);
+    }
 
     private sealed class WorkerStatusSnapshot
     {

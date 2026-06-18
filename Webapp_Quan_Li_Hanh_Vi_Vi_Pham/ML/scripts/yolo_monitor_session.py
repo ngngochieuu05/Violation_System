@@ -91,9 +91,20 @@ def crop_snapshot(frame, box):
     return base64.b64encode(encoded.tobytes()).decode("ascii"), "image/jpeg"
 
 
+def normalize_mojibake(value):
+    if not isinstance(value, str) or not value:
+        return value
+
+    try:
+        repaired = value.encode("latin1", errors="ignore").decode("utf-8", errors="ignore")
+        return repaired or value
+    except Exception:
+        return value
+
+
 def draw_detection(frame, detection, color):
     x1, y1, x2, y2 = detection["xyxy"]
-    caption = f'{detection["displayLabel"]} {detection["confidence"]:.2f}'
+    caption = f'{normalize_mojibake(detection["displayLabel"])} {detection["confidence"]:.2f}'
     if detection.get("trackId"):
         caption = f'{caption} #{detection["trackId"]}'
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
@@ -206,10 +217,17 @@ class RuleStateTracker:
             state["objectBox"] = object_box
         return state
 
-    def mark_missing(self, active_rule_keys):
+    def prune_missing(self, active_rule_keys, now_ts, stale_seconds):
         active_rule_keys = set(active_rule_keys)
         for key in list(self.states.keys()):
-            if key not in active_rule_keys:
+            if key in active_rule_keys:
+                continue
+
+            state = self.states.get(key)
+            if state is None:
+                continue
+
+            if now_ts - state["lastSeenTs"] > stale_seconds:
                 self.states.pop(key, None)
 
 
@@ -455,7 +473,22 @@ class MonitoringSessionWorker:
                     flush=True,
                 )
 
-        self.rule_tracker.mark_missing(active_rule_keys)
+        # Empty-desk detection often flickers for a few frames. Keep the timer alive
+        # briefly so the "rời vị trí" rule is not reset by a single missed frame.
+        stale_seconds = max(1.5, self.empty_desk_seconds * 0.5, self.smoke_seconds * 0.5)
+        self.rule_tracker.prune_missing(active_rule_keys, now_ts, stale_seconds)
+
+    def _resolve_detection_color(self, detection):
+        normalized_label = detection["label"].strip().lower()
+        if normalized_label == self.person_label:
+            return (255, 191, 0)
+        if normalized_label == self.smoke_label:
+            return (0, 102, 255)
+        if normalized_label == self.empty_desk_label:
+            return (0, 200, 120)
+
+        model_type = detection.get("modelType", "")
+        return (0, 140, 255) if model_type == "YoloSmoking" else (180, 105, 255)
 
     def run(self):
         self._open_source()
@@ -520,11 +553,13 @@ class MonitoringSessionWorker:
                         x1, y1, x2, y2 = [int(value) for value in box.xyxy[0].tolist()]
                         cls = int(box.cls[0])
                         label = names[cls] if isinstance(names, list) else names.get(cls, str(cls))
+                        normalized_label = normalize_mojibake(str(label))
+                        normalized_model_name = normalize_mojibake(str(model_entry["modelName"]))
                         detections.append(
                             {
                                 "modelType": model_entry["modelType"],
-                                "label": str(label),
-                                "displayLabel": f'{model_entry["modelName"]}: {label}',
+                                "label": normalized_label,
+                                "displayLabel": f'{normalized_model_name}: {normalized_label}',
                                 "confidence": round(float(box.conf[0]), 4),
                                 "xyxy": [x1, y1, x2, y2],
                                 "boundingBox": f"x:{x1},y:{y1},w:{x2 - x1},h:{y2 - y1}",
@@ -535,9 +570,8 @@ class MonitoringSessionWorker:
                 detections = self.tracker.assign(model_entry["modelType"], detections)
                 all_detections.extend(detections)
                 annotated = frame.copy()
-                accent = (0, 140, 255) if model_entry["modelType"] == "YoloSmoking" else (0, 200, 120)
                 for detection in detections:
-                    draw_detection(annotated, detection, accent)
+                    draw_detection(annotated, detection, self._resolve_detection_color(detection))
                 annotated_frames[model_entry["modelType"]] = annotated.copy()
 
                 output_name = f'{model_entry["modelType"].lower()}.jpg'

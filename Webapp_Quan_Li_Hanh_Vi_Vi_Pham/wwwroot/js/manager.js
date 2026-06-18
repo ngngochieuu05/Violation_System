@@ -379,12 +379,11 @@
         if (!confirm(`Xác nhận cập nhật vi phạm sang trạng thái ${status}?`)) return;
 
         try {
-            const params = new URLSearchParams({
-                id,
-                status,
-                note,
-                employeeId
-            });
+            const params = new URLSearchParams();
+            params.append('id', id);
+            params.append('status', status);
+            if (note) params.append('note', note);
+            if (employeeId) params.append('employeeId', employeeId);
             const res = await fetch(`/Manager/ReviewViolationAssignment?${params.toString()}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
@@ -1522,7 +1521,7 @@ window.handleTestVideoSelect = async (event) => {
     let isPaused = false;
     let isSendingFrame = false;
     let analysisTimerId = null;
-    const analysisIntervalMs = 16; // Giảm xuống 16ms (~60 FPS) chuẩn thời gian thực
+    const analysisIntervalMs = 250; // 4 FPS ổn định hơn cho vòng gọi model + base64 + canvas
     let frameCounter = 0;
     
     const captureCanvas = document.createElement('canvas');

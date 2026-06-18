@@ -397,6 +397,28 @@
         }
     };
 
+    const previewViolationEvidence = async (id) => {
+        const container = document.getElementById(`violationEvidence-${id}`);
+        if (!container) return;
+
+        try {
+            const res = await fetch(`/Employee/GetViolationEvidence?id=${encodeURIComponent(id)}&t=${Date.now()}`);
+            const payload = await res.json();
+            if (!payload.success || !payload.data?.evidenceImageDataUrl) {
+                throw new Error(payload.message || "Không tải được ảnh minh chứng.");
+            }
+
+            container.innerHTML = `
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 mt-2">
+                    <img src="${payload.data.evidenceImageDataUrl}" alt="Ảnh minh chứng vi phạm" class="w-full h-32 object-cover select-none" draggable="false">
+                </div>
+                <p class="mt-1 text-[10px] font-semibold text-emerald-600"><i class="fa-solid fa-lock mr-1"></i>Ảnh mã hóa nội bộ</p>`;
+        } catch (err) {
+            console.error(err);
+            container.innerHTML = `<div class="mt-2 text-[11px] text-red-500">Lỗi tải ảnh minh chứng</div>`;
+        }
+    };
+
     const loadMyViolations = async () => {
         const countEl = document.getElementById("homeViolationCount");
         const listEl = document.getElementById("homeViolationList");
@@ -404,12 +426,37 @@
         const fullListEl = document.getElementById("fullViolationList");
         
         try {
-            const res = await fetch("/Employee/GetMyViolations");
+            const res = await fetch("/Employee/GetMyViolations?t=" + Date.now());
             const result = await res.json();
             if (result.success && Array.isArray(result.data)) {
                 const list = result.data;
                 if (countEl) countEl.textContent = `${list.length} vi phạm`;
                 if (fullCountEl) fullCountEl.textContent = list.length;
+
+                // Update violation stats headers
+                const statsTotalEl = document.getElementById("violationStatsTotal");
+                const statsProcessedEl = document.getElementById("violationStatsProcessed");
+                const statsPendingEl = document.getElementById("violationStatsPending");
+                const statsPointsEl = document.getElementById("violationStatsPoints");
+                
+                if (statsTotalEl) statsTotalEl.textContent = list.length;
+                if (statsProcessedEl) {
+                    const processedCount = list.filter(x => x.status === "Approved" || x.status === "Đã duyệt").length;
+                    statsProcessedEl.textContent = processedCount;
+                }
+                if (statsPendingEl) {
+                    const pendingCount = list.filter(x => x.status === "Pending" || x.status === "Chờ duyệt").length;
+                    statsPendingEl.textContent = pendingCount;
+                }
+                if (statsPointsEl) {
+                    const points = list.reduce((sum, item) => {
+                        const sev = (item.severity || "").toLowerCase();
+                        if (sev === "high" || sev === "danger") return sum + 10;
+                        if (sev === "medium" || sev === "warning") return sum + 5;
+                        return sum + 2;
+                    }, 0);
+                    statsPointsEl.textContent = points;
+                }
 
                 // Home Tab Widget
                 if (listEl) {
@@ -474,6 +521,12 @@
                                 iconClass = "fa-circle-info text-slate-500";
                             }
 
+                            const evidencePreview = item.hasEvidenceImage
+                                ? `<div id="violationEvidence-${item.id}" class="mt-3">
+                                       <span class="text-[11px] text-slate-400">Đang tải ảnh...</span>
+                                   </div>`
+                                : `<div class="mt-3 text-[11px] text-slate-400">Chưa có ảnh minh chứng</div>`;
+
                             return `
                                 <div class="employee-surface rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative">
                                     <div class="flex justify-between items-start mb-3">
@@ -488,6 +541,7 @@
                                         <p class="text-[11px] text-slate-500"><i class="fa-regular fa-clock text-slate-400 mr-2 w-3 text-center"></i>${date}</p>
                                         <p class="text-[11px] font-semibold mt-2 ${item.status === "Approved" || item.status === "Đã duyệt" ? "text-green-600" : "text-amber-500"}"><i class="fa-solid fa-circle-notch text-slate-400 mr-2 w-3 text-center"></i>${item.status}</p>
                                     </div>
+                                    ${evidencePreview}
                                     ${(() => {
                                         const isPending = item.status === 'Pending' || item.status === 'Chờ duyệt';
                                         
@@ -519,6 +573,8 @@
                                 </div>
                             `;
                         }).join("");
+
+                        list.filter(item => item.hasEvidenceImage).forEach(item => previewViolationEvidence(item.id));
                     }
                 }
             }
