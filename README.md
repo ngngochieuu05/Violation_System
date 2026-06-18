@@ -1,4 +1,15 @@
-# HỆ THỐNG GIÁM SÁT VÀ QUẢN LÝ HÀNH VI VI PHẠM (VIOLATION MONITORING & MANAGEMENT SYSTEM)
+<div align="center">
+  <a href="#vi-hệ-thống-giám-sát-và-quản-lý-hành-vi-vi-phạm"><img src="https://img.shields.io/badge/Ngôn_ngữ-Tiếng_Việt-red?style=for-the-badge&logo=appveyor" alt="VI" /></a>
+  <a href="#en-violation-monitoring--management-system"><img src="https://img.shields.io/badge/Language-English-blue?style=for-the-badge&logo=appveyor" alt="EN" /></a>
+</div>
+
+# [VI] HỆ THỐNG GIÁM SÁT VÀ QUẢN LÝ HÀNH VI VI PHẠM
+
+**Tác giả (Author):** DevHP  
+**Liên hệ:** bimax12052005@gmail.com  
+<br/>
+
+
 
 Hệ thống giám sát tự động tích hợp trí tuệ nhân tạo (AI) giúp phát hiện, theo dõi, cảnh báo và quản lý các hành vi vi phạm nội quy tại nơi làm việc (như hút thuốc lá, rời vị trí làm việc quá thời gian quy định). Hệ thống kết hợp sức mạnh xử lý luồng của **ASP.NET Core 8 MVC** và khả năng suy luận mô hình học sâu của **Python (YOLOv8 & DeepFace)**, đồng thời hỗ trợ cảnh báo đa kênh thời gian thực (Telegram, SignalR WebSockets) và tương tác thông minh qua **Google Gemini 2.5 Flash**.
 
@@ -419,3 +430,177 @@ dotnet run -- --test-monitoring
 * **Testcase Hút thuốc**: Giả lập phát hiện thuốc lá (`Cigarette`) vượt ngưỡng thời gian tích lũy tại khu vực làm việc (Kết quả mong đợi: Tạo hồ sơ vi phạm mới trong database, ghi nhận Audit Log và gửi thông báo cảnh báo kèm ảnh bằng chứng về Telegram Chat ID đã cấu hình).
 * **Testcase Rời vị trí**: Giả lập nhân viên rời bàn làm việc trống (`un-occupied_desk`) quá thời gian tối đa (Kết quả mong đợi: Tạo bản ghi vi phạm mới, ghi nhận Audit Log và gửi thông báo cảnh báo về Telegram Chat ID).
 * **Telegram Commands Poll**: Gọi dịch vụ quét và lấy danh sách các tin nhắn lệnh gần nhất gửi tới Bot Telegram, xử lý các lệnh như `/status` và `/history`.
+
+
+
+<br/><hr/><br/>
+
+# [EN] VIOLATION MONITORING & MANAGEMENT SYSTEM
+
+**Author:** DevHP  
+**Contact:** bimax12052005@gmail.com  
+<br/>
+
+An automated monitoring system integrated with Artificial Intelligence (AI) that detects, tracks, alerts, and manages workplace rule violations (such as smoking, leaving the workstation). The system combines the stream processing power of **ASP.NET Core 8 MVC** and the deep learning inference capabilities of **Python (YOLOv8 & DeepFace)**, while supporting real-time multi-channel alerts (Telegram, SignalR WebSockets) and intelligent interaction via **Google Gemini 2.5 Flash**.
+
+---
+
+## 📌 TABLE OF CONTENTS
+1. [General Introduction](#-general-introduction)
+2. [Architecture & Dataflow](#-architecture--dataflow)
+3. [AI Engines & Persistent Python Worker Details](#-ai-engines--persistent-python-worker-details)
+4. [Main Functional Modules](#-main-functional-modules)
+5. [Database Schema](#-database-schema)
+6. [REST API & Webhook Documents](#-rest-api--webhook-documents)
+7. [Secure Chat System & AES-256 Encryption](#-secure-chat-system--aes-256-encryption)
+8. [Telegram Bot & Gemini AI Assistant Interaction](#-telegram-bot--gemini-ai-assistant-interaction)
+9. [Configuration & Operation Guide](#-configuration--operation-guide)
+10. [Automated Integration Testing](#-automated-integration-testing)
+
+---
+
+## 📖 GENERAL INTRODUCTION
+
+In businesses and organizations, ensuring proper workplace conduct, safety, and compliance is crucial for operations. Traditional monitoring methods via security cameras require 24/7 human supervision, leading to fatigue, missed violations, and lack of instant feedback.
+
+The **Violation Monitoring & Management System** solves this problem by:
+* **Automated Monitoring**: Using an optimized **YOLOv8** model running locally to detect sensitive behavior classes: smoking (`Cigarette`) and leaving the workstation (`un-occupied_desk`).
+* **Continuous Tracking**: Utilizing tracking algorithms based on spatial similarity (IoU Bounding Box) and the `person` class to assign IDs, preventing false alerts.
+* **Instant Alerts**: Sending evidence images and alerts directly to the Manager's Telegram channel and updating the Dashboard instantly via SignalR WebSockets.
+* **Smart Support**: Employees and Managers can chat directly with the built-in AI Assistant (**Gemini 2.5 Flash**) to quickly look up violation history, internal rules, or account details.
+* **Maximum Security**: Internal chat messages are symmetrically encrypted with AES-256 before being saved to the SQL Server database.
+
+---
+
+## 🏗️ ARCHITECTURE & DATAFLOW
+
+The system is designed with a **Hybrid Subprocess-Worker Architecture** to optimize resources between the ASP.NET Core Web application (high performance, good load balancing) and Python Machine Learning libraries (requiring heavy GPU/CPU resources).
+
+### 1. Overall Architecture Diagram (Mermaid)
+
+```mermaid
+graph TD
+    subgraph Client / User Interface
+        ManagerUI[Manager Dashboard - Browser]
+        EmployeeUI[Employee Portal - Browser]
+        TelegramApp[Telegram Mobile/Desktop App]
+    end
+
+    subgraph ASP.NET Core MVC 8 Server
+        Auth[Authentication & Role-Based Auth]
+        SignalR[SignalR Hub - WebSockets]
+        BackgroundService[ViolationMonitoringHostedService]
+        SessionService[ManagerMonitoringSessionService]
+        GeminiService[InternalAiChatService]
+        TelegramAlert[TelegramAlertService]
+        DB_Context[ViolationDbContext - EF Core]
+    end
+
+    subgraph Python ML Pipeline
+        YoloWorker[yolo_worker.py - Subprocess]
+        YoloSession[yolo_monitor_session.py - Live Stream]
+        DeepFaceEngine[run_deepface.py - Face Biometrics]
+    end
+
+    subgraph External Services
+        GeminiAPI[Google Gemini API]
+        TelegramAPI[Telegram Bot API]
+    end
+
+    subgraph Database Layer
+        SQLServer[(MS SQL Server)]
+    end
+
+    %% Client - Server Communication
+    ManagerUI <-->|WebSockets & HTTPS| SignalR
+    ManagerUI <-->|HTTPS| Auth
+    EmployeeUI <-->|HTTPS & WebSockets| Auth
+    
+    %% Background & Management
+    BackgroundService <-->|Stdin/Stdout| YoloWorker
+    SessionService <-->|Direct Subprocess| YoloSession
+    Auth <-->|CLI Command| DeepFaceEngine
+
+    %% External Services
+    GeminiService <-->|API Key / JSON| GeminiAPI
+    TelegramAlert <-->|HTTPS Post| TelegramAPI
+    TelegramApp <-->|Webhook/Polling| TelegramAlert
+    
+    %% DB Actions
+    BackgroundService -->|Save violation| DB_Context
+    Auth -->|Save User/Face Embeddings| DB_Context
+    DB_Context <-->|Read/Write| SQLServer
+```
+
+---
+
+## 🧠 AI ENGINES & PERSISTENT PYTHON WORKER DETAILS
+
+### 1. Persistent Python Worker Architecture (Latency Optimization)
+A major bottleneck when calling Python code from C# is the latency of loading libraries (`torch`, `ultralytics`, `opencv`) and the model weights into RAM/VRAM, often taking 3-5 seconds per call.
+
+The system solves this entirely with a **Persistent Python Worker Client**:
+* The C# application launches the `yolo_worker.py` process once and keeps it running as a Daemon Process.
+* The Python process pre-loads all libraries and the YOLOv8 model.
+* C# sends JSON requests via `stdin` and reads JSON responses directly from `stdout`.
+* **Result**: Inference latency is reduced from ~4000ms to **~30ms - 80ms** per frame.
+
+### 2. Object Tracking & Violation Detection
+The system uses Spatial Association to track objects across frames:
+* **IoU Tracking**: If the bounding box overlap between two consecutive frames exceeds the `TrackMatchIouThreshold` (default `0.4`), the object inherits the same `TrackingId`.
+* **Accumulated Time Filter**:
+  * **Smoking**: `t_smoke > 1.5 seconds`
+  * **Empty Workstation**: `t_empty > 3.0 seconds`
+  If a violation persists beyond the threshold, it triggers an alert.
+
+### 3. Face Biometrics Verification (DeepFace Engine)
+Uses **DeepFace** (VGG-Face or RetinaFace) for passwordless authentication.
+* **Enrollment**: 4 angles of the face are captured, and 128/4096-dimensional embeddings are saved to the `UserFaceEmbeddings` table.
+* **Verification**: Current face embeddings are compared against the DB using **Cosine Similarity**.
+
+---
+
+## 🎯 MAIN FUNCTIONAL MODULES
+
+### 1. Violation Management
+* **Dashboard Charts**: Visual charts for violation trends over time.
+* **Review Violations**: Managers can review evidence and Approve/Reject violations manually.
+
+### 2. HR & Payroll Control
+* **Registration / Activation**: Register via Face Biometrics or Google OAuth.
+* **Work Sessions**: Track check-ins and check-outs.
+* **Approval Requests**: Submit and review requests (leave, explanation, business trips).
+* **Automated Payroll**: Calculates base salary and deducts fines based on approved violations.
+
+### 3. Secure Internal Chat
+* Real-time messaging via SignalR WebSockets, fully encrypted.
+
+### 4. Gemini AI Assistant
+* Role-based context retrieval for answering internal queries and retrieving specific violation data.
+
+---
+
+## ⚙️ CONFIGURATION & OPERATION GUIDE
+
+### 1. Prerequisites
+* **.NET 8.0 SDK** and **SQL Server**.
+* **Python 3.10** or **3.11** (Added to system `PATH`).
+
+### 2. Install Python Dependencies
+```bash
+cd ML
+python -m venv .venv
+.venv\Scriptsctivate
+pip install -r requirements.txt
+```
+
+### 3. Database Migration
+```bash
+dotnet ef database update
+```
+
+### 4. Run Application
+```bash
+dotnet run
+```
+Access the application at `https://localhost:7192`.
