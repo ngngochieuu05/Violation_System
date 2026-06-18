@@ -438,7 +438,7 @@ dotnet run -- --test-monitoring
 
 # [EN] VIOLATION MONITORING & MANAGEMENT SYSTEM
 
-**Author:** DevHP  
+**Author:** Nguyễn Ngọc Hiếu - Phạm Văn Phúc  
 **Contact:** bimax12052005@gmail.com  
 <br/>
 
